@@ -96,6 +96,21 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testJourneyOpensAndFirstMatchStarts() throws {
+        app.buttons["btn-journey"].tap()
+        XCTAssertTrue(app.staticTexts["journey-title"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["journey-stars"].label, "0 ★")
+        let kofi = app.buttons["opponent-kumasi-1"]
+        XCTAssertTrue(kofi.exists)
+        XCTAssertFalse(app.buttons["opponent-bonwire-1"].exists, "chapter 2 is locked until Kumasi is beaten")
+        kofi.tap()
+        XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))
+        // The opponent's greeting shows briefly, then it is our move.
+        let yourMove = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Your move"), object: app.staticTexts["turn-indicator"])
+        XCTAssertEqual(XCTWaiter().wait(for: [yourMove], timeout: 10), .completed)
+    }
+
+    @MainActor
     func testPlayingAgainstTheAIGetsAReply() throws {
         app.buttons["level-beginner"].tap()
         app.buttons["btn-play-ai"].tap()

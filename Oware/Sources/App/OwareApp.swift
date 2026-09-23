@@ -5,6 +5,7 @@ struct OwareApp: App {
     @State private var session: GameSession
     @State private var settings: AppSettings
     @State private var library = PuzzleLibrary()
+    @State private var progress = JourneyProgress()
 
     init() {
         // Launch options used by UI tests: `--reset-state` / `-resetState YES` wipe the saved game,
@@ -12,6 +13,7 @@ struct OwareApp: App {
         if LaunchOptions.resetState {
             GameStore.shared.clear()
             UserDefaults.standard.removeObject(forKey: "solvedPuzzleIDs")
+            UserDefaults.standard.removeObject(forKey: "journeyStars")
         }
         _session = State(initialValue: GameSession())
         _settings = State(initialValue: AppSettings())
@@ -23,6 +25,7 @@ struct OwareApp: App {
                 .environment(session)
                 .environment(settings)
                 .environment(library)
+                .environment(progress)
                 .preferredColorScheme(.dark)
         }
     }

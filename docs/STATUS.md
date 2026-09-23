@@ -115,6 +115,17 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Open polish: seed-count labels touch the rim band in portrait; store labels could sit inside the
   store; puzzle hints (Nyansapo) not yet implemented; Journey (M4) next.
 
+## Milestone 4 — IN PROGRESS (branch `feat/journey`, stacked on PR #4)
+
+- `Journey.swift`: 8 chapters (Kumasi, Bonwire, Lake Bosomtwe, Techiman, Cape Coast, Makola/Accra,
+  Ho/Volta, Tamale) × 3 opponents with region-appropriate names, roles, greetings, difficulty ramp
+  Beginner→Grandmaster and a personality each. Stars: win 1★, ≥28 seeds 2★, ≥32 seeds 3★.
+  `JourneyProgress` persists stars; a chapter unlocks when every opponent in the previous one is beaten.
+- `GameMode.journey(chapter:opponent:)`; greeting shown as a hint at match start; game-over overlay
+  shows stars and "Next: <opponent>". `JourneyView` lists chapters/opponents. Home row "Journey".
+- Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, IAP gate
+  for chapters 3–8 (owner decision: free + one-time IAP), achievements.
+
 ## Next steps (in order)
 
 1. **Milestone 0 — art direction.** Generate concept art with the connected Adobe/Canva tools:

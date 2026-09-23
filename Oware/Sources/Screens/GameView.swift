@@ -5,8 +5,10 @@ import OwareAI
 struct GameView: View {
     @Environment(GameSession.self) private var session
     @Environment(PuzzleLibrary.self) private var library
+    @Environment(JourneyProgress.self) private var progress
     let goHome: () -> Void
     var goToPuzzles: () -> Void = {}
+    var goToJourney: () -> Void = {}
     let openSettings: () -> Void
 
     @State private var hint: String?
@@ -16,16 +18,26 @@ struct GameView: View {
         ZStack {
             VStack(spacing: 0) {
                 topBar
-                BoardView(onBlockedTap: showHint)
+                BoardView(onBlockedTap: { showHint($0) })
                     .padding(.horizontal, 6)
                 bottomBar
             }
             if session.isGameOver && session.mode.isResumable {
-                GameOverOverlay(goHome: goHome)
+                GameOverOverlay(goHome: goHome, goToJourney: goToJourney)
                     .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.5), value: session.isGameOver)
+        .onChange(of: session.isGameOver) { _, over in
+            if over, let opponent = session.mode.journeyOpponent {
+                progress.record(stars: Journey.stars(for: session.state), for: opponent)
+            }
+        }
+        .onAppear {
+            if let opponent = session.mode.journeyOpponent, session.state.moveNumber == 0 {
+                showHint(opponent.greeting, seconds: 3.5)
+            }
+        }
         .onChange(of: session.puzzleAttempt) { _, attempt in
             if attempt == .solved, let puzzle = session.currentPuzzle { library.markSolved(puzzle) }
         }
@@ -153,11 +165,11 @@ struct GameView: View {
         .accessibilityIdentifier(id)
     }
 
-    private func showHint(_ text: String) {
+    private func showHint(_ text: String, seconds: Double = 1.6) {
         hint = text
         hintTask?.cancel()
         hintTask = Task {
-            try? await Task.sleep(for: .seconds(1.6))
+            try? await Task.sleep(for: .seconds(seconds))
             if !Task.isCancelled { hint = nil }
         }
     }
@@ -165,7 +177,9 @@ struct GameView: View {
 
 struct GameOverOverlay: View {
     @Environment(GameSession.self) private var session
+    @Environment(JourneyProgress.self) private var progress
     let goHome: () -> Void
+    var goToJourney: () -> Void = {}
 
     var body: some View {
         VStack(spacing: 26) {
@@ -179,19 +193,48 @@ struct GameOverOverlay: View {
                 .font(Theme.body(22))
                 .foregroundStyle(Theme.gold)
                 .accessibilityIdentifier("game-over-score")
-            VStack(spacing: 4) {
-                QuietButton(title: "Play again", prominent: true) {
-                    session.newGame(session.mode)
+            if case let .journey(chapter, index) = session.mode {
+                let stars = Journey.stars(for: session.state)
+                Text(String(repeating: "★", count: stars) + String(repeating: "☆", count: 3 - stars))
+                    .font(Theme.title(30))
+                    .foregroundStyle(Theme.gold)
+                    .accessibilityIdentifier("journey-result-stars")
+                    .accessibilityLabel("\(stars) stars")
+                VStack(spacing: 4) {
+                    if stars > 0, let next = nextJourneyMatch(after: chapter, index) {
+                        QuietButton(title: "Next: \(next.opponent.name)", subtitle: next.opponent.role, prominent: true) {
+                            session.newGame(.journey(chapter: next.chapter, opponent: next.index))
+                        }
+                        .accessibilityIdentifier("btn-next-opponent")
+                    }
+                    QuietButton(title: "Play again", prominent: stars == 0) { session.newGame(session.mode) }
+                        .accessibilityIdentifier("btn-play-again")
+                    QuietButton(title: "Journey") { goToJourney() }
+                        .accessibilityIdentifier("btn-journey-overlay")
                 }
-                .accessibilityIdentifier("btn-play-again")
-                QuietButton(title: "Home") { goHome() }
-                    .accessibilityIdentifier("btn-home-overlay")
+                .frame(maxWidth: 260)
+            } else {
+                VStack(spacing: 4) {
+                    QuietButton(title: "Play again", prominent: true) {
+                        session.newGame(session.mode)
+                    }
+                    .accessibilityIdentifier("btn-play-again")
+                    QuietButton(title: "Home") { goHome() }
+                        .accessibilityIdentifier("btn-home-overlay")
+                }
+                .frame(maxWidth: 260)
             }
-            .frame(maxWidth: 260)
             Spacer()
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.night.opacity(0.88))
     }
+}
+
+
+private func nextJourneyMatch(after chapter: Int, _ index: Int) -> (chapter: Int, index: Int, opponent: Journey.Opponent)? {
+    if let same = Journey.opponent(chapter: chapter, index: index + 1) { return (chapter, index + 1, same) }
+    if let next = Journey.opponent(chapter: chapter + 1, index: 0) { return (chapter + 1, 0, next) }
+    return nil
 }

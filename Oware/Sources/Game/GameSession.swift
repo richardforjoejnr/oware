@@ -81,7 +81,7 @@ final class GameSession {
         if let outcome = state.outcome { return Self.describe(outcome, mode: mode) }
         if isThinking { return "Thinking…" }
         switch mode {
-        case .versusAI: return humanToMove ? "Your move" : "…"
+        case .versusAI, .journey: return humanToMove ? "Your move" : "…"
         case .passAndPlay: return state.sideToMove == .south ? "A to move" : "B to move"
         case .puzzle, .tutorial: return ""
         }
@@ -94,7 +94,7 @@ final class GameSession {
             switch mode {
             case .versusAI(_, _, let human): who = player == human ? "You win" : "You lose"
             case .passAndPlay: who = "\(player.label) wins"
-            case .puzzle, .tutorial: who = player == .south ? "You win" : "You lose"
+            case .puzzle, .tutorial, .journey: who = player == .south ? "You win" : "You lose"
             }
             return who + reasonSuffix(reason)
         case let .draw(reason):

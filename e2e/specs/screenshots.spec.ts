@@ -52,5 +52,11 @@ const dir = path.resolve(__dirname, "../screenshots");
     await byId("tab-heritage").click();
     await byId("heritage-title").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "heritage.png"));
+
+    await byId("btn-back").click();
+    await byId("btn-journey").waitForDisplayed();
+    await byId("btn-journey").click();
+    await byId("journey-title").waitForDisplayed();
+    await browser.saveScreenshot(path.join(dir, "journey.png"));
   });
 });
