@@ -119,14 +119,14 @@ final class BoardScene: SKScene, BoardAnimator {
             houseNodes[i].path = CGPath(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius * 0.86, width: radius * 2, height: radius * 1.72), transform: nil)
             houseRims[i].path = CGPath(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius * 0.86, width: radius * 2, height: radius * 1.72), transform: nil)
             countLabels[i].fontSize = max(10, layout.cell * 0.2)
-            let dy: CGFloat = Player.south.owns(i) ? -radius * 1.12 : radius * 1.12
-            countLabels[i].position = CGPoint(x: c.x, y: c.y + dy)
+            countLabels[i].position = layout.sk(layout.countLabelPoint(i))
         }
         for p in Player.allCases {
             let rect = layout.sk(layout.storeRect(p))
-            storeNodes[p.rawValue].path = CGPath(roundedRect: rect, cornerWidth: rect.width / 2, cornerHeight: rect.width / 2, transform: nil)
+            let corner = min(rect.width, rect.height) / 2
+            storeNodes[p.rawValue].path = CGPath(roundedRect: rect, cornerWidth: corner, cornerHeight: corner, transform: nil)
             storeLabels[p.rawValue].fontSize = max(11, layout.cell * 0.26)
-            storeLabels[p.rawValue].position = CGPoint(x: rect.midX, y: p == .south ? rect.minY - layout.cell * 0.32 : rect.maxY + layout.cell * 0.32)
+            storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
         }
         render(current)
     }
@@ -247,8 +247,9 @@ final class BoardScene: SKScene, BoardAnimator {
                 haptics?.pickUp()
                 let target = layout.handPoint(for: house)
                 for (k, seed) in seeds.enumerated() {
-                    let spread = CGPoint(x: target.x + CGFloat(k % 4 - 2) * layout.seedRadius * 1.3,
-                                         y: target.y + CGFloat(k / 4) * layout.seedRadius * -1.2)
+                    let angle = Double(k) * 2.399963
+                    let r = layout.seedRadius * 1.1 * CGFloat(Double(k).squareRoot())
+                    let spread = CGPoint(x: target.x + r * CGFloat(cos(angle)), y: target.y + r * CGFloat(sin(angle)))
                     let move = SKAction.move(to: layout.sk(spread), duration: 0.16 / animationSpeed)
                     move.timingMode = .easeOut
                     seed.zPosition = 10
