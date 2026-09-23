@@ -84,6 +84,7 @@ struct HeritageView: View {
 
     @ViewBuilder private var heritage: some View {
         heading("Ɔware")
+            .padding(.leading, 8) // the open-O glyph has a negative side bearing in the serif face
             .accessibilityIdentifier("heritage-title")
         Image("hero")
             .resizable()
