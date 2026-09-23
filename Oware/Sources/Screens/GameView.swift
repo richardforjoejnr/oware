@@ -60,6 +60,18 @@ struct GameView: View {
                 .foregroundStyle(Theme.ivoryDim)
             Spacer()
 
+            if session.mode.isResumable {
+                Button(action: { session.requestHint() }) {
+                    Image(systemName: "lightbulb")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(session.canHint ? Theme.ivoryDim : Theme.ivoryDim.opacity(0.3))
+                        .frame(width: 44, height: 44)
+                }
+                .disabled(!session.canHint)
+                .accessibilityIdentifier("btn-hint")
+                .accessibilityLabel("Hint")
+            }
+
             Button(action: { session.undo() }) {
                 Image(systemName: "arrow.uturn.backward")
                     .font(.system(size: 16, weight: .medium))

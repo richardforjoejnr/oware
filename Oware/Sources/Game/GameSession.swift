@@ -27,6 +27,9 @@ final class GameSession {
     private(set) var puzzleAttempt: PuzzleAttempt?
     /// Tutorial: index of the current step and whether its required move was completed.
     private(set) var tutorialStepDone = false
+    /// True while a hint is being computed.
+    private(set) var isHinting = false
+    private var hintTask: Task<Void, Never>?
 
     weak var animator: (any BoardAnimator)?
     private var aiTask: Task<Void, Never>?
@@ -203,6 +206,28 @@ final class GameSession {
         if state.isLegal(move) { return nil }
         if state.sideIsEmpty(state.sideToMove.opponent) { return "You must give the other side seeds" }
         return "Not allowed"
+    }
+
+    /// Hints are offered in ordinary games and the Journey, never in riddles or the lesson.
+    var canHint: Bool { mode.isResumable && humanToMove && !isHinting }
+
+    /// Nyansapo: show the strong engine's suggestion as a landing preview for a moment.
+    func requestHint() {
+        guard canHint else { return }
+        isHinting = true
+        let snapshot = state
+        hintTask?.cancel()
+        hintTask = Task { [weak self] in
+            let suggestion = await Task.detached(priority: .userInitiated) {
+                AIPlayer.analyse(snapshot, depth: 8, timeBudget: .milliseconds(900))?.move
+            }.value
+            guard let self, !Task.isCancelled, self.state == snapshot else { self?.isHinting = false; return }
+            self.isHinting = false
+            guard let suggestion else { return }
+            self.previewMove = suggestion
+            try? await Task.sleep(for: .seconds(2.2))
+            if self.previewMove == suggestion { self.previewMove = nil }
+        }
     }
 
     func undo() {
