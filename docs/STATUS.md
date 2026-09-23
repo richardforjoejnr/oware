@@ -101,7 +101,7 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
   (SKLightNode + normal maps), reduce visible wood tile repeat, real drum audio.
 - **Owner:** confirm the Canva AI-content licence position before App Store submission.
 
-## Milestone 3 — DONE pending review (branch `feat/learn-and-puzzles`, PR #4)
+## Milestone 3 — DONE (PR #4 merged 2026-09-23)
 
 - Riddles: `Puzzle`/`PuzzleSet`/`PuzzleGenerator` in OwareAI; 60 shipped puzzles in
   `Oware/Resources/Puzzles/puzzles.json` (regenerate with `swift run -c release oware puzzles …`);
@@ -115,7 +115,7 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Open polish: seed-count labels touch the rim band in portrait; store labels could sit inside the
   store; puzzle hints (Nyansapo) not yet implemented; Journey (M4) next.
 
-## Milestone 4 — IN PROGRESS (branch `feat/journey`, stacked on PR #4)
+## Milestone 4 — DONE pending review (branch `feat/journey`, PR #5)
 
 - `Journey.swift`: 8 chapters (Kumasi, Bonwire, Lake Bosomtwe, Techiman, Cape Coast, Makola/Accra,
   Ho/Volta, Tamale) × 3 opponents with region-appropriate names, roles, greetings, difficulty ramp
@@ -129,7 +129,12 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
   launch flag for tests/screenshots. **Owner:** create the same product ID in App Store Connect.
 - App icon in `AppIcon.appiconset` (1024², from Canva media `MAHWDmM5VRg`). `docs/PRIVACY.md` drafted
   (needs a support email and hosting, e.g. GitHub Pages).
-- Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements.
+- Hint button (`btn-hint`, lightbulb for now; Nyansapo icon later): `AIPlayer.analyse` depth 8 / 0.9 s
+  shown as the landing preview for ~2 s. Board polish: store counts behind seeds, thinner rim,
+  larger wood tile, Reduce Motion → instant sowing, grand-slam convention in Settings.
+- `docs/APP_STORE.md`: listing copy, keywords, IAP metadata, privacy label answer, screenshot plan.
+- Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
+  real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
 
 ## Next steps (in order)
 
