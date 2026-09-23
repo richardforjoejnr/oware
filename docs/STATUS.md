@@ -88,6 +88,28 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Tests rewritten for the real game: XCUITest (4 cases), Maestro smoke (pass & play, sow, undo),
   TypeScript `home.spec.ts` + `game.spec.ts` (sow, empty-house hint, undo).
 
+## Milestone 0 — art direction: first pass DONE (2026-09-23, on PR #3)
+
+- Research on Ghanaian carvers (Ahwiaa; osese wood; adze/knife/gouge; dye + wax finish;
+  hinged boards; "redwood and black dye"; nickernut seeds) is in `docs/ART_DIRECTION.md`.
+- Generated with Canva (media IDs recorded in ART_DIRECTION.md §3), processed by
+  `scratchpad/assets/process.py` (difference matting for seed alpha, tileable wood, masked pit):
+  `Oware/Resources/Assets.xcassets/Board/{wood,pit,rim,hero,seed1…seed8}`.
+- `BoardTexture.swift` bakes the slab; `BoardScene` now draws textured board, pits, stores,
+  seeds and Adinkra rim. Screenshot verified on iPhone portrait.
+- Still to do in art: journey backdrops, app icon, Adinkra UI icon set (vector), lighting pass
+  (SKLightNode + normal maps), reduce visible wood tile repeat, real drum audio.
+- **Owner:** confirm the Canva AI-content licence position before App Store submission.
+
+## Milestone 3 — IN PROGRESS (branch `feat/learn-and-puzzles`, uncommitted)
+
+- `Packages/OwareEngine/Sources/OwareAI/Puzzles/` — `Puzzle`, `PuzzleSet` (daily pick), `PuzzleGenerator`
+  (mines unique-answer positions: capture-in-one, capture-in-two, escape-the-trap, feed-or-lose, win-in-one).
+- `swift run -c release oware puzzles --per-kind 12 --seed 2026 --out Oware/Resources/Puzzles/puzzles.json`
+  produced 60 puzzles (12 per kind) — file exists, not yet wired into the app.
+- Next: puzzle UI (list by kind, board in puzzle mode, success/retry), daily puzzle, tutorial
+  "Learn from Nana", rules reference, Heritage screen.
+
 ## Next steps (in order)
 
 1. **Milestone 0 — art direction.** Generate concept art with the connected Adobe/Canva tools:
