@@ -7,6 +7,7 @@ struct HomeView: View {
     @Environment(PuzzleLibrary.self) private var library
     let startGame: () -> Void
     let openPuzzles: () -> Void
+    let openHeritage: () -> Void
     let openSettings: () -> Void
 
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.player.rawValue
@@ -60,6 +61,9 @@ struct HomeView: View {
                     openPuzzles()
                 }
                 .accessibilityIdentifier("btn-puzzles")
+
+                QuietButton(title: "Rules & heritage") { openHeritage() }
+                    .accessibilityIdentifier("btn-heritage")
 
                 QuietButton(title: "Settings") { openSettings() }
                     .accessibilityIdentifier("btn-settings")

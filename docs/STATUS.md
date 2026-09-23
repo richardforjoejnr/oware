@@ -67,7 +67,7 @@
   `Personality` weight sets (balanced, aggressive, hoarder, cautious, trickster), seeded RNG.
   `AIPlayer.analyse` returns move, score, depth, nodes and principal variation (for hints).
 
-## Milestone 2 — DONE pending review (branch `feat/playable-core`, PR #3)
+## Milestone 2 — DONE (PR #3 merged 2026-09-23)
 
 Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots), engine 45/45.
 - `Oware/Sources/Game/GameSession.swift` — @Observable session: applies moves, awaits the board
@@ -88,7 +88,7 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Tests rewritten for the real game: XCUITest (4 cases), Maestro smoke (pass & play, sow, undo),
   TypeScript `home.spec.ts` + `game.spec.ts` (sow, empty-house hint, undo).
 
-## Milestone 0 — art direction: first pass DONE (2026-09-23, on PR #3)
+## Milestone 0 — art direction: first pass DONE (merged with PR #3)
 
 - Research on Ghanaian carvers (Ahwiaa; osese wood; adze/knife/gouge; dye + wax finish;
   hinged boards; "redwood and black dye"; nickernut seeds) is in `docs/ART_DIRECTION.md`.
@@ -101,14 +101,19 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
   (SKLightNode + normal maps), reduce visible wood tile repeat, real drum audio.
 - **Owner:** confirm the Canva AI-content licence position before App Store submission.
 
-## Milestone 3 — IN PROGRESS (branch `feat/learn-and-puzzles`, uncommitted)
+## Milestone 3 — DONE pending review (branch `feat/learn-and-puzzles`, PR #4)
 
-- `Packages/OwareEngine/Sources/OwareAI/Puzzles/` — `Puzzle`, `PuzzleSet` (daily pick), `PuzzleGenerator`
-  (mines unique-answer positions: capture-in-one, capture-in-two, escape-the-trap, feed-or-lose, win-in-one).
-- `swift run -c release oware puzzles --per-kind 12 --seed 2026 --out Oware/Resources/Puzzles/puzzles.json`
-  produced 60 puzzles (12 per kind) — file exists, not yet wired into the app.
-- Next: puzzle UI (list by kind, board in puzzle mode, success/retry), daily puzzle, tutorial
-  "Learn from Nana", rules reference, Heritage screen.
+- Riddles: `Puzzle`/`PuzzleSet`/`PuzzleGenerator` in OwareAI; 60 shipped puzzles in
+  `Oware/Resources/Puzzles/puzzles.json` (regenerate with `swift run -c release oware puzzles …`);
+  `PuzzleLibrary` (solved tracking in UserDefaults, daily pick); `PuzzlesView` ("Ananse's riddles");
+  puzzle mode in `GameSession` (only the solution counts; wrong taps leave the board unchanged).
+- Learn: `Tutorial.steps` (7 steps: welcome, sowing, capturing, chains, grand slam, feeding, winning),
+  tutorial mode restricts the learner to the required move; Next / Play controls under the board.
+- Rules & heritage: `HeritageView` with Rules and Heritage tabs (hero image, "it is said" phrasing).
+- Home rows: Learn, Riddles, Rules & heritage. Tests: 5 puzzle tests, 6 XCUITests, screenshot spec
+  covers home, board, riddles, puzzle, tutorial, rules, heritage.
+- Open polish: seed-count labels touch the rim band in portrait; store labels could sit inside the
+  store; puzzle hints (Nyansapo) not yet implemented; Journey (M4) next.
 
 ## Next steps (in order)
 

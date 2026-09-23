@@ -5,6 +5,7 @@ enum Screen: Hashable {
     case home
     case game
     case puzzles
+    case heritage
 }
 
 struct RootView: View {
@@ -19,12 +20,16 @@ struct RootView: View {
             case .home:
                 HomeView(startGame: { screen = .game },
                          openPuzzles: { screen = .puzzles },
+                         openHeritage: { screen = .heritage },
                          openSettings: { showSettings = true })
                     .transition(.opacity)
             case .game:
                 GameView(goHome: { screen = .home },
                          goToPuzzles: { screen = .puzzles },
                          openSettings: { showSettings = true })
+                    .transition(.opacity)
+            case .heritage:
+                HeritageView(goBack: { screen = .home })
                     .transition(.opacity)
             case .puzzles:
                 PuzzlesView(goBack: { screen = .home }, startPuzzle: { puzzle in
