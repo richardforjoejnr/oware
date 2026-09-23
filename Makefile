@@ -33,5 +33,5 @@ e2e: e2e-build        ## Install on a booted simulator and run Maestro flows
 e2e-studio:           ## Open Maestro Studio to author flows interactively against the booted simulator
 	maestro studio
 
-e2e-ts: e2e-build     ## Run the TypeScript Appium + WebdriverIO suite (cd e2e && npm ci first)
+e2e-ts: e2e-build     ## Run the TypeScript Appium + WebdriverIO suite (cd e2e && npm install first)
 	cd e2e && npm test

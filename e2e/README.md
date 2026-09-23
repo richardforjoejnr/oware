@@ -5,7 +5,7 @@ Maestro YAML flows in `../.maestro` (quick smoke checks) and the XCUITest target
 
 ```bash
 cd e2e
-npm ci                          # installs Appium, the XCUITest driver and WebdriverIO
+npm install                     # installs Appium, the XCUITest driver and WebdriverIO
 npm run appium:install-driver   # first time only
 make -C .. e2e-build            # builds the simulator app into ../build
 npm test                        # runs specs/**/*.spec.ts

@@ -83,8 +83,9 @@ jobs:
           xcrun simctl bootstatus "${{ steps.sim.outputs.name }}" -b
       - name: Install e2e dependencies
         working-directory: e2e
+        # npm ci is not used: sharp's optional platform binaries are not reconciled in the lock file by npm.
         run: |
-          npm ci
+          npm install --no-audit --no-fund
           npx appium driver install xcuitest || npx appium driver update xcuitest
       - name: Run TypeScript e2e suite
         working-directory: e2e
