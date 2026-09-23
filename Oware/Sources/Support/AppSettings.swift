@@ -1,5 +1,7 @@
 import SwiftUI
 import Observation
+import UIKit
+import OwareEngine
 
 /// User preferences. Backed by UserDefaults so they survive relaunch.
 @MainActor
@@ -30,6 +32,16 @@ final class AppSettings {
     var showSeedCounts: Bool {
         didSet { defaults.set(showSeedCounts, forKey: "showSeedCounts") }
     }
+    /// Grand-slam convention for new games (Abapa forfeit by default).
+    var grandSlamRule: RuleSet.GrandSlamRule {
+        didSet { defaults.set(grandSlamRule.rawValue, forKey: "grandSlamRule") }
+    }
+    var rules: RuleSet { RuleSet(grandSlam: grandSlamRule) }
+
+    /// Honour the system Reduce Motion setting: sowing becomes instant.
+    var effectiveSpeed: Double {
+        UIAccessibility.isReduceMotionEnabled ? AnimationSpeed.instant.rawValue : animationSpeed.rawValue
+    }
 
     private let defaults: UserDefaults
 
@@ -40,6 +52,7 @@ final class AppSettings {
         hapticsEnabled = defaults.object(forKey: "hapticsEnabled") as? Bool ?? true
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
         showSeedCounts = defaults.object(forKey: "showSeedCounts") as? Bool ?? true
+        grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         if LaunchOptions.fastAnimations {
             // Not persisted: UI-test runs must not change the player's real preferences.
             animationSpeed = .instant

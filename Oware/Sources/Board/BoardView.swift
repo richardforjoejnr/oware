@@ -50,7 +50,7 @@ struct BoardView: View {
     }
 
     private func configureScene() {
-        scene.animationSpeed = settings.animationSpeed.rawValue
+        scene.animationSpeed = settings.effectiveSpeed
         scene.showCounts = settings.showSeedCounts
         SoundPlayer.shared.enabled = settings.soundEnabled
         Haptics.shared.enabled = settings.hapticsEnabled

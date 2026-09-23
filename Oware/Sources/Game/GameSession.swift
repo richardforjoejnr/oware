@@ -27,6 +27,9 @@ final class GameSession {
     private(set) var puzzleAttempt: PuzzleAttempt?
     /// Tutorial: index of the current step and whether its required move was completed.
     private(set) var tutorialStepDone = false
+    /// True while a hint is being computed.
+    private(set) var isHinting = false
+    private var hintTask: Task<Void, Never>?
 
     weak var animator: (any BoardAnimator)?
     private var aiTask: Task<Void, Never>?
@@ -81,7 +84,7 @@ final class GameSession {
         if let outcome = state.outcome { return Self.describe(outcome, mode: mode) }
         if isThinking { return "Thinking…" }
         switch mode {
-        case .versusAI: return humanToMove ? "Your move" : "…"
+        case .versusAI, .journey: return humanToMove ? "Your move" : "…"
         case .passAndPlay: return state.sideToMove == .south ? "A to move" : "B to move"
         case .puzzle, .tutorial: return ""
         }
@@ -94,7 +97,7 @@ final class GameSession {
             switch mode {
             case .versusAI(_, _, let human): who = player == human ? "You win" : "You lose"
             case .passAndPlay: who = "\(player.label) wins"
-            case .puzzle, .tutorial: who = player == .south ? "You win" : "You lose"
+            case .puzzle, .tutorial, .journey: who = player == .south ? "You win" : "You lose"
             }
             return who + reasonSuffix(reason)
         case let .draw(reason):
@@ -203,6 +206,28 @@ final class GameSession {
         if state.isLegal(move) { return nil }
         if state.sideIsEmpty(state.sideToMove.opponent) { return "You must give the other side seeds" }
         return "Not allowed"
+    }
+
+    /// Hints are offered in ordinary games and the Journey, never in riddles or the lesson.
+    var canHint: Bool { mode.isResumable && humanToMove && !isHinting }
+
+    /// Nyansapo: show the strong engine's suggestion as a landing preview for a moment.
+    func requestHint() {
+        guard canHint else { return }
+        isHinting = true
+        let snapshot = state
+        hintTask?.cancel()
+        hintTask = Task { [weak self] in
+            let suggestion = await Task.detached(priority: .userInitiated) {
+                AIPlayer.analyse(snapshot, depth: 8, timeBudget: .milliseconds(900))?.move
+            }.value
+            guard let self, !Task.isCancelled, self.state == snapshot else { self?.isHinting = false; return }
+            self.isHinting = false
+            guard let suggestion else { return }
+            self.previewMove = suggestion
+            try? await Task.sleep(for: .seconds(2.2))
+            if self.previewMove == suggestion { self.previewMove = nil }
+        }
     }
 
     func undo() {

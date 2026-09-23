@@ -9,23 +9,36 @@ enum GameMode: Codable, Hashable, Sendable {
     case puzzle(Puzzle)
     /// The guided lesson; `step` indexes `Tutorial.steps`.
     case tutorial(step: Int)
+    /// A Journey match against `Journey.chapters[chapter].opponents[opponent]`; the human is south.
+    case journey(chapter: Int, opponent: Int)
 
-    var aiSide: Player? {
-        if case let .versusAI(_, _, human) = self { return human.opponent }
+    var journeyOpponent: Journey.Opponent? {
+        if case let .journey(c, o) = self { return Journey.opponent(chapter: c, index: o) }
         return nil
     }
 
-    var aiPlayer: AIPlayer? {
-        if case let .versusAI(difficulty, personality, _) = self {
-            return AIPlayer(difficulty: difficulty, personality: personality)
+    var aiSide: Player? {
+        switch self {
+        case let .versusAI(_, _, human): human.opponent
+        case .journey: .north
+        default: nil
         }
-        return nil
+    }
+
+    var aiPlayer: AIPlayer? {
+        switch self {
+        case let .versusAI(difficulty, personality, _):
+            AIPlayer(difficulty: difficulty, personality: personality)
+        case .journey:
+            journeyOpponent.map { AIPlayer(difficulty: $0.difficulty, personality: $0.personality) }
+        default: nil
+        }
     }
 
     /// Modes that are ordinary games worth saving and resuming.
     var isResumable: Bool {
         switch self {
-        case .versusAI, .passAndPlay: true
+        case .versusAI, .passAndPlay, .journey: true
         case .puzzle, .tutorial: false
         }
     }
@@ -36,6 +49,7 @@ enum GameMode: Codable, Hashable, Sendable {
         case .passAndPlay: "Pass & Play"
         case let .puzzle(puzzle): puzzle.kind.title
         case .tutorial: "Learn"
+        case .journey: journeyOpponent.map { "\($0.name) · \($0.role)" } ?? "Journey"
         }
     }
 }

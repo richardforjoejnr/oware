@@ -18,7 +18,7 @@ enum BoardTexture {
 
             if let wood = UIImage(named: "wood") {
                 // Tile at a scale that keeps the adze marks readable on any board size.
-                let tile = max(size.width, size.height) / 2.2
+                let tile = max(size.width, size.height) / 1.25
                 cg.saveGState()
                 cg.setFillColor(UIColor(patternImage: scaled(wood, to: tile)).cgColor)
                 cg.fill(rect)

@@ -5,9 +5,12 @@ import OwareAI
 struct HomeView: View {
     @Environment(GameSession.self) private var session
     @Environment(PuzzleLibrary.self) private var library
+    @Environment(JourneyProgress.self) private var progress
+    @Environment(AppSettings.self) private var settings
     let startGame: () -> Void
     let openPuzzles: () -> Void
     let openHeritage: () -> Void
+    let openJourney: () -> Void
     let openSettings: () -> Void
 
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.player.rawValue
@@ -37,7 +40,7 @@ struct HomeView: View {
                 }
 
                 QuietButton(title: "Play", subtitle: "against \(difficulty.displayName)") {
-                    session.newGame(.versusAI(difficulty: difficulty, personality: .balanced, humanPlays: .south))
+                    session.newGame(.versusAI(difficulty: difficulty, personality: .balanced, humanPlays: .south), rules: settings.rules)
                     startGame()
                 }
                 .accessibilityIdentifier("btn-play-ai")
@@ -45,8 +48,13 @@ struct HomeView: View {
                 levelPicker
                     .padding(.bottom, 10)
 
+                QuietButton(title: "Journey", subtitle: progress.totalStars == 0 ? "across Ghana, one board at a time" : "\(progress.totalStars) stars") {
+                    openJourney()
+                }
+                .accessibilityIdentifier("btn-journey")
+
                 QuietButton(title: "Pass & Play", subtitle: "two players, one board") {
-                    session.newGame(.passAndPlay)
+                    session.newGame(.passAndPlay, rules: settings.rules)
                     startGame()
                 }
                 .accessibilityIdentifier("btn-pass-play")
