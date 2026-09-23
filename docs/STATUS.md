@@ -29,11 +29,13 @@
 
 ## In progress (as of last session)
 
-- Latest push made the Appium/TS CI job use `npm install` instead of `npm ci` (lock file could not
-  reconcile sharp's optional platform binaries). Verify the "Appium + WebdriverIO (TypeScript)"
-  check is green on PR #1; if not, read the job log with
-  `gh api repos/richardforjoejnr/oware/actions/jobs/<job-id>/logs`.
-- Consider adding "Appium + WebdriverIO (TypeScript)" to the required checks on `main` once stable.
+- Two CI fixes were pushed last: the Appium/TS job uses `npm install` (lock file could not reconcile
+  sharp's optional platform binaries), and the Maestro job got a 300 s driver-startup timeout,
+  a simulator warm-up launch, and one retry (it timed out once on a slow runner).
+  **First thing to do: check `gh pr checks 1 -R richardforjoejnr/oware`.** If a job is red, read
+  its log with `gh api repos/richardforjoejnr/oware/actions/jobs/<job-id>/logs`.
+- Once both E2E jobs are stable, add "Appium + WebdriverIO (TypeScript)" to the required checks on
+  `main` (`gh api -X PATCH repos/richardforjoejnr/oware/branches/main/protection/required_status_checks`).
 
 ## Blocked on the owner (needs a password or Apple account)
 
