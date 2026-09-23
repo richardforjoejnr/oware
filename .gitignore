@@ -1,0 +1,37 @@
+# Xcode
+*.xcodeproj/
+!*.xcodeproj/project.xcworkspace/xcshareddata/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+build/
+*.ipa
+*.dSYM.zip
+*.dSYM
+*.xcresult
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Packages/*/.build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+fastlane/README.md
+
+# Ruby
+vendor/bundle/
+.bundle/
+
+# macOS
+.DS_Store
+
+# Secrets (never commit)
+*.p8
+*.p12
+*.mobileprovision
+.env
+.env.*

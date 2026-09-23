@@ -1,0 +1,5 @@
+included: [Oware, OwareTests, Packages]
+excluded: [Packages/*/.build, DerivedData]
+disabled_rules: [trailing_whitespace]
+line_length: { warning: 130, error: 160 }
+identifier_name: { min_length: 1 }
