@@ -50,3 +50,51 @@ jobs:
             maestro-report.xml
             ~/.maestro/tests/**
           if-no-files-found: ignore
+
+  appium-ts:
+    name: Appium + WebdriverIO (TypeScript)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install tools
+        run: brew install xcodegen xcbeautify
+      - name: Generate project
+        run: xcodegen generate
+      - name: Pick a simulator
+        id: sim
+        run: echo "name=$(scripts/pick-simulator.sh)" >> "$GITHUB_OUTPUT"
+      - name: Build app for simulator
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Oware.xcodeproj -scheme Oware -configuration Debug \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: Boot simulator
+        run: |
+          xcrun simctl boot "${{ steps.sim.outputs.name }}" || true
+          xcrun simctl bootstatus "${{ steps.sim.outputs.name }}" -b
+      - name: Install e2e dependencies
+        working-directory: e2e
+        run: |
+          npm ci
+          npx appium driver install xcuitest || npx appium driver update xcuitest
+      - name: Run TypeScript e2e suite
+        working-directory: e2e
+        env:
+          OWARE_SIM_NAME: ${{ steps.sim.outputs.name }}
+        run: npm run test:ci
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-ts-report
+          path: e2e/junit-*.xml
+          if-no-files-found: ignore

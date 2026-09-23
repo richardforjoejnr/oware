@@ -189,7 +189,11 @@ glass beads), Kente border patterns, Adinkra stamps for your profile.
   Resources/ (Assets.xcassets, Audio, Localizable.xcstrings)
   docs/ (this plan, rules, cultural sources, privacy policy source)
   ```
-- **Tooling:** XcodeGen or plain project; SwiftLint; unit + UI tests; TestFlight from day one.
+- **Tooling:** XcodeGen; SwiftLint; TestFlight from day one.
+- **Testing:** engine unit tests (Swift Testing, no Xcode needed) → XCUITest (developer UI tests)
+  → Maestro YAML flows (quick smoke) → TypeScript Appium + WebdriverIO suite in `e2e/` (owner-authored
+  end-to-end scenarios). Every interactive element carries an accessibility identifier
+  (`house-A1…B6`, `store-A/B`, etc.) so no test depends on text or coordinates.
 
 ---
 
@@ -247,14 +251,19 @@ Resolved 2026-09-23 by the owner:
    then adapted into game assets (vector/SVG + SpriteKit) under a style guide.
 4. **Title** — *Lelu Oware*. Bundle ID stays `com.richardforjoe.oware`; App Store name "Lelu Oware".
 
+5. **Stack** — Swift app (SwiftUI + SpriteKit). TypeScript is used for tooling and UI tests
+   (Appium + WebdriverIO suite in `e2e/`), alongside Maestro flows and XCUITest.
+6. **Cultural review** — the owner will review Heritage text, Twi strings and symbol meanings
+   personally, so Twi can be used confidently in the UI (always with English alongside).
+7. **Apple Developer account** — owner has one; follow docs/PIPELINE.md to wire credentials.
+
 Still open:
 
-5. **Cultural review** — do you have Ghanaian heritage or someone who can review the Heritage
+8. **Cultural review (process)** — do you have Ghanaian heritage or someone who can review the Heritage
    text and Twi strings? (Affects how boldly we use Twi in the UI.)
-6. **Apple Developer account** — do you already have a paid account + team ID? Needed for IAP and
-   TestFlight (not for building locally). See docs/PIPELINE.md.
-7. **Extra variants** — Abapa only for v1 (recommended) or also Nam-Nam / Kalah?
-8. **"Lelu"** — please confirm the meaning/origin you intend so the Heritage text and store
+   — I will prepare a single review document (docs/HERITAGE_REVIEW.md) before Milestone 3.
+9. **Extra variants** — Abapa only for v1 (recommended) or also Nam-Nam / Kalah?
+10. **"Lelu"** — please confirm the meaning/origin you intend so the Heritage text and store
    description explain it correctly.
 
 ---

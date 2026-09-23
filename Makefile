@@ -1,4 +1,4 @@
-.PHONY: bootstrap project test engine-test open clean e2e e2e-studio
+.PHONY: bootstrap project test engine-test open clean e2e e2e-build e2e-studio e2e-ts
 
 bootstrap:            ## Install local tooling (Homebrew + Ruby gems)
 	brew install xcodegen xcbeautify swiftlint mobile-dev-inc/tap/maestro
@@ -20,13 +20,18 @@ open: project         ## Generate and open in Xcode
 clean:
 	rm -rf Oware.xcodeproj DerivedData Packages/OwareEngine/.build
 
-e2e: project          ## Build for simulator, install, and run Maestro flows
+e2e-build: project    ## Build a Debug simulator app into ./build (used by Maestro and the TS suite)
 	set -o pipefail; xcodebuild build -project Oware.xcodeproj -scheme Oware -configuration Debug \
 	  -destination "platform=iOS Simulator,name=$$(scripts/pick-simulator.sh)" \
 	  -derivedDataPath build CODE_SIGNING_ALLOWED=NO | xcbeautify
+
+e2e: e2e-build        ## Install on a booted simulator and run Maestro flows
 	xcrun simctl boot "$$(scripts/pick-simulator.sh)" || true
 	xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/Oware.app
 	maestro test .maestro
 
 e2e-studio:           ## Open Maestro Studio to author flows interactively against the booted simulator
 	maestro studio
+
+e2e-ts: e2e-build     ## Run the TypeScript Appium + WebdriverIO suite (cd e2e && npm ci first)
+	cd e2e && npm test
