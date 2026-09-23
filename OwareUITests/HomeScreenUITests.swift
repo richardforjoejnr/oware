@@ -56,6 +56,46 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testTutorialFirstMoveStepAdvances() throws {
+        app.buttons["btn-learn"].tap()
+        XCTAssertTrue(app.staticTexts["turn-indicator"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["turn-indicator"].label.hasPrefix("Welcome"))
+        app.buttons["btn-next-step"].tap()
+        // Step 2 asks for A3; a different house is refused with a hint.
+        app.buttons["house-A1"].tap()
+        XCTAssertTrue(app.staticTexts["hint"].waitForExistence(timeout: 3))
+        app.buttons["house-A3"].tap()
+        XCTAssertTrue(app.staticTexts["tutorial-after"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["btn-next-step"].exists)
+    }
+
+    @MainActor
+    func testSolvingTheDailyRiddleMarksItSolved() throws {
+        app.buttons["btn-puzzles"].tap()
+        XCTAssertTrue(app.staticTexts["puzzles-title"].waitForExistence(timeout: 5))
+        // Open the first capture-in-one riddle and read its answer from the goal text position:
+        // we brute-force by tapping houses until the solved state appears (wrong taps do not change the board).
+        let first = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'puzzle-captureInOne-'")).firstMatch
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        first.tap()
+        XCTAssertTrue(app.staticTexts["puzzle-goal"].waitForExistence(timeout: 5))
+        var solved = false
+        for house in 1...6 where !solved {
+            let button = app.buttons["house-A\(house)"]
+            if button.exists, button.value as? String != "0 seeds" {
+                button.tap()
+                let done = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label BEGINSWITH %@", "Ayekoo"), object: app.staticTexts["turn-indicator"])
+                solved = XCTWaiter().wait(for: [done], timeout: 6) == .completed
+            }
+        }
+        XCTAssertTrue(solved, "one of the six houses must be the solution")
+        XCTAssertTrue(app.buttons["btn-all-puzzles"].waitForExistence(timeout: 5))
+        app.buttons["btn-all-puzzles"].tap()
+        XCTAssertTrue(app.staticTexts["puzzles-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label ENDSWITH 'solved'")).firstMatch.exists)
+    }
+
+    @MainActor
     func testPlayingAgainstTheAIGetsAReply() throws {
         app.buttons["level-beginner"].tap()
         app.buttons["btn-play-ai"].tap()

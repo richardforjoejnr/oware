@@ -87,6 +87,24 @@ case "replay":
         }
     } catch { print("Illegal move in record: \(error)"); exit(1) }
 
+case "puzzles":
+    // swift run -c release oware puzzles --per-kind 12 --seed 2026 --out ../../Oware/Resources/Puzzles/puzzles.json
+    let perKind = Int(option("--per-kind", in: args) ?? "12") ?? 12
+    let seed = UInt64(option("--seed", in: args) ?? "2026") ?? 2026
+    let set = PuzzleGenerator(seed: seed).generate(perKind: perKind)
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+    let data = try! encoder.encode(set)
+    if let out = option("--out", in: args) {
+        try! data.write(to: URL(fileURLWithPath: out))
+        print("wrote \(set.puzzles.count) puzzles to \(out)")
+    } else {
+        print(String(decoding: data, as: UTF8.self))
+    }
+    for kind in Puzzle.Kind.allCases {
+        print("  \(kind.title): \(set.puzzles(of: kind).count)")
+    }
+
 default:
-    print("commands: selfplay | play | replay"); exit(1)
+    print("commands: selfplay | play | replay | puzzles"); exit(1)
 }

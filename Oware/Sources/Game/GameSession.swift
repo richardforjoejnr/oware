@@ -22,6 +22,11 @@ final class GameSession {
     private(set) var isThinking = false
     /// The house the player is previewing with a long press, if any.
     var previewMove: Move?
+    /// Outcome of the last attempt in puzzle mode.
+    enum PuzzleAttempt: Equatable { case solved, wrong(Move) }
+    private(set) var puzzleAttempt: PuzzleAttempt?
+    /// Tutorial: index of the current step and whether its required move was completed.
+    private(set) var tutorialStepDone = false
 
     weak var animator: (any BoardAnimator)?
     private var aiTask: Task<Void, Never>?
@@ -43,23 +48,42 @@ final class GameSession {
 
     // MARK: - Derived
 
-    var hasResumableGame: Bool { state.moveNumber > 0 && !state.isOver }
+    var hasResumableGame: Bool { mode.isResumable && state.moveNumber > 0 && !state.isOver }
     var isGameOver: Bool { state.isOver }
     var sideToMove: Player { state.sideToMove }
     var humanToMove: Bool {
-        !state.isOver && !isAnimating && !isThinking && mode.aiSide != state.sideToMove
+        if case .puzzle = mode, puzzleAttempt == .solved { return false }
+        if case .tutorial = mode, tutorialStepDone { return false }
+        return !state.isOver && !isAnimating && !isThinking && mode.aiSide != state.sideToMove
     }
     var canUndo: Bool {
-        !history.isEmpty && !isAnimating && !isThinking
+        mode.isResumable && !history.isEmpty && !isAnimating && !isThinking
+    }
+    var currentPuzzle: Puzzle? {
+        if case let .puzzle(p) = mode { return p }
+        return nil
+    }
+    var currentTutorialStep: Tutorial.Step? {
+        if case let .tutorial(i) = mode, Tutorial.steps.indices.contains(i) { return Tutorial.steps[i] }
+        return nil
     }
     func isHumanSide(_ player: Player) -> Bool { mode.aiSide != player }
 
     var turnDescription: String {
+        if let puzzle = currentPuzzle {
+            switch puzzleAttempt {
+            case .solved: return "Ayekoo — well done"
+            case .wrong: return "Not that one. Try again."
+            case nil: return puzzle.kind.instruction
+            }
+        }
+        if let step = currentTutorialStep { return step.prompt }
         if let outcome = state.outcome { return Self.describe(outcome, mode: mode) }
         if isThinking { return "Thinking…" }
         switch mode {
         case .versusAI: return humanToMove ? "Your move" : "…"
         case .passAndPlay: return state.sideToMove == .south ? "A to move" : "B to move"
+        case .puzzle, .tutorial: return ""
         }
     }
 
@@ -70,6 +94,7 @@ final class GameSession {
             switch mode {
             case .versusAI(_, _, let human): who = player == human ? "You win" : "You lose"
             case .passAndPlay: who = "\(player.label) wins"
+            case .puzzle, .tutorial: who = player == .south ? "You win" : "You lose"
             }
             return who + reasonSuffix(reason)
         case let .draw(reason):
@@ -96,6 +121,8 @@ final class GameSession {
         state = .initial(rules: rules)
         history = []
         previewMove = nil
+        puzzleAttempt = nil
+        tutorialStepDone = false
         isThinking = false
         isAnimating = false
         persist()
@@ -103,11 +130,65 @@ final class GameSession {
         scheduleAIIfNeeded()
     }
 
+    /// Start (or restart) a puzzle. Ordinary saved games are left untouched.
+    func startPuzzle(_ puzzle: Puzzle) {
+        aiTask?.cancel()
+        mode = .puzzle(puzzle)
+        state = puzzle.state
+        history = []
+        previewMove = nil
+        puzzleAttempt = nil
+        isThinking = false
+        isAnimating = false
+        animator?.render(state)
+    }
+
+    func retryPuzzle() {
+        guard let puzzle = currentPuzzle else { return }
+        startPuzzle(puzzle)
+    }
+
+    /// Jump to a tutorial step.
+    func startTutorial(step index: Int) {
+        aiTask?.cancel()
+        let step = Tutorial.steps[min(max(index, 0), Tutorial.steps.count - 1)]
+        mode = .tutorial(step: index)
+        state = step.position ?? .initial
+        history = []
+        previewMove = nil
+        tutorialStepDone = step.requiredMove == nil
+        isThinking = false
+        isAnimating = false
+        animator?.render(state)
+    }
+
+    func advanceTutorial() {
+        guard case let .tutorial(i) = mode else { return }
+        if i + 1 < Tutorial.steps.count { startTutorial(step: i + 1) }
+    }
+
     /// Human taps a house (0–5 relative to the side to move).
     func play(house: Int) {
         guard humanToMove else { return }
         let move = Move(player: state.sideToMove, house: house)
         guard state.isLegal(move) else { return }
+        if let puzzle = currentPuzzle {
+            if puzzle.isSolved(by: move) {
+                puzzleAttempt = .solved
+                Task { await perform(move) }
+            } else {
+                puzzleAttempt = .wrong(move)
+            }
+            return
+        }
+        if let step = currentTutorialStep, let required = step.requiredMove {
+            guard move == required else { return }
+            Task {
+                await perform(move)
+                tutorialStepDone = true
+            }
+            return
+        }
         Task { await perform(move) }
     }
 
@@ -116,6 +197,9 @@ final class GameSession {
         guard !state.isOver else { return nil }
         let move = Move(player: state.sideToMove, house: house)
         if state.houses[move.absoluteIndex] == 0 { return "Empty house" }
+        if let step = currentTutorialStep, let required = step.requiredMove, move != required {
+            return "Try \(required.notation) for this step"
+        }
         if state.isLegal(move) { return nil }
         if state.sideIsEmpty(state.sideToMove.opponent) { return "You must give the other side seeds" }
         return "Not allowed"
@@ -192,6 +276,7 @@ final class GameSession {
     }
 
     private func persist() {
+        guard mode.isResumable else { return }
         store.save(SavedGame(state: state, mode: mode, history: history))
     }
 }

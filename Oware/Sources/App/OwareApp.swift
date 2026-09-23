@@ -4,11 +4,15 @@ import SwiftUI
 struct OwareApp: App {
     @State private var session: GameSession
     @State private var settings: AppSettings
+    @State private var library = PuzzleLibrary()
 
     init() {
         // Launch options used by UI tests: `--reset-state` / `-resetState YES` wipe the saved game,
         // `--fast-animations` / `-fastAnimations YES` make everything instant and silent.
-        if LaunchOptions.resetState { GameStore.shared.clear() }
+        if LaunchOptions.resetState {
+            GameStore.shared.clear()
+            UserDefaults.standard.removeObject(forKey: "solvedPuzzleIDs")
+        }
         _session = State(initialValue: GameSession())
         _settings = State(initialValue: AppSettings())
     }
@@ -18,6 +22,7 @@ struct OwareApp: App {
             RootView()
                 .environment(session)
                 .environment(settings)
+                .environment(library)
                 .preferredColorScheme(.dark)
         }
     }

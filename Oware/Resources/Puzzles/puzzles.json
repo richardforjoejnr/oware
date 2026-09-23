@@ -1,0 +1,1744 @@
+{
+  "puzzles" : [
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        1,
+        1,
+        13,
+        3,
+        10,
+        1,
+        2,
+        0,
+        10,
+        2,
+        0
+      ],
+      "id" : "captureInOne-11",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 0
+      },
+      "stores" : [
+        2,
+        2
+      ],
+      "target" : 5,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        2,
+        2,
+        4,
+        0,
+        0,
+        15,
+        1,
+        0,
+        1,
+        0,
+        3,
+        3
+      ],
+      "id" : "captureInOne-12",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 1
+      },
+      "stores" : [
+        13,
+        4
+      ],
+      "target" : 6,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        1,
+        15,
+        0,
+        2,
+        4,
+        1,
+        1,
+        2,
+        2,
+        3,
+        1
+      ],
+      "id" : "captureInOne-2",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 1
+      },
+      "stores" : [
+        11,
+        4
+      ],
+      "target" : 4,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        2,
+        2,
+        1,
+        2,
+        10,
+        0,
+        1,
+        1,
+        12,
+        10,
+        1,
+        2
+      ],
+      "id" : "captureInOne-3",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        0,
+        4
+      ],
+      "target" : 6,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        7,
+        0,
+        1,
+        2,
+        1,
+        1,
+        1,
+        0,
+        1,
+        16,
+        0
+      ],
+      "id" : "captureInOne-6",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 1
+      },
+      "stores" : [
+        6,
+        11
+      ],
+      "target" : 5,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        0,
+        0,
+        1,
+        15,
+        11,
+        10,
+        0,
+        0,
+        4,
+        2,
+        1,
+        0
+      ],
+      "id" : "captureInOne-7",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        2,
+        2
+      ],
+      "target" : 4,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        1,
+        2,
+        0,
+        13,
+        12,
+        0,
+        0,
+        5,
+        3,
+        2,
+        1
+      ],
+      "id" : "captureInOne-8",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 2,
+        "player" : 1
+      },
+      "stores" : [
+        6,
+        2
+      ],
+      "target" : 4,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        3,
+        5,
+        1,
+        0,
+        1,
+        2,
+        2,
+        0,
+        0,
+        7,
+        6
+      ],
+      "id" : "captureInOne-9",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 2,
+        "player" : 0
+      },
+      "stores" : [
+        8,
+        12
+      ],
+      "target" : 6,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        0,
+        1,
+        1,
+        0,
+        2,
+        7,
+        1,
+        3,
+        1,
+        0,
+        5,
+        2
+      ],
+      "id" : "winInOne-1",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        2,
+        23
+      ],
+      "target" : 2,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        0,
+        2,
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "id" : "winInOne-10",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        24,
+        18
+      ],
+      "target" : 1,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        1,
+        0,
+        1,
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "winInOne-11",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        23,
+        19
+      ],
+      "target" : 2,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        0,
+        8,
+        0,
+        3,
+        1,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "winInOne-12",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 0
+      },
+      "stores" : [
+        23,
+        10
+      ],
+      "target" : 2,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        1,
+        2,
+        1,
+        1,
+        2,
+        1,
+        1,
+        1,
+        1,
+        0,
+        1
+      ],
+      "id" : "winInOne-2",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        22,
+        13
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        0,
+        0,
+        1,
+        0,
+        2,
+        0,
+        0,
+        0,
+        7,
+        1,
+        1,
+        3
+      ],
+      "id" : "winInOne-3",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        10,
+        23
+      ],
+      "target" : 2,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        1,
+        8,
+        6,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0
+      ],
+      "id" : "winInOne-4",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        23,
+        7
+      ],
+      "target" : 2,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        0,
+        2,
+        2,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1,
+        2,
+        3
+      ],
+      "id" : "winInOne-5",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        14,
+        21
+      ],
+      "target" : 4,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        2,
+        1,
+        0,
+        4,
+        2,
+        4
+      ],
+      "id" : "winInOne-6",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 1
+      },
+      "stores" : [
+        10,
+        23
+      ],
+      "target" : 2,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        9,
+        1,
+        0,
+        3,
+        0,
+        0,
+        0,
+        0,
+        2,
+        1,
+        0
+      ],
+      "id" : "winInOne-7",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        24,
+        7
+      ],
+      "target" : 1,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        2,
+        3,
+        0,
+        2,
+        5
+      ],
+      "id" : "winInOne-8",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 1
+      },
+      "stores" : [
+        8,
+        23
+      ],
+      "target" : 2,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 2,
+      "houses" : [
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        2
+      ],
+      "id" : "winInOne-9",
+      "kind" : "winInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        18,
+        24
+      ],
+      "target" : 1,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        2,
+        4,
+        10,
+        9,
+        7,
+        0,
+        0,
+        0,
+        8,
+        1,
+        1,
+        1
+      ],
+      "id" : "captureInOne-1",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 0
+      },
+      "stores" : [
+        5,
+        0
+      ],
+      "target" : 6,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        2,
+        6,
+        1,
+        3,
+        4,
+        0,
+        1,
+        1,
+        1,
+        2,
+        0,
+        1
+      ],
+      "id" : "captureInOne-10",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 4,
+        "player" : 0
+      },
+      "stores" : [
+        11,
+        15
+      ],
+      "target" : 6,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        2,
+        1,
+        0,
+        2,
+        5,
+        1,
+        2,
+        0,
+        14,
+        3,
+        3
+      ],
+      "id" : "captureInOne-4",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        0,
+        14
+      ],
+      "target" : 7,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        4,
+        0,
+        6,
+        0,
+        6,
+        10,
+        1,
+        1,
+        1,
+        9,
+        2,
+        0
+      ],
+      "id" : "captureInOne-5",
+      "kind" : "captureInOne",
+      "solution" : {
+        "house" : 2,
+        "player" : 0
+      },
+      "stores" : [
+        2,
+        6
+      ],
+      "target" : 6,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        2,
+        2,
+        1,
+        0,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        2,
+        0
+      ],
+      "id" : "escapeTheTrap-1",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        23,
+        16
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        12,
+        0,
+        2,
+        0,
+        10,
+        0,
+        0,
+        0,
+        1,
+        12,
+        3
+      ],
+      "id" : "escapeTheTrap-10",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        5,
+        3
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        2,
+        10,
+        1,
+        8,
+        6,
+        1,
+        7,
+        6,
+        5,
+        0,
+        0
+      ],
+      "id" : "escapeTheTrap-11",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 0,
+        "player" : 1
+      },
+      "stores" : [
+        0,
+        2
+      ],
+      "target" : 4,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        5,
+        13,
+        0,
+        8,
+        0,
+        2,
+        0,
+        2,
+        8,
+        1,
+        1
+      ],
+      "id" : "escapeTheTrap-12",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 0,
+        "player" : 1
+      },
+      "stores" : [
+        4,
+        4
+      ],
+      "target" : 3,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        0,
+        2,
+        0,
+        3,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "id" : "escapeTheTrap-2",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 1,
+        "player" : 1
+      },
+      "stores" : [
+        23,
+        16
+      ],
+      "target" : 4,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        2,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        2
+      ],
+      "id" : "escapeTheTrap-3",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        23,
+        18
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        0,
+        0,
+        0,
+        9,
+        7,
+        3,
+        0,
+        9,
+        8,
+        7,
+        0
+      ],
+      "id" : "escapeTheTrap-4",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        0,
+        4
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        2,
+        1,
+        5,
+        12,
+        4,
+        9,
+        0,
+        0,
+        0,
+        8,
+        1,
+        1
+      ],
+      "id" : "escapeTheTrap-5",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        2,
+        3
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        1,
+        3,
+        1,
+        0,
+        14,
+        0,
+        1,
+        1,
+        5,
+        4,
+        3
+      ],
+      "id" : "escapeTheTrap-6",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 1,
+        "player" : 1
+      },
+      "stores" : [
+        8,
+        6
+      ],
+      "target" : 8,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        4,
+        5,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        7,
+        6
+      ],
+      "id" : "escapeTheTrap-7",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        11,
+        12
+      ],
+      "target" : 7,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        2,
+        0,
+        2,
+        4,
+        5,
+        1,
+        0,
+        0,
+        0,
+        3,
+        0,
+        1
+      ],
+      "id" : "escapeTheTrap-8",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        15,
+        15
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        2,
+        0,
+        2
+      ],
+      "id" : "escapeTheTrap-9",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "house" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        20,
+        17
+      ],
+      "target" : 5,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        11,
+        1,
+        4,
+        7
+      ],
+      "id" : "feedOrLose-1",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 4,
+        "player" : 1
+      },
+      "stores" : [
+        13,
+        10
+      ],
+      "target" : 3,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        3,
+        14,
+        12,
+        11,
+        1
+      ],
+      "id" : "feedOrLose-10",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        2,
+        4
+      ],
+      "target" : 3,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        2,
+        0,
+        4,
+        10,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "feedOrLose-11",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        12,
+        10
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        2,
+        4,
+        9,
+        0,
+        12,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "feedOrLose-12",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 2,
+        "player" : 0
+      },
+      "stores" : [
+        16,
+        4
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        14,
+        1,
+        12,
+        10,
+        1
+      ],
+      "id" : "feedOrLose-2",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        2,
+        7
+      ],
+      "target" : 3,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        2,
+        1,
+        5,
+        10,
+        8,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "feedOrLose-3",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        10,
+        11
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        11,
+        3,
+        5,
+        7,
+        0
+      ],
+      "id" : "feedOrLose-4",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 3,
+        "player" : 1
+      },
+      "stores" : [
+        10,
+        11
+      ],
+      "target" : 3,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        10,
+        3,
+        11,
+        6,
+        0
+      ],
+      "id" : "feedOrLose-5",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 4,
+        "player" : 1
+      },
+      "stores" : [
+        6,
+        11
+      ],
+      "target" : 3,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        14,
+        12,
+        11,
+        1
+      ],
+      "id" : "feedOrLose-6",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        4,
+        4
+      ],
+      "target" : 3,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        11,
+        9,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "feedOrLose-7",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        14,
+        11
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        2,
+        14,
+        0,
+        12,
+        2
+      ],
+      "id" : "feedOrLose-8",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        0,
+        17
+      ],
+      "target" : 3,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        5,
+        13,
+        12,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "feedOrLose-9",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "house" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        12,
+        4
+      ],
+      "target" : 3,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        1,
+        1,
+        0,
+        4,
+        6,
+        10
+      ],
+      "id" : "captureInTwo-1",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        15,
+        9
+      ],
+      "target" : 5,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        14,
+        7,
+        1,
+        0,
+        3,
+        0,
+        0
+      ],
+      "id" : "captureInTwo-10",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 1,
+        "player" : 1
+      },
+      "stores" : [
+        14,
+        9
+      ],
+      "target" : 8,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        1,
+        0,
+        0,
+        5,
+        0,
+        2,
+        0,
+        0,
+        0,
+        0,
+        12,
+        0
+      ],
+      "id" : "captureInTwo-11",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        16,
+        12
+      ],
+      "target" : 8,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        16,
+        1,
+        0,
+        0,
+        0,
+        3,
+        3
+      ],
+      "id" : "captureInTwo-12",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 0,
+        "player" : 1
+      },
+      "stores" : [
+        11,
+        14
+      ],
+      "target" : 8,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2,
+        1,
+        1,
+        4,
+        6,
+        10
+      ],
+      "id" : "captureInTwo-2",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 5,
+        "player" : 1
+      },
+      "stores" : [
+        15,
+        9
+      ],
+      "target" : 5,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        3,
+        0,
+        6,
+        4,
+        4,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "captureInTwo-3",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        14,
+        13
+      ],
+      "target" : 6,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        1,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4
+      ],
+      "id" : "captureInTwo-4",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        20,
+        21
+      ],
+      "target" : 5,
+      "toMove" : 0
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        5,
+        0,
+        0,
+        0,
+        0,
+        4,
+        8,
+        0,
+        6,
+        4
+      ],
+      "id" : "captureInTwo-5",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 1,
+        "player" : 1
+      },
+      "stores" : [
+        12,
+        9
+      ],
+      "target" : 6,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        0,
+        15,
+        11,
+        0,
+        0,
+        6,
+        0,
+        1,
+        2,
+        0
+      ],
+      "id" : "captureInTwo-6",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 3,
+        "player" : 1
+      },
+      "stores" : [
+        7,
+        6
+      ],
+      "target" : 6,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        1,
+        0,
+        0,
+        0,
+        3,
+        1,
+        1,
+        0,
+        0,
+        13,
+        3,
+        0
+      ],
+      "id" : "captureInTwo-7",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 3,
+        "player" : 1
+      },
+      "stores" : [
+        13,
+        13
+      ],
+      "target" : 5,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        1,
+        0,
+        0,
+        0,
+        0,
+        2,
+        1,
+        0,
+        0,
+        13,
+        3,
+        0
+      ],
+      "id" : "captureInTwo-8",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 3,
+        "player" : 1
+      },
+      "stores" : [
+        15,
+        13
+      ],
+      "target" : 5,
+      "toMove" : 1
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        1,
+        2,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      "id" : "captureInTwo-9",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "house" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        20,
+        23
+      ],
+      "target" : 5,
+      "toMove" : 0
+    }
+  ]
+}

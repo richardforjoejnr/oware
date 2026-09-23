@@ -4,7 +4,9 @@ import OwareAI
 
 struct HomeView: View {
     @Environment(GameSession.self) private var session
+    @Environment(PuzzleLibrary.self) private var library
     let startGame: () -> Void
+    let openPuzzles: () -> Void
     let openSettings: () -> Void
 
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.player.rawValue
@@ -47,6 +49,17 @@ struct HomeView: View {
                     startGame()
                 }
                 .accessibilityIdentifier("btn-pass-play")
+
+                QuietButton(title: "Learn", subtitle: "a five-minute lesson with Nana") {
+                    session.startTutorial(step: 0)
+                    startGame()
+                }
+                .accessibilityIdentifier("btn-learn")
+
+                QuietButton(title: "Riddles", subtitle: library.dailySolved ? "today's solved · \(library.solvedIDs.count) of \(library.puzzles.count)" : "today's riddle waiting") {
+                    openPuzzles()
+                }
+                .accessibilityIdentifier("btn-puzzles")
 
                 QuietButton(title: "Settings") { openSettings() }
                     .accessibilityIdentifier("btn-settings")
