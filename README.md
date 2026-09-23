@@ -1,0 +1,2 @@
+# oware
+Ghanaian game
