@@ -15,3 +15,6 @@ with at least two independent sources. Reviewed items are marked ✅.
 | Akwaaba / Medaase / Ayekoo | UI strings | welcome / thank you / well done (Ayekoo is Ga in origin, used across Ghana) | learnakan.com; ayekooafrique.com | ☐ |
 | Nickernut seeds | Seed art | *Caesalpinia bonduc*, traditional Oware counters | Wikipedia (Oware) | ☐ |
 | Atumpan / Fontomfrom | Audio design | Akan talking drums / ceremonial drum ensemble | Wikipedia (Fontomfrom); ghanaculture.gov.gh | ☐ |
+| Ahwiaa carving craft | Board art direction | Osese/sese/tweneboa woods; adze, knives, gouges; dye + wax polish finish; oware board among traditional products | Adu-Agyem, Sabutey & Mensah 2013 (IJBMR 1(3)); Wikipedia (Ahwiaa) | ☐ |
+| Board finish "redwood and black dye" | Board colours | Deep red-brown with black in the grain, hinged folding boards, Adinkra/elephant carved on lid | africaheartwoodproject.org; Wikipedia (Oware) | ☐ |
+| Oware aba (nickernuts) | Seed sprites | Grey/green glossy seeds of Guilandina bonduc | Wikipedia (Nickernut); Mancala World | ☐ |

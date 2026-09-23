@@ -12,12 +12,15 @@ final class BoardScene: SKScene, BoardAnimator {
     var haptics: Haptics? = .shared
 
     private var layout = BoardLayout(size: CGSize(width: 390, height: 300))
-    private let boardNode = SKShapeNode()
-    private let boardInner = SKShapeNode()
-    private var houseNodes: [SKShapeNode] = []
-    private var houseRims: [SKShapeNode] = []
+    private let boardNode = SKSpriteNode()
+    private let boardShadow = SKShapeNode()
+    private var rimNodes: [SKSpriteNode] = []
+    private var houseNodes: [SKSpriteNode] = []
+    private let pitTexture = SKTexture(imageNamed: "pit")
+    private let seedTextures: [SKTexture] = (1...8).map { SKTexture(imageNamed: "seed\($0)") }
+    private var lastBoardSize = CGSize.zero
     private var countLabels: [SKLabelNode] = []
-    private var storeNodes: [SKShapeNode] = []
+    private var storeNodes: [SKSpriteNode] = []
     private var storeLabels: [SKLabelNode] = []
     private var seedsInHouse: [[SKNode]] = Array(repeating: [], count: 12)
     private var seedsInStore: [[SKNode]] = [[], []]
@@ -53,23 +56,24 @@ final class BoardScene: SKScene, BoardAnimator {
 
     private func build() {
         built = true
-        boardNode.lineWidth = 0
-        boardInner.lineWidth = 0
+        boardShadow.lineWidth = 0
+        boardShadow.fillColor = UIColor(white: 0, alpha: 0.55)
+        boardShadow.zPosition = -2
+        addChild(boardShadow)
+        boardNode.zPosition = -1
         addChild(boardNode)
-        addChild(boardInner)
+        for _ in 0..<2 {
+            let rim = SKSpriteNode(texture: SKTexture(imageNamed: "rim"))
+            rim.alpha = 0.85
+            rim.zPosition = 0
+            addChild(rim)
+            rimNodes.append(rim)
+        }
         for i in 0..<12 {
-            let house = SKShapeNode()
-            house.lineWidth = 0
-            house.fillColor = UIColor(red: 0.09, green: 0.05, blue: 0.03, alpha: 1)
+            let house = SKSpriteNode(texture: pitTexture)
+            house.zPosition = 1
             addChild(house)
             houseNodes.append(house)
-
-            let rim = SKShapeNode()
-            rim.lineWidth = 1
-            rim.fillColor = .clear
-            rim.strokeColor = UIColor(red: 0.40, green: 0.26, blue: 0.16, alpha: 0.55)
-            addChild(rim)
-            houseRims.append(rim)
 
             let label = SKLabelNode(fontNamed: "Georgia")
             label.fontColor = UIColor(red: 0.92, green: 0.85, blue: 0.72, alpha: 0.55)
@@ -81,10 +85,8 @@ final class BoardScene: SKScene, BoardAnimator {
             _ = i
         }
         for _ in 0..<2 {
-            let store = SKShapeNode()
-            store.lineWidth = 1
-            store.fillColor = UIColor(red: 0.08, green: 0.045, blue: 0.03, alpha: 1)
-            store.strokeColor = UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.35)
+            let store = SKSpriteNode(texture: pitTexture)
+            store.zPosition = 1
             addChild(store)
             storeNodes.append(store)
 
@@ -107,24 +109,43 @@ final class BoardScene: SKScene, BoardAnimator {
     private func relayout() {
         layout = BoardLayout(size: size)
         let r = layout.sk(layout.boardRect)
-        boardNode.path = CGPath(roundedRect: r, cornerWidth: layout.cell * 0.5, cornerHeight: layout.cell * 0.5, transform: nil)
-        boardNode.fillColor = UIColor(red: 0.20, green: 0.12, blue: 0.075, alpha: 1)
-        let inner = r.insetBy(dx: layout.cell * 0.08, dy: layout.cell * 0.08)
-        boardInner.path = CGPath(roundedRect: inner, cornerWidth: layout.cell * 0.45, cornerHeight: layout.cell * 0.45, transform: nil)
-        boardInner.fillColor = UIColor(red: 0.24, green: 0.145, blue: 0.09, alpha: 1)
+        if lastBoardSize != r.size {
+            lastBoardSize = r.size
+            boardNode.texture = BoardTexture.make(size: r.size, cornerRadius: layout.cell * 0.5)
+            boardNode.size = r.size
+        }
+        boardNode.position = CGPoint(x: r.midX, y: r.midY)
+        let shadowRect = r.offsetBy(dx: layout.cell * 0.06, dy: -layout.cell * 0.12).insetBy(dx: -layout.cell * 0.04, dy: -layout.cell * 0.04)
+        boardShadow.path = CGPath(roundedRect: shadowRect, cornerWidth: layout.cell * 0.55, cornerHeight: layout.cell * 0.55, transform: nil)
+
+        // Carved Adinkra band along the two long edges.
+        let bandThickness = layout.cell * 0.26
+        let inset = layout.cell * 0.12
+        for (k, rim) in rimNodes.enumerated() {
+            switch layout.orientation {
+            case .horizontal:
+                rim.zRotation = 0
+                rim.size = CGSize(width: r.width - inset * 2, height: bandThickness)
+                rim.position = CGPoint(x: r.midX, y: k == 0 ? r.maxY - inset - bandThickness / 2 : r.minY + inset + bandThickness / 2)
+            case .vertical:
+                rim.zRotation = .pi / 2
+                rim.size = CGSize(width: r.height - inset * 2, height: bandThickness)
+                rim.position = CGPoint(x: k == 0 ? r.minX + inset + bandThickness / 2 : r.maxX - inset - bandThickness / 2, y: r.midY)
+            }
+        }
 
         for i in 0..<12 {
             let c = layout.sk(layout.houseCenter(i))
             let radius = layout.houseRadius
-            houseNodes[i].path = CGPath(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius * 0.86, width: radius * 2, height: radius * 1.72), transform: nil)
-            houseRims[i].path = CGPath(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius * 0.86, width: radius * 2, height: radius * 1.72), transform: nil)
+            houseNodes[i].position = c
+            houseNodes[i].size = CGSize(width: radius * 2.15, height: radius * 1.9)
             countLabels[i].fontSize = max(10, layout.cell * 0.2)
             countLabels[i].position = layout.sk(layout.countLabelPoint(i))
         }
         for p in Player.allCases {
             let rect = layout.sk(layout.storeRect(p))
-            let corner = min(rect.width, rect.height) / 2
-            storeNodes[p.rawValue].path = CGPath(roundedRect: rect, cornerWidth: corner, cornerHeight: corner, transform: nil)
+            storeNodes[p.rawValue].position = CGPoint(x: rect.midX, y: rect.midY)
+            storeNodes[p.rawValue].size = CGSize(width: rect.width * 1.08, height: rect.height * 1.06)
             storeLabels[p.rawValue].fontSize = max(11, layout.cell * 0.26)
             storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
         }
@@ -135,16 +156,16 @@ final class BoardScene: SKScene, BoardAnimator {
 
     private func makeSeed() -> SKNode {
         let r = layout.seedRadius
-        let body = SKShapeNode(ellipseIn: CGRect(x: -r, y: -r * 0.92, width: r * 2, height: r * 1.84))
-        let shade = CGFloat.random(in: -0.05...0.05)
-        body.fillColor = UIColor(red: 0.55 + shade, green: 0.50 + shade, blue: 0.42 + shade, alpha: 1)
-        body.strokeColor = UIColor(red: 0.25, green: 0.2, blue: 0.15, alpha: 0.9)
-        body.lineWidth = 0.8
-        let highlight = SKShapeNode(ellipseIn: CGRect(x: -r * 0.45, y: r * 0.05, width: r * 0.7, height: r * 0.45))
-        highlight.fillColor = UIColor(white: 1, alpha: 0.35)
-        highlight.lineWidth = 0
-        body.addChild(highlight)
-        body.zRotation = CGFloat.random(in: -0.6...0.6)
+        let body = SKSpriteNode(texture: seedTextures.randomElement()!)
+        body.size = CGSize(width: r * 2.6, height: r * 2.6)
+        body.zRotation = CGFloat.random(in: -.pi ... .pi)
+        let shadow = SKShapeNode(ellipseIn: CGRect(x: -r * 0.95, y: -r * 0.8, width: r * 1.9, height: r * 1.6))
+        shadow.fillColor = UIColor(white: 0, alpha: 0.35)
+        shadow.lineWidth = 0
+        shadow.position = CGPoint(x: r * 0.18, y: -r * 0.22)
+        shadow.zPosition = -0.5
+        shadow.zRotation = -body.zRotation
+        body.addChild(shadow)
         return body
     }
 
