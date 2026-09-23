@@ -152,6 +152,34 @@ to review the Heritage text before release.
 6. Undo (Sankofa) available vs AI and in Pass & Play if both agree; not in Online or Puzzles.
 7. Store counts always visible; seeds in a house shown as real seeds up to 12, then seeds + number.
 
+### 3.2b Indie polish — the Playdead standard (owner request, 2026-09-23)
+
+The reference for *feel* is Playdead's INSIDE / LIMBO: restraint, atmosphere, and animation that is
+never merely functional. Applied to Lelu Oware:
+
+- **Zero clutter.** No HUD during a turn beyond the two stores and whose move it is. Menus are
+  quiet, typographic, and sit on the board itself rather than in panels. No pop-ups, no badges.
+- **One light source.** The board lives in a warm, low-key scene: lamplight or late-afternoon sun
+  on dark carved wood, long soft shadows, dust motes, gentle depth-of-field on the background.
+  Kente and gold appear as *accents* (a border, a capture flash, the store rim), never as flat
+  poster colour. Palette is muted, with the Kente meanings reserved for moments that matter.
+- **Physicality.** Seeds have mass: they arc, land, settle with a tiny wobble, and click. Houses
+  respond to touch with a press and a subtle scoop sound before the seeds lift. Camera drifts
+  almost imperceptibly (parallax on device tilt, reduced-motion aware). Everything eases; nothing
+  snaps. Target 120 Hz, all motion on a single coherent timing curve family.
+- **Sound as narrative.** Ambient bed (evening insects, distant market, wind) under sparse drum
+  accents. Silence is used deliberately, e.g. the beat before a big capture lands.
+- **Wordless teaching.** The tutorial shows rather than tells: Nana plays, you copy, the board
+  highlights. Text is minimal and appears only when needed, in one refined typeface.
+- **Slow reveal.** Journey chapters open with a short, silent establishing shot of the location
+  (a few seconds of parallax art + ambience) rather than a menu.
+- **No dark patterns.** No timers, streak pressure, or pop-up offers; the one IAP lives in a
+  single calm screen.
+
+This direction is compatible with the cultural brief: the *content* is Ghanaian, the *craft*
+standard is Playdead. `docs/STYLE_GUIDE.md` (Milestone 0) will define palette values, lighting,
+easing curves, sound palette and typography from these rules.
+
 ### 3.3 AI
 - Minimax with alpha-beta, iterative deepening, transposition table, move ordering (captures first).
 - Evaluation: store difference, seeds on own side, mobility, vulnerable houses (1–2 seeds facing a

@@ -54,6 +54,19 @@
 5. Confirm the meaning/origin of "Lelu" for the Heritage text and store description.
 6. Say "plan approved" (or request changes) so Milestone 1 can begin.
 
+## Milestone 1 — DONE (2026-09-23, branch `feat/rules-engine`, PR #2)
+
+- `Packages/OwareEngine` now holds three targets: **OwareEngine** (rules), **OwareAI** (search),
+  **oware** CLI (`swift run oware selfplay|play|replay`). 42 tests, all green locally.
+- Engine: `Player`, `RuleSet` (Abapa default; grand-slam variants forfeit/illegal/captureEndsGame;
+  mustFeed; winningSeeds; repetitionLimit), `Move` + notation (A1…B6), `GameState.legalMoves()`,
+  `apply(_:) -> [MoveEvent]` (pickUp, sow, skipOrigin, capture, grandSlamForfeited, sweep, gameOver),
+  `GameOutcome` / `GameEndReason`, `GameRecord` (notation, replay, states), `endByAgreement()`.
+- AI: iterative-deepening alpha-beta negamax, transposition table, captures-first ordering,
+  six `Difficulty` levels (depth 1–12, 0.1–3 s budgets, blunder rate at low levels), five
+  `Personality` weight sets (balanced, aggressive, hoarder, cautious, trickster), seeded RNG.
+  `AIPlayer.analyse` returns move, score, depth, nodes and principal variation (for hints).
+
 ## Next steps (in order)
 
 1. **Milestone 0 — art direction.** Generate concept art with the connected Adobe/Canva tools:
@@ -61,11 +74,8 @@
    Adinkrahene, Dwennimmen, Eban, Nkyinkyim, Mate Masie, Aya, Akoma, Funtunfunefu-Denkyemfunefu),
    Kente border patterns, Journey backdrops (Kumasi, Bonwire, Bosomtwe, Techiman, Cape Coast,
    Accra, Volta, Mole), app icon. Licence-check generated imagery; write `docs/STYLE_GUIDE.md`.
-2. **Milestone 1 — rules engine** in `Packages/OwareEngine`: `RuleSet`, `Move`, `apply(move)`
-   emitting events (sow, skipOrigin, capture, grandSlamForfeit, mustFeed, gameOver), `legalMoves()`,
-   cycle detection, notation + replay. Exhaustive tests for every rule row in GAME_PLAN §2.1.
-   CLI self-play to sanity-check seed conservation (always 48).
-3. **Milestone 2 — playable core**: SpriteKit board scene in `SpriteView`, per-seed sowing animation,
+2. ~~Milestone 1 — rules engine~~ done (see above).
+3. **Milestone 2 — playable core** (design bar: Playdead-style restraint, see GAME_PLAN §3.2b): SpriteKit board scene in `SpriteView`, per-seed sowing animation,
    haptics, long-press landing preview, Pass & Play, AI levels 1–4 (`Packages/OwareAI`), save/resume.
    Add accessibility ids `house-A1…A6`, `house-B1…B6`, `store-A`, `store-B`, `btn-undo`, etc.
    First TestFlight build.
