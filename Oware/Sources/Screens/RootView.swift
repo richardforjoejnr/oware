@@ -1,8 +1,11 @@
 import SwiftUI
+import OwareAI
 
 enum Screen: Hashable {
     case home
     case game
+    case puzzles
+    case heritage
 }
 
 struct RootView: View {
@@ -15,11 +18,25 @@ struct RootView: View {
             Theme.night.ignoresSafeArea()
             switch screen {
             case .home:
-                HomeView(startGame: { screen = .game }, openSettings: { showSettings = true })
+                HomeView(startGame: { screen = .game },
+                         openPuzzles: { screen = .puzzles },
+                         openHeritage: { screen = .heritage },
+                         openSettings: { showSettings = true })
                     .transition(.opacity)
             case .game:
-                GameView(goHome: { screen = .home }, openSettings: { showSettings = true })
+                GameView(goHome: { screen = .home },
+                         goToPuzzles: { screen = .puzzles },
+                         openSettings: { showSettings = true })
                     .transition(.opacity)
+            case .heritage:
+                HeritageView(goBack: { screen = .home })
+                    .transition(.opacity)
+            case .puzzles:
+                PuzzlesView(goBack: { screen = .home }, startPuzzle: { puzzle in
+                    session.startPuzzle(puzzle)
+                    screen = .game
+                })
+                .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.45), value: screen)

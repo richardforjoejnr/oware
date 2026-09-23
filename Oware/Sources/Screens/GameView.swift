@@ -1,9 +1,12 @@
 import SwiftUI
 import OwareEngine
+import OwareAI
 
 struct GameView: View {
     @Environment(GameSession.self) private var session
+    @Environment(PuzzleLibrary.self) private var library
     let goHome: () -> Void
+    var goToPuzzles: () -> Void = {}
     let openSettings: () -> Void
 
     @State private var hint: String?
@@ -17,12 +20,15 @@ struct GameView: View {
                     .padding(.horizontal, 6)
                 bottomBar
             }
-            if session.isGameOver {
+            if session.isGameOver && session.mode.isResumable {
                 GameOverOverlay(goHome: goHome)
                     .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.5), value: session.isGameOver)
+        .onChange(of: session.puzzleAttempt) { _, attempt in
+            if attempt == .solved, let puzzle = session.currentPuzzle { library.markSolved(puzzle) }
+        }
     }
 
     private var topBar: some View {
@@ -57,23 +63,94 @@ struct GameView: View {
     }
 
     private var bottomBar: some View {
-        ZStack {
-            Text(session.turnDescription)
-                .font(Theme.body(18))
-                .foregroundStyle(session.humanToMove ? Theme.ivory : Theme.ivoryDim)
-                .accessibilityIdentifier("turn-indicator")
-                .opacity(hint == nil ? 1 : 0)
-            if let hint {
-                Text(hint)
-                    .font(Theme.body(16))
-                    .foregroundStyle(Theme.gold)
-                    .transition(.opacity)
-                    .accessibilityIdentifier("hint")
+        VStack(spacing: 10) {
+            ZStack {
+                Text(session.turnDescription)
+                    .font(Theme.body(session.mode.isResumable ? 18 : 16))
+                    .foregroundStyle(session.humanToMove ? Theme.ivory : Theme.ivoryDim)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("turn-indicator")
+                    .opacity(hint == nil ? 1 : 0)
+                if let hint {
+                    Text(hint)
+                        .font(Theme.body(16))
+                        .foregroundStyle(Theme.gold)
+                        .transition(.opacity)
+                        .accessibilityIdentifier("hint")
+                }
+            }
+            .frame(minHeight: 44)
+            .padding(.horizontal, 24)
+            modeControls
+        }
+        .frame(minHeight: 56)
+        .animation(.easeInOut(duration: 0.25), value: hint)
+        .animation(.easeInOut(duration: 0.3), value: session.puzzleAttempt)
+        .animation(.easeInOut(duration: 0.3), value: session.tutorialStepDone)
+        .padding(.bottom, 12)
+    }
+
+    /// Puzzle and tutorial controls under the board; nothing for ordinary games.
+    @ViewBuilder
+    private var modeControls: some View {
+        if let puzzle = session.currentPuzzle {
+            HStack(spacing: 28) {
+                if session.puzzleAttempt == .solved {
+                    if let next = library.next(after: puzzle) {
+                        smallButton("Next riddle", id: "btn-next-puzzle", prominent: true) { session.startPuzzle(next) }
+                    }
+                    smallButton("All riddles", id: "btn-all-puzzles") { goToPuzzles() }
+                } else {
+                    Text("Goal: \(puzzle.target) seeds")
+                        .font(Theme.caption())
+                        .foregroundStyle(Theme.ivoryDim)
+                        .accessibilityIdentifier("puzzle-goal")
+                    if case .wrong = session.puzzleAttempt {
+                        smallButton("Reset", id: "btn-retry") { session.retryPuzzle() }
+                    }
+                }
+            }
+            .frame(height: 32)
+        } else if let step = session.currentTutorialStep, case let .tutorial(index) = session.mode {
+            VStack(spacing: 8) {
+                if session.tutorialStepDone, let after = step.afterText {
+                    Text(after)
+                        .font(Theme.caption(14))
+                        .foregroundStyle(Theme.gold)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                        .accessibilityIdentifier("tutorial-after")
+                }
+                HStack(spacing: 28) {
+                    Text("\(index + 1) of \(Tutorial.steps.count)")
+                        .font(Theme.caption())
+                        .foregroundStyle(Theme.ivoryDim)
+                    if session.tutorialStepDone {
+                        if index + 1 < Tutorial.steps.count {
+                            smallButton("Next", id: "btn-next-step", prominent: true) { session.advanceTutorial() }
+                        } else {
+                            smallButton("Play", id: "btn-tutorial-play", prominent: true) {
+                                session.newGame(.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south))
+                            }
+                        }
+                    }
+                }
+                .frame(height: 32)
             }
         }
-        .frame(height: 56)
-        .animation(.easeInOut(duration: 0.25), value: hint)
-        .padding(.bottom, 12)
+    }
+
+    private func smallButton(_ title: String, id: String, prominent: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(Theme.body(17))
+                .foregroundStyle(prominent ? Theme.gold : Theme.ivoryDim)
+                .padding(.horizontal, 6)
+                .frame(height: 32)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
     }
 
     private func showHint(_ text: String) {

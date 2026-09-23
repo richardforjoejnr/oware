@@ -25,5 +25,32 @@ const dir = path.resolve(__dirname, "../screenshots");
     await tapHouse("A6");
     await waitForTurn("B to move");
     await browser.saveScreenshot(path.join(dir, "board.png"));
+
+    await byId("btn-home").click();
+    await byId("btn-puzzles").waitForDisplayed();
+    await byId("btn-puzzles").click();
+    await byId("puzzles-title").waitForDisplayed();
+    await browser.saveScreenshot(path.join(dir, "puzzles.png"));
+    await byId("btn-daily").click();
+    await byId("puzzle-goal").waitForDisplayed();
+    await browser.saveScreenshot(path.join(dir, "puzzle.png"));
+
+    await byId("btn-home").click();
+    await byId("btn-learn").waitForDisplayed();
+    await byId("btn-learn").click();
+    await byId("btn-next-step").waitForDisplayed();
+    await byId("btn-next-step").click();
+    await tapHouse("A3");
+    await byId("tutorial-after").waitForDisplayed();
+    await browser.saveScreenshot(path.join(dir, "tutorial.png"));
+
+    await byId("btn-home").click();
+    await byId("btn-heritage").waitForDisplayed();
+    await byId("btn-heritage").click();
+    await byId("rules-title").waitForDisplayed();
+    await browser.saveScreenshot(path.join(dir, "rules.png"));
+    await byId("tab-heritage").click();
+    await byId("heritage-title").waitForDisplayed();
+    await browser.saveScreenshot(path.join(dir, "heritage.png"));
   });
 });

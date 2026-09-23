@@ -67,7 +67,7 @@
   `Personality` weight sets (balanced, aggressive, hoarder, cautious, trickster), seeded RNG.
   `AIPlayer.analyse` returns move, score, depth, nodes and principal variation (for hints).
 
-## Milestone 2 — DONE pending review (branch `feat/playable-core`, PR #3)
+## Milestone 2 — DONE (PR #3 merged 2026-09-23)
 
 Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots), engine 45/45.
 - `Oware/Sources/Game/GameSession.swift` — @Observable session: applies moves, awaits the board
@@ -87,6 +87,33 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Engine: added `GameState.preview(_:)` → `MovePreview` (path, landing house, captures) + 3 tests.
 - Tests rewritten for the real game: XCUITest (4 cases), Maestro smoke (pass & play, sow, undo),
   TypeScript `home.spec.ts` + `game.spec.ts` (sow, empty-house hint, undo).
+
+## Milestone 0 — art direction: first pass DONE (merged with PR #3)
+
+- Research on Ghanaian carvers (Ahwiaa; osese wood; adze/knife/gouge; dye + wax finish;
+  hinged boards; "redwood and black dye"; nickernut seeds) is in `docs/ART_DIRECTION.md`.
+- Generated with Canva (media IDs recorded in ART_DIRECTION.md §3), processed by
+  `scratchpad/assets/process.py` (difference matting for seed alpha, tileable wood, masked pit):
+  `Oware/Resources/Assets.xcassets/Board/{wood,pit,rim,hero,seed1…seed8}`.
+- `BoardTexture.swift` bakes the slab; `BoardScene` now draws textured board, pits, stores,
+  seeds and Adinkra rim. Screenshot verified on iPhone portrait.
+- Still to do in art: journey backdrops, app icon, Adinkra UI icon set (vector), lighting pass
+  (SKLightNode + normal maps), reduce visible wood tile repeat, real drum audio.
+- **Owner:** confirm the Canva AI-content licence position before App Store submission.
+
+## Milestone 3 — DONE pending review (branch `feat/learn-and-puzzles`, PR #4)
+
+- Riddles: `Puzzle`/`PuzzleSet`/`PuzzleGenerator` in OwareAI; 60 shipped puzzles in
+  `Oware/Resources/Puzzles/puzzles.json` (regenerate with `swift run -c release oware puzzles …`);
+  `PuzzleLibrary` (solved tracking in UserDefaults, daily pick); `PuzzlesView` ("Ananse's riddles");
+  puzzle mode in `GameSession` (only the solution counts; wrong taps leave the board unchanged).
+- Learn: `Tutorial.steps` (7 steps: welcome, sowing, capturing, chains, grand slam, feeding, winning),
+  tutorial mode restricts the learner to the required move; Next / Play controls under the board.
+- Rules & heritage: `HeritageView` with Rules and Heritage tabs (hero image, "it is said" phrasing).
+- Home rows: Learn, Riddles, Rules & heritage. Tests: 5 puzzle tests, 6 XCUITests, screenshot spec
+  covers home, board, riddles, puzzle, tutorial, rules, heritage.
+- Open polish: seed-count labels touch the rim band in portrait; store labels could sit inside the
+  store; puzzle hints (Nyansapo) not yet implemented; Journey (M4) next.
 
 ## Next steps (in order)
 
