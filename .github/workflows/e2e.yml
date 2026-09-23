@@ -1,0 +1,132 @@
+name: E2E (Maestro)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  maestro:
+    name: Maestro flows on simulator
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - name: Install tools
+        run: |
+          brew install xcodegen xcbeautify
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Generate project
+        run: xcodegen generate
+      - name: Pick a simulator
+        id: sim
+        run: echo "name=$(scripts/pick-simulator.sh)" >> "$GITHUB_OUTPUT"
+      - name: Build app for simulator
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Oware.xcodeproj -scheme Oware -configuration Debug \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: Boot simulator and install app
+        run: |
+          xcrun simctl boot "${{ steps.sim.outputs.name }}" || true
+          xcrun simctl bootstatus "${{ steps.sim.outputs.name }}" -b
+          xcrun simctl install booted build/Build/Products/Debug-iphonesimulator/Oware.app
+      - name: Warm up simulator (launch app once)
+        run: |
+          xcrun simctl launch booted com.richardforjoe.oware || true
+          sleep 10
+      - name: Run Maestro flows
+        env:
+          MAESTRO_CLI_NO_ANALYTICS: "1"
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "300000"
+        run: |
+          for attempt in 1 2; do
+            if maestro test --format junit --output maestro-report.xml .maestro; then exit 0; fi
+            echo "Maestro attempt $attempt failed; retrying after driver reset"
+            pkill -f "maestro-driver-ios" || true
+            sleep 15
+          done
+          exit 1
+      - name: Upload Maestro report & screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-report
+          path: |
+            maestro-report.xml
+            ~/.maestro/tests/**
+          if-no-files-found: ignore
+
+  appium-ts:
+    name: Appium + WebdriverIO (TypeScript)
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install tools
+        run: brew install xcodegen xcbeautify
+      - name: Generate project
+        run: xcodegen generate
+      - name: Pick a simulator
+        id: sim
+        run: echo "name=$(scripts/pick-simulator.sh)" >> "$GITHUB_OUTPUT"
+      - name: Build app for simulator
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Oware.xcodeproj -scheme Oware -configuration Debug \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: Boot simulator
+        id: boot
+        env:
+          SIM_NAME: ${{ steps.sim.outputs.name }}
+        run: |
+          xcrun simctl boot "$SIM_NAME" || true
+          xcrun simctl bootstatus "$SIM_NAME" -b
+          udid=$(xcrun simctl list devices booted -j | python3 -c 'import json,os,sys; d=json.load(sys.stdin)["devices"]; print(next(dev["udid"] for devs in d.values() for dev in devs if dev["name"]==os.environ["SIM_NAME"] and dev["state"]=="Booted"))')
+          echo "Booted $SIM_NAME ($udid)"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      - name: Warm up Xcode tool caches
+        # The XCUITest driver shells out to xcrun/xcodebuild with a hard-coded 15 s timeout.
+        # On a fresh runner the first xcrun query builds its cache and can exceed that.
+        run: |
+          time xcodebuild -version
+          time xcrun --sdk iphonesimulator --show-sdk-version
+          time xcrun --sdk iphonesimulator --show-sdk-path
+      - name: Install e2e dependencies
+        working-directory: e2e
+        # npm ci is not used: sharp's optional platform binaries are not reconciled in the lock file by npm.
+        # The XCUITest driver is a devDependency, so Appium discovers it from package.json.
+        run: |
+          npm install --no-audit --no-fund
+          npx appium driver list --installed
+      - name: Run TypeScript e2e suite
+        working-directory: e2e
+        env:
+          OWARE_SIM_NAME: ${{ steps.sim.outputs.name }}
+          OWARE_SIM_UDID: ${{ steps.boot.outputs.udid }}
+        run: npm run test:ci
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appium-ts-report
+          path: e2e/junit-*.xml
+          if-no-files-found: ignore

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Engine (swift test)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - name: Test OwareEngine
+        working-directory: Packages/OwareEngine
+        run: swift test --parallel
+
+  app:
+    name: iOS app (build + test)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - name: Install tools
+        run: brew install xcodegen xcbeautify
+      - name: Generate Xcode project
+        run: xcodegen generate
+      - name: Pick a simulator
+        id: sim
+        run: echo "name=$(scripts/pick-simulator.sh)" >> "$GITHUB_OUTPUT"
+      - name: Build & test (simulator, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project Oware.xcodeproj \
+            -scheme Oware \
+            -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            | xcbeautify --renderer github-actions
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TestResults
+          path: TestResults.xcresult
+          if-no-files-found: ignore

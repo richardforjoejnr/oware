@@ -1,0 +1,53 @@
+name: App Store Release
+
+# Publishing a GitHub Release (tag v1.2.3) uploads that build to App Store Connect.
+# Set SUBMIT_FOR_REVIEW=true in the workflow_dispatch input to also submit for review.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      submit_for_review:
+        description: "Submit the build for App Review"
+        type: boolean
+        default: false
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & upload to App Store Connect
+    runs-on: macos-15
+    environment: production   # add required reviewers on this environment for a manual gate
+    if: ${{ vars.SIGNING_READY == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Install tools
+        run: brew install xcodegen xcbeautify
+      - name: Set marketing version from tag
+        if: github.event_name == 'release'
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
+          echo "Marketing version set to $VERSION"
+      - name: Upload to App Store Connect
+        env:
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          BUILD_NUMBER: ${{ github.run_number }}
+          SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review || 'false' }}
+        run: bundle exec fastlane ios release

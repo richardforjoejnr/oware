@@ -1,0 +1,11 @@
+# Smoke: the app launches and the home screen renders.
+# Run locally:  make e2e   (or: maestro test .maestro)
+appId: com.richardforjoe.oware
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: "home-title"
+- assertVisible:
+    id: "home-seed-count"
+    text: "Seeds on board: 48"

@@ -1,0 +1,4 @@
+app_identifier(ENV.fetch("APP_IDENTIFIER", "com.richardforjoe.oware"))
+apple_id(ENV["APPLE_ID"])          # your Apple ID email (only needed for some local lanes)
+team_id(ENV["DEVELOPMENT_TEAM"])   # Apple Developer Team ID (10 characters)
+itc_team_id(ENV["ITC_TEAM_ID"])    # App Store Connect team ID (only if you belong to several teams)

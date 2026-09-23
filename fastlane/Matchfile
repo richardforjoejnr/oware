@@ -1,0 +1,6 @@
+# Code-signing certificates/profiles are stored encrypted in a PRIVATE git repo (fastlane match).
+git_url(ENV["MATCH_GIT_URL"])          # e.g. https://github.com/richardforjoejnr/oware-certificates
+storage_mode("git")
+type("appstore")
+app_identifier(["com.richardforjoe.oware"])
+readonly(true)                          # CI never creates certs; run `bundle exec fastlane match appstore` locally once

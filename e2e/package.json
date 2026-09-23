@@ -1,0 +1,25 @@
+{
+  "name": "lelu-oware-e2e",
+  "private": true,
+  "description": "TypeScript end-to-end UI tests for Lelu Oware (Appium XCUITest driver + WebdriverIO)",
+  "scripts": {
+    "test": "wdio run wdio.conf.ts",
+    "test:ci": "wdio run wdio.conf.ts --reporters spec --reporters junit",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@wdio/appium-service": "^9.12.0",
+    "@wdio/cli": "^9.12.0",
+    "@wdio/junit-reporter": "^9.12.0",
+    "@wdio/local-runner": "^9.12.0",
+    "@wdio/mocha-framework": "^9.12.0",
+    "@wdio/spec-reporter": "^9.12.0",
+    "appium": "^3.7.0",
+    "appium-xcuitest-driver": "^12.13.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
