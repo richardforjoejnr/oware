@@ -1,7 +1,7 @@
-# Oware for iOS — Game Plan (v0.1, for approval)
+# Lelu Oware — iOS Game Plan (v0.2)
 
-Working title: **Oware: Seeds of Ghana** (alternatives: *Ɔware*, *Oware Kingdom*, *Nana's Oware*).
-Status: DRAFT — awaiting owner approval. Date: 2026-09-23.
+Title: **Lelu Oware** (chosen by owner, 2026-09-23).
+Status: decisions in §7 resolved; awaiting final owner approval of the plan as a whole.
 
 ---
 
@@ -136,8 +136,9 @@ to review the Heritage text before release.
   stars for win / win by margin / win without conceding a capture chain; cosmetic unlocks.
 - **Learn** — interactive 5-minute tutorial ("Learn from Nana"), then rules reference.
 - **Puzzles** — 60 hand-made puzzles + daily puzzle (seeded by date, offline).
-- **Online** — Game Center turn-based (async, push notified), plus friend invites. Leaderboards
-  (Journey stars, puzzle streak) and achievements.
+- **Online** — *deferred to v1.1* (owner decision). Game Center turn-based (async, push notified),
+  friend invites, leaderboards and achievements. The engine's compact state + move list is designed
+  so async play drops in cleanly.
 
 ### 3.2 The turn — feel spec
 1. Tap or long-press a house. Long-press shows the sowing path, the landing house, and any
@@ -223,34 +224,38 @@ Set up in this repo (see `docs/PIPELINE.md` for the one-time credentials you mus
 
 | # | Milestone | Deliverable | Est. |
 |---|---|---|---|
-| 0 | Approval & art direction | This plan approved; moodboard (palette, board, symbols, type) | 1–2 days |
+| 0 | Approval & art direction | This plan approved; concept art generated with the connected Adobe/Canva tools (board, seeds, Adinkra icon set, Journey backdrops, app icon), licence check on generated imagery, then adapted into vector/game assets with a style guide | 2–3 days |
 | 1 | Engine | `OwareEngine` package, 100% rule coverage tests, replay notation, CLI self-play | 3–4 days |
 | 2 | Playable core | Xcode project, board scene, sowing/capture animation, Pass & Play, AI (levels 1–4), save/resume; TestFlight build #1 | 1–2 weeks |
 | 3 | Learn & Puzzles | Tutorial, 60 puzzles, daily puzzle, rules reference, Heritage section | 1 week |
 | 4 | Journey | 8 chapters, personalities, cosmetics, achievements | 1–2 weeks |
-| 5 | Online | Game Center turn-based, leaderboards; Master/Grandmaster AI | 1 week |
-| 6 | Polish & ship | Audio, haptics, accessibility, iPad layouts, localisation (EN first), App Store assets, privacy policy, submission | 1 week |
+| 5 | Polish & ship v1 | Master/Grandmaster AI, audio, haptics, accessibility, iPad layouts, localisation (EN first), App Store assets, privacy policy, submission | 1 week |
+| 6 | v1.1 Online | Game Center turn-based, leaderboards | 1 week |
 
 Each milestone ends with a TestFlight build you can play.
 
 ---
 
-## 7. Open decisions (need your answer)
+## 7. Decisions
 
-1. **Monetisation** — recommended: free, no ads, one-time IAP (~£2.99–4.99) unlocking Journey chapters
-   3–8 + cosmetic packs; everything needed to play (AI, Pass & Play, tutorial, online) free.
-   Alternatives: paid upfront (~£3.99); free with rewarded (opt-in) ads only.
-2. **Online in v1** — Game Center async (recommended) vs. ship local-only first and add online in 1.1.
-3. **Art production** — I produce vector/procedural art in code (SwiftUI/SpriteKit shapes, SVG
-   assets) for v1 with a consistent style guide, replaceable by a commissioned illustrator later;
-   or you commission/hand me art; or we generate concept art with the connected Adobe/Canva tools
-   and I trace/adapt it.
-4. **Title** — pick one: *Oware: Seeds of Ghana* / *Ɔware* / *Oware Kingdom* / *Nana's Oware* / other.
+Resolved 2026-09-23 by the owner:
+
+1. **Monetisation** — free, no ads, one-time IAP (~£2.99–4.99) unlocking Journey chapters 3–8 and
+   cosmetic packs. Everything needed to play (AI, Pass & Play, tutorial, puzzles) is free.
+2. **Online** — not in v1; ships in v1.1 via Game Center turn-based.
+3. **Art production** — concept art generated with the connected Adobe/Canva tools, licence-checked,
+   then adapted into game assets (vector/SVG + SpriteKit) under a style guide.
+4. **Title** — *Lelu Oware*. Bundle ID stays `com.richardforjoe.oware`; App Store name "Lelu Oware".
+
+Still open:
+
 5. **Cultural review** — do you have Ghanaian heritage or someone who can review the Heritage
    text and Twi strings? (Affects how boldly we use Twi in the UI.)
-6. **Apple Developer account** — do you already have a paid account + team ID? Needed for Game
-   Center, IAP and TestFlight (not for building locally).
+6. **Apple Developer account** — do you already have a paid account + team ID? Needed for IAP and
+   TestFlight (not for building locally). See docs/PIPELINE.md.
 7. **Extra variants** — Abapa only for v1 (recommended) or also Nam-Nam / Kalah?
+8. **"Lelu"** — please confirm the meaning/origin you intend so the Heritage text and store
+   description explain it correctly.
 
 ---
 

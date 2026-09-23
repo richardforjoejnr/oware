@@ -7,7 +7,7 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text("Ɔware")
+            Text("Lelu Oware")
                 .font(.system(size: 48, weight: .bold, design: .serif))
                 .accessibilityIdentifier("home-title")
             Text("Akwaaba — welcome")

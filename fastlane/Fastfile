@@ -1,4 +1,4 @@
-# Oware — fastlane lanes used by GitHub Actions (see .github/workflows) and locally.
+# Lelu Oware — fastlane lanes used by GitHub Actions (see .github/workflows) and locally.
 #
 #   bundle exec fastlane ios test       # unit tests on simulator
 #   bundle exec fastlane ios beta       # signed build -> TestFlight

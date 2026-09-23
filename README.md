@@ -1,4 +1,4 @@
-# Oware — Ghana's game, for iPhone and iPad
+# Lelu Oware — Ghana's game, for iPhone and iPad
 
 A native iOS Oware (Abapa rules) game with authentic Ghanaian art direction.
 Plan and design: **[docs/GAME_PLAN.md](docs/GAME_PLAN.md)**. Build/release pipeline: **[docs/PIPELINE.md](docs/PIPELINE.md)**.
