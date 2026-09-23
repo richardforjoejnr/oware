@@ -9,14 +9,15 @@ struct ContentView: View {
         VStack(spacing: 16) {
             Text("Ɔware")
                 .font(.system(size: 48, weight: .bold, design: .serif))
+                .accessibilityIdentifier("home-title")
             Text("Akwaaba — welcome")
                 .font(.title3)
                 .foregroundStyle(.secondary)
             Text("Seeds on board: \(state.seedsOnBoard)")
                 .font(.footnote.monospacedDigit())
+                .accessibilityIdentifier("home-seed-count")
         }
         .padding()
-        .accessibilityElement(children: .combine)
     }
 }
 

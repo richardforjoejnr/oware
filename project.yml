@@ -71,17 +71,29 @@ targets:
         CODE_SIGN_STYLE: Automatic
         PROVISIONING_PROFILE_SPECIFIER: ""
 
+  OwareUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [OwareUITests]
+    dependencies:
+      - target: Oware
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        PROVISIONING_PROFILE_SPECIFIER: ""
+
 schemes:
   Oware:
     build:
       targets:
         Oware: all
         OwareTests: [test]
+        OwareUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
       gatherCoverageData: true
-      targets: [OwareTests]
+      targets: [OwareTests, OwareUITests]
     archive:
       config: Release
