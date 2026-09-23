@@ -25,23 +25,28 @@
 | Signing/upload | fastlane lanes `test`, `beta`, `release` with match (private cert repo) + App Store Connect API key. `Gemfile` present. |
 | GitHub | Branch protection on `main` (checks: "Engine (swift test)", "iOS app (build + test)", "Maestro flows on simulator"). Environments `testflight` and `production` (production requires owner approval). Variable `SIGNING_READY=false`. |
 | Docs | `GAME_PLAN.md` (design + culture + compliance), `PIPELINE.md` (what credentials are needed), `CULTURE_SOURCES.md` (source log), this file. |
-| Local Mac | XcodeGen, xcbeautify, mas installed. Maestro CLI at `~/.maestro/bin` (PATH added in `~/.zshrc`) but **needs Java**. Node 22 + npm present; `e2e/node_modules` installed. **Xcode 27 installed but licence not accepted.** |
+| Local Mac | Xcode 27.0 (licence accepted), XcodeGen, xcbeautify, mas installed. Maestro CLI at `~/.maestro/bin` (PATH added in `~/.zshrc`) but **needs Java**. Node 22 + npm present; `e2e/node_modules` installed (Appium 3, xcuitest driver 12). |
+
+## Verified locally on the owner's Mac (2026-09-23, 21:45)
+
+- Xcode 27.0 licence accepted. `make engine-test`, `make test` (unit + XCUITest on iPhone 18 Pro Max
+  simulator) and the TypeScript Appium suite (`make e2e-build` then `cd e2e && npm test`) all pass.
+- Maestro still needs Java locally (`brew install --cask temurin`).
 
 ## In progress (as of last session)
 
-- Two CI fixes were pushed last: the Appium/TS job uses `npm install` (lock file could not reconcile
-  sharp's optional platform binaries), and the Maestro job got a 300 s driver-startup timeout,
-  a simulator warm-up launch, and one retry (it timed out once on a slow runner).
-  **First thing to do: check `gh pr checks 1 -R richardforjoejnr/oware`.** If a job is red, read
-  its log with `gh api repos/richardforjoejnr/oware/actions/jobs/<job-id>/logs`.
+- CI fixes pushed: Appium/TS job uses `npm install`; Maestro job has a 300 s driver-startup timeout,
+  warm-up launch and one retry; the TS job's real root cause (Appium's 15 s `xcrun` SDK probe timing
+  out on cold runners, and Appium 2 / driver 9 predating Xcode 26) was fixed in commit 2b8f280 by
+  passing the simulator UDID explicitly, warming Xcode tool caches, and upgrading to Appium 3 +
+  xcuitest driver 12. **First thing to do: check `gh pr checks 1 -R richardforjoejnr/oware`.**
+  If a job is red, read its log with `gh api repos/richardforjoejnr/oware/actions/jobs/<job-id>/logs`.
 - Once both E2E jobs are stable, add "Appium + WebdriverIO (TypeScript)" to the required checks on
   `main` (`gh api -X PATCH repos/richardforjoejnr/oware/branches/main/protection/required_status_checks`).
 
 ## Blocked on the owner (needs a password or Apple account)
 
-1. Accept the Xcode licence (this also unblocks `git`, `python3`, `xcodebuild` on the Mac):
-   `sudo xcodebuild -license accept`
-   Until then use `/Library/Developer/CommandLineTools/usr/bin/git` and `/opt/homebrew/bin/python3.11`.
+1. ~~Accept the Xcode licence~~ — done 2026-09-23; normal `git`/`python3`/`xcodebuild` work again.
 2. Java for Maestro: `brew install --cask temurin`
 3. Apple credentials → GitHub secrets, exactly as listed in `docs/PIPELINE.md` §A–B, then set
    repo variable `SIGNING_READY=true`.
