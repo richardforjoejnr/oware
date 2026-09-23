@@ -1,11 +1,31 @@
-# Smoke: the app launches and the home screen renders.
+# Smoke: launch, start Pass & Play, sow A1, and see the turn pass to B.
 # Run locally:  make e2e   (or: maestro test .maestro)
 appId: com.richardforjoe.oware
 ---
 - launchApp:
     clearState: true
+    arguments:
+      fastAnimations: true
 - assertVisible:
     id: "home-title"
+- tapOn:
+    id: "btn-pass-play"
 - assertVisible:
-    id: "home-seed-count"
-    text: "Seeds on board: 48"
+    id: "house-A1"
+- assertVisible:
+    id: "turn-indicator"
+    text: "A to move"
+- tapOn:
+    id: "house-A1"
+- extendedWaitUntil:
+    visible:
+      id: "turn-indicator"
+      text: "B to move"
+    timeout: 8000
+- tapOn:
+    id: "btn-undo"
+- extendedWaitUntil:
+    visible:
+      id: "turn-indicator"
+      text: "A to move"
+    timeout: 8000

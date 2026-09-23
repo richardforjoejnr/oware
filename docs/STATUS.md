@@ -54,7 +54,7 @@
 5. Confirm the meaning/origin of "Lelu" for the Heritage text and store description.
 6. Say "plan approved" (or request changes) so Milestone 1 can begin.
 
-## Milestone 1 — DONE (2026-09-23, branch `feat/rules-engine`, PR #2)
+## Milestone 1 — DONE (2026-09-23, PR #2 merged)
 
 - `Packages/OwareEngine` now holds three targets: **OwareEngine** (rules), **OwareAI** (search),
   **oware** CLI (`swift run oware selfplay|play|replay`). 42 tests, all green locally.
@@ -67,6 +67,27 @@
   `Personality` weight sets (balanced, aggressive, hoarder, cautious, trickster), seeded RNG.
   `AIPlayer.analyse` returns move, score, depth, nodes and principal variation (for hints).
 
+## Milestone 2 — DONE pending review (branch `feat/playable-core`, PR #3)
+
+Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots), engine 45/45.
+- `Oware/Sources/Game/GameSession.swift` — @Observable session: applies moves, awaits the board
+  animation, runs the AI on a detached task with a minimum think time, undo (two plies vs AI),
+  resign/agreement, JSON persistence via `GameStore` (Application Support/LeluOware/current-game.json).
+- `Oware/Sources/Board/BoardLayout.swift` — shared geometry; **horizontal** (landscape/iPad: north store, A1…A6 / B6…B1, south store) and **vertical** (portrait phones: two columns, A up the right, B down the left, south's store on top).
+- `Oware/Sources/Board/BoardScene.swift` — SpriteKit: procedural board/houses/seeds, per-seed arc sowing
+  with tick sound + haptic, capture pulse + fly-to-store, sweeps, grand-slam red pulse, long-press
+  preview (ghost seeds, landing ring, capture tint). `animationSpeed >= 100` = instant (UI tests).
+- `Oware/Sources/Board/BoardView.swift` — SwiftUI overlay owning touch + accessibility
+  (`house-A1…B6` value "N seeds", `store-A/B`, `board`).
+- Screens: `RootView` (home ⇄ game fade), `HomeView` (Continue / Play + level picker / Pass & Play /
+  Settings), `GameView` (top bar home+undo, board, `turn-indicator`, transient `hint`), `GameOverOverlay`,
+  `SettingsView` (speed, sound, haptics, counts). `Theme` = quiet palette + serif type (§3.2b).
+- Support: `Haptics`, synthesised `SoundPlayer` (placeholder until real drum samples in M5), `AppSettings`,
+  launch options `--reset-state` / `--fast-animations` (also `-resetState YES` / `-fastAnimations YES`).
+- Engine: added `GameState.preview(_:)` → `MovePreview` (path, landing house, captures) + 3 tests.
+- Tests rewritten for the real game: XCUITest (4 cases), Maestro smoke (pass & play, sow, undo),
+  TypeScript `home.spec.ts` + `game.spec.ts` (sow, empty-house hint, undo).
+
 ## Next steps (in order)
 
 1. **Milestone 0 — art direction.** Generate concept art with the connected Adobe/Canva tools:
@@ -75,7 +96,9 @@
    Kente border patterns, Journey backdrops (Kumasi, Bonwire, Bosomtwe, Techiman, Cape Coast,
    Accra, Volta, Mole), app icon. Licence-check generated imagery; write `docs/STYLE_GUIDE.md`.
 2. ~~Milestone 1 — rules engine~~ done (see above).
-3. **Milestone 2 — playable core** (design bar: Playdead-style restraint, see GAME_PLAN §3.2b): SpriteKit board scene in `SpriteView`, per-seed sowing animation,
+3. ~~Milestone 2 — playable core~~ done (PR #3). Known polish items carried forward: real drum
+   samples, a lighting pass on the board (SKLightNode/normal maps), seed physics wobble on landing,
+   table-mode HUD flip for Pass & Play.: SpriteKit board scene in `SpriteView`, per-seed sowing animation,
    haptics, long-press landing preview, Pass & Play, AI levels 1–4 (`Packages/OwareAI`), save/resume.
    Add accessibility ids `house-A1…A6`, `house-B1…B6`, `store-A`, `store-B`, `btn-undo`, etc.
    First TestFlight build.

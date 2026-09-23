@@ -60,6 +60,7 @@ export const config: WebdriverIO.Config = {
       "appium:showXcodeLog": Boolean(process.env.CI),
       "appium:autoAcceptAlerts": true,
       "appium:noReset": false,
+      "appium:processArguments": { args: ["--reset-state", "--fast-animations"] },
     },
   ],
 };

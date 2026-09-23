@@ -1,9 +1,10 @@
 import { expect } from "@wdio/globals";
-import { byId, textOf } from "../helpers/board";
+import { byId } from "../helpers/board";
 
 describe("Home screen", () => {
-  it("shows the title and the initial 48 seeds", async () => {
+  it("shows the title and both ways to play", async () => {
     await expect(byId("home-title")).toBeDisplayed();
-    expect(await textOf("home-seed-count")).toBe("Seeds on board: 48");
+    await expect(byId("btn-play-ai")).toBeDisplayed();
+    await expect(byId("btn-pass-play")).toBeDisplayed();
   });
 });
