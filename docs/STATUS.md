@@ -123,8 +123,13 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
   `JourneyProgress` persists stars; a chapter unlocks when every opponent in the previous one is beaten.
 - `GameMode.journey(chapter:opponent:)`; greeting shown as a hint at match start; game-over overlay
   shows stars and "Next: <opponent>". `JourneyView` lists chapters/opponents. Home row "Journey".
-- Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, IAP gate
-  for chapters 3–8 (owner decision: free + one-time IAP), achievements.
+- One-time purchase (StoreKit 2): `StoreManager` (product `com.richardforjoe.oware.fulljourney`,
+  entitlement check, restore), `UnlockView`, chapters 3–8 gated (`JourneyProgress.requiresPurchase`),
+  local `Oware/Resources/Products.storekit` wired into the scheme for simulator testing, `--unlock-all`
+  launch flag for tests/screenshots. **Owner:** create the same product ID in App Store Connect.
+- App icon in `AppIcon.appiconset` (1024², from Canva media `MAHWDmM5VRg`). `docs/PRIVACY.md` drafted
+  (needs a support email and hosting, e.g. GitHub Pages).
+- Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements.
 
 ## Next steps (in order)
 

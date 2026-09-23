@@ -178,8 +178,10 @@ struct GameView: View {
 struct GameOverOverlay: View {
     @Environment(GameSession.self) private var session
     @Environment(JourneyProgress.self) private var progress
+    @Environment(StoreManager.self) private var store
     let goHome: () -> Void
     var goToJourney: () -> Void = {}
+    @State private var showUnlock = false
 
     var body: some View {
         VStack(spacing: 26) {
@@ -202,10 +204,17 @@ struct GameOverOverlay: View {
                     .accessibilityLabel("\(stars) stars")
                 VStack(spacing: 4) {
                     if stars > 0, let next = nextJourneyMatch(after: chapter, index) {
-                        QuietButton(title: "Next: \(next.opponent.name)", subtitle: next.opponent.role, prominent: true) {
-                            session.newGame(.journey(chapter: next.chapter, opponent: next.index))
+                        if JourneyProgress.requiresPurchase(chapterIndex: next.chapter) && !store.hasFullJourney {
+                            QuietButton(title: "Unlock the full Journey", subtitle: Journey.chapter(next.chapter)?.title, prominent: true) {
+                                showUnlock = true
+                            }
+                            .accessibilityIdentifier("btn-unlock-next")
+                        } else {
+                            QuietButton(title: "Next: \(next.opponent.name)", subtitle: next.opponent.role, prominent: true) {
+                                session.newGame(.journey(chapter: next.chapter, opponent: next.index))
+                            }
+                            .accessibilityIdentifier("btn-next-opponent")
                         }
-                        .accessibilityIdentifier("btn-next-opponent")
                     }
                     QuietButton(title: "Play again", prominent: stars == 0) { session.newGame(session.mode) }
                         .accessibilityIdentifier("btn-play-again")
@@ -229,6 +238,11 @@ struct GameOverOverlay: View {
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.night.opacity(0.88))
+        .sheet(isPresented: $showUnlock) {
+            UnlockView()
+                .presentationDetents([.large])
+                .presentationBackground(Theme.ember)
+        }
     }
 }
 
