@@ -56,6 +56,7 @@ Alternatives seen in Ghana: cowries, palm kernels, pebbles.
 | `seeds.png` (1264², alpha) | eight grey nickernuts, background removed | Seed sprite sheet (8 variants) |
 | `adinkra-rim.png` (1776×896) | relief-carved Adinkra strip | Board rim band |
 | `hero-board.png` (1776×896) | full traditional board, reference | Home/Heritage hero and art reference |
+| `AppIcon.png` (1024²) | one carved hollow with three nickernuts, warm key light | App icon (Canva media `MAHWDmM5VRg`) |
 
 **Licence note (owner to confirm before submission).** These were generated with Canva's AI image
 tool under the owner's Canva account. Canva's terms permit commercial use of generated content;
