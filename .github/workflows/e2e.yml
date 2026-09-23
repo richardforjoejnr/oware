@@ -13,6 +13,7 @@ jobs:
   maestro:
     name: Maestro flows on simulator
     runs-on: macos-15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
@@ -68,6 +69,7 @@ jobs:
   appium-ts:
     name: Appium + WebdriverIO (TypeScript)
     runs-on: macos-15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
@@ -92,19 +94,34 @@ jobs:
             -destination "platform=iOS Simulator,name=${{ steps.sim.outputs.name }}" \
             -derivedDataPath build CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
       - name: Boot simulator
+        id: boot
+        env:
+          SIM_NAME: ${{ steps.sim.outputs.name }}
         run: |
-          xcrun simctl boot "${{ steps.sim.outputs.name }}" || true
-          xcrun simctl bootstatus "${{ steps.sim.outputs.name }}" -b
+          xcrun simctl boot "$SIM_NAME" || true
+          xcrun simctl bootstatus "$SIM_NAME" -b
+          udid=$(xcrun simctl list devices booted -j | python3 -c 'import json,os,sys; d=json.load(sys.stdin)["devices"]; print(next(dev["udid"] for devs in d.values() for dev in devs if dev["name"]==os.environ["SIM_NAME"] and dev["state"]=="Booted"))')
+          echo "Booted $SIM_NAME ($udid)"
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      - name: Warm up Xcode tool caches
+        # The XCUITest driver shells out to xcrun/xcodebuild with a hard-coded 15 s timeout.
+        # On a fresh runner the first xcrun query builds its cache and can exceed that.
+        run: |
+          time xcodebuild -version
+          time xcrun --sdk iphonesimulator --show-sdk-version
+          time xcrun --sdk iphonesimulator --show-sdk-path
       - name: Install e2e dependencies
         working-directory: e2e
         # npm ci is not used: sharp's optional platform binaries are not reconciled in the lock file by npm.
+        # The XCUITest driver is a devDependency, so Appium discovers it from package.json.
         run: |
           npm install --no-audit --no-fund
-          npx appium driver install xcuitest || npx appium driver update xcuitest
+          npx appium driver list --installed
       - name: Run TypeScript e2e suite
         working-directory: e2e
         env:
           OWARE_SIM_NAME: ${{ steps.sim.outputs.name }}
+          OWARE_SIM_UDID: ${{ steps.boot.outputs.udid }}
         run: npm run test:ci
       - name: Upload report
         if: always()
