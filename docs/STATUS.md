@@ -138,19 +138,19 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 
 ## Next steps (in order)
 
-1. **Milestone 0 — art direction.** Generate concept art with the connected Adobe/Canva tools:
-   board (carved osese wood, stool base), nickernut seeds, Adinkra icon set (Sankofa, Nyansapo,
-   Adinkrahene, Dwennimmen, Eban, Nkyinkyim, Mate Masie, Aya, Akoma, Funtunfunefu-Denkyemfunefu),
-   Kente border patterns, Journey backdrops (Kumasi, Bonwire, Bosomtwe, Techiman, Cape Coast,
-   Accra, Volta, Mole), app icon. Licence-check generated imagery; write `docs/STYLE_GUIDE.md`.
-2. ~~Milestone 1 — rules engine~~ done (see above).
-3. ~~Milestone 2 — playable core~~ done (PR #3). Known polish items carried forward: real drum
-   samples, a lighting pass on the board (SKLightNode/normal maps), seed physics wobble on landing,
-   table-mode HUD flip for Pass & Play.: SpriteKit board scene in `SpriteView`, per-seed sowing animation,
-   haptics, long-press landing preview, Pass & Play, AI levels 1–4 (`Packages/OwareAI`), save/resume.
-   Add accessibility ids `house-A1…A6`, `house-B1…B6`, `store-A`, `store-B`, `btn-undo`, etc.
-   First TestFlight build.
-4. Milestones 3–5 per GAME_PLAN §6 (Learn & Puzzles → Journey → Polish & ship v1). Online in v1.1.
+1. **Merge PR #5** when CI is green (I merge once green unless told otherwise).
+2. **Milestone 5 — polish & ship v1** (new branch `feat/polish`):
+   - Real drum audio to replace `SoundPlayer`'s synthesised buffers (owner to source/record CC0 atumpan,
+     fontomfrom samples, or approve keeping the synthesised set for v1).
+   - Adinkra vector icons for Undo (Sankofa) and Hint (Nyansapo) drawn cleanly; until then SF Symbols.
+   - Cosmetic unlocks that the purchase promises (at least one alternative seed set and board tint).
+   - App Store screenshots: iPhone 6.9" set is produced by `e2e/specs/screenshots.spec.ts` at 1320×2868;
+     iPad 13" set from `screenshots-ipad13/` (2064×2752). Add captions in Canva if wanted.
+   - Accessibility sweep with VoiceOver on device; Dynamic Type check for the Heritage text.
+3. **Owner-gated release steps** (`docs/PIPELINE.md`): Apple secrets → `SIGNING_READY=true` → first
+   TestFlight build on merge; create IAP product `com.richardforjoe.oware.fulljourney`; host the
+   privacy policy and add the support email; fill App Store Connect from `docs/APP_STORE.md`.
+4. **v1.1 — Online** via Game Center turn-based matches (GAME_PLAN §3.1), leaderboards, achievements.
 
 ## Useful commands
 

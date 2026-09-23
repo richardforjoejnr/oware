@@ -47,7 +47,11 @@ merging is safe before Apple credentials are configured.
    bundle exec fastlane match appstore --readonly false
    bundle exec fastlane match development --readonly false   # for running on your own iPhone
    ```
-6. **TestFlight testers** — App Store Connect → TestFlight → Internal Testing → add yourself.
+6. **In-app purchase** — App Store Connect → your app → Monetization → In-App Purchases → "+":
+   Non-Consumable, Reference name "Full Journey", Product ID `com.richardforjoe.oware.fulljourney`,
+   price tier ≈ £3.99, display name "The Full Journey", description from `docs/APP_STORE.md`.
+   Submit it with the first build that uses it (Apple reviews IAPs alongside the binary).
+7. **TestFlight testers** — App Store Connect → TestFlight → Internal Testing → add yourself.
    Install the TestFlight app on your iPhone.
 
 ### B. GitHub side (Settings → Secrets and variables → Actions)
