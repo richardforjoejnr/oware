@@ -6,6 +6,7 @@ struct HomeView: View {
     @Environment(GameSession.self) private var session
     @Environment(PuzzleLibrary.self) private var library
     @Environment(JourneyProgress.self) private var progress
+    @Environment(AppSettings.self) private var settings
     let startGame: () -> Void
     let openPuzzles: () -> Void
     let openHeritage: () -> Void
@@ -39,7 +40,7 @@ struct HomeView: View {
                 }
 
                 QuietButton(title: "Play", subtitle: "against \(difficulty.displayName)") {
-                    session.newGame(.versusAI(difficulty: difficulty, personality: .balanced, humanPlays: .south))
+                    session.newGame(.versusAI(difficulty: difficulty, personality: .balanced, humanPlays: .south), rules: settings.rules)
                     startGame()
                 }
                 .accessibilityIdentifier("btn-play-ai")
@@ -53,7 +54,7 @@ struct HomeView: View {
                 .accessibilityIdentifier("btn-journey")
 
                 QuietButton(title: "Pass & Play", subtitle: "two players, one board") {
-                    session.newGame(.passAndPlay)
+                    session.newGame(.passAndPlay, rules: settings.rules)
                     startGame()
                 }
                 .accessibilityIdentifier("btn-pass-play")

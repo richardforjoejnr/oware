@@ -94,15 +94,10 @@ struct BoardLayout: Equatable {
         }
     }
 
-    /// Where the store's count is drawn.
+    /// Where the store's count is drawn: centred in the store, behind the seeds.
     func storeLabelPoint(_ player: Player) -> CGPoint {
         let r = storeRect(player)
-        switch orientation {
-        case .horizontal:
-            return CGPoint(x: r.midX, y: player == .south ? r.maxY + cell * 0.32 : r.minY - cell * 0.32)
-        case .vertical:
-            return CGPoint(x: r.maxX + cell * 0.36, y: r.midY)
-        }
+        return CGPoint(x: r.midX, y: r.midY)
     }
 
     /// Where a house's seed count is drawn (outside the house, away from the board centre).
@@ -112,7 +107,7 @@ struct BoardLayout: Equatable {
         case .horizontal:
             return CGPoint(x: c.x, y: c.y + (Player.south.owns(house) ? houseRadius * 1.12 : -houseRadius * 1.12))
         case .vertical:
-            return CGPoint(x: c.x + (Player.south.owns(house) ? houseRadius * 1.28 : -houseRadius * 1.28), y: c.y)
+            return CGPoint(x: c.x + (Player.south.owns(house) ? houseRadius * 1.22 : -houseRadius * 1.22), y: c.y)
         }
     }
 

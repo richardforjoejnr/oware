@@ -52,7 +52,7 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.45), value: screen)
         .sheet(isPresented: $showSettings) {
             SettingsView()
-                .presentationDetents([.medium])
+                .presentationDetents([.large])
                 .presentationBackground(Theme.ember)
         }
         .statusBarHidden(true)

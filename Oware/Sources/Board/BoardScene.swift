@@ -91,10 +91,10 @@ final class BoardScene: SKScene, BoardAnimator {
             storeNodes.append(store)
 
             let label = SKLabelNode(fontNamed: "Georgia")
-            label.fontColor = UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.9)
+            label.fontColor = UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.55)
             label.verticalAlignmentMode = .center
             label.horizontalAlignmentMode = .center
-            label.zPosition = 5
+            label.zPosition = 2   // behind the seeds: a quiet numeral in the bowl
             addChild(label)
             storeLabels.append(label)
         }
@@ -119,8 +119,8 @@ final class BoardScene: SKScene, BoardAnimator {
         boardShadow.path = CGPath(roundedRect: shadowRect, cornerWidth: layout.cell * 0.55, cornerHeight: layout.cell * 0.55, transform: nil)
 
         // Carved Adinkra band along the two long edges.
-        let bandThickness = layout.cell * 0.26
-        let inset = layout.cell * 0.12
+        let bandThickness = layout.cell * 0.2
+        let inset = layout.cell * 0.07
         for (k, rim) in rimNodes.enumerated() {
             switch layout.orientation {
             case .horizontal:
@@ -146,7 +146,7 @@ final class BoardScene: SKScene, BoardAnimator {
             let rect = layout.sk(layout.storeRect(p))
             storeNodes[p.rawValue].position = CGPoint(x: rect.midX, y: rect.midY)
             storeNodes[p.rawValue].size = CGSize(width: rect.width * 1.08, height: rect.height * 1.06)
-            storeLabels[p.rawValue].fontSize = max(11, layout.cell * 0.26)
+            storeLabels[p.rawValue].fontSize = max(14, layout.cell * 0.5)
             storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
         }
         render(current)
