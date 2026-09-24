@@ -23,19 +23,58 @@ struct HomeView: View {
     private var difficulty: Difficulty { Difficulty(rawValue: preferredDifficulty) ?? .learner }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer(minLength: 0)
+        GeometryReader { geo in
+            ZStack(alignment: .top) {
+                hero(height: min(geo.size.height * 0.46, 460))
+                    .ignoresSafeArea(edges: .top)
+                VStack(alignment: .leading, spacing: 0) {
+                    Spacer(minLength: min(geo.size.height * 0.34, 340))
+                    menu
+                }
+                .padding(.horizontal, 32)
+                .frame(maxWidth: 520, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: showMore)
+        .animation(.easeInOut(duration: 0.2), value: showLevels)
+    }
 
+    /// The board in warm light, fading into the dark so the menu sits on it without competing.
+    private func hero(height: CGFloat) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            Image("hero")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+                .clipped()
+                .overlay(
+                    LinearGradient(stops: [
+                        .init(color: Theme.night.opacity(0.35), location: 0),
+                        .init(color: Theme.night.opacity(0.0), location: 0.35),
+                        .init(color: Theme.night.opacity(0.85), location: 0.8),
+                        .init(color: Theme.night, location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+                )
+                .accessibilityHidden(true)
+        }
+        .frame(height: height)
+    }
+
+    private var menu: some View {
+        VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Lelu Oware")
                     .font(Theme.title(46))
                     .foregroundStyle(Theme.ivory)
+                    .shadow(color: Theme.night.opacity(0.8), radius: 12)
                     .accessibilityIdentifier("home-title")
                 Text("Akwaaba · welcome")
                     .font(Theme.body(17))
                     .foregroundStyle(Theme.ivoryDim)
             }
-            .padding(.bottom, 48)
+            .padding(.bottom, 34)
 
             primaryAction
                 .padding(.bottom, 26)
@@ -70,11 +109,6 @@ struct HomeView: View {
                 .foregroundStyle(Theme.ivoryDim)
                 .padding(.bottom, 8)
         }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: 520, alignment: .leading)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .animation(.easeInOut(duration: 0.25), value: showMore)
-        .animation(.easeInOut(duration: 0.2), value: showLevels)
     }
 
     // MARK: - Primary

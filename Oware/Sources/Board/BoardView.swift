@@ -46,10 +46,14 @@ struct BoardView: View {
             .onChange(of: session.previewMove) { _, move in
                 scene.showPreview(move.flatMap { session.state.preview($0) })
             }
+            .onChange(of: settings.boardThemeID) { _, _ in configureScene() }
+            .onChange(of: session.highlightedHouse) { _, house in scene.setHighlight(house: house) }
         }
     }
 
     private func configureScene() {
+        scene.theme = settings.boardTheme
+        scene.setHighlight(house: session.highlightedHouse)
         scene.animationSpeed = settings.effectiveSpeed
         scene.showCounts = settings.showSeedCounts
         SoundPlayer.shared.enabled = settings.soundEnabled

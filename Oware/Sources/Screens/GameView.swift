@@ -6,6 +6,7 @@ struct GameView: View {
     @Environment(GameSession.self) private var session
     @Environment(PuzzleLibrary.self) private var library
     @Environment(JourneyProgress.self) private var progress
+    @Environment(AppSettings.self) private var settings
     let goHome: () -> Void
     var goToPuzzles: () -> Void = {}
     var goToJourney: () -> Void = {}
@@ -18,6 +19,9 @@ struct GameView: View {
 
     var body: some View {
         ZStack {
+            LinearGradient(colors: [settings.boardTheme.backgroundTop, settings.boardTheme.backgroundBottom],
+                           startPoint: .top, endPoint: .bottom)
+                .ignoresSafeArea()
             VStack(spacing: 0) {
                 topBar
                 if showLevels, session.canChangeDifficulty {
@@ -65,23 +69,14 @@ struct GameView: View {
                 Button {
                     showLevels.toggle()
                 } label: {
-                    HStack(spacing: 5) {
-                        Text(session.mode.title)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 9, weight: .medium))
-                            .rotationEffect(.degrees(showLevels ? 180 : 0))
-                    }
-                    .font(Theme.caption(14))
-                    .foregroundStyle(Theme.ivoryDim)
-                    .contentShape(Rectangle())
+                    opponentStrip(chevron: true)
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("btn-mode-title")
                 .accessibilityLabel("Opponent level, \(session.mode.title). Tap to change")
             } else {
-                Text(session.mode.title)
-                    .font(Theme.caption(14))
-                    .foregroundStyle(Theme.ivoryDim)
+                opponentStrip(chevron: false)
+                    .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("mode-title")
             }
             Spacer()
@@ -110,6 +105,46 @@ struct GameView: View {
         }
         .padding(.horizontal, 8)
         .padding(.top, 8)
+    }
+
+    /// Who you are playing: a small badge, their name and their captured seeds.
+    private func opponentStrip(chevron: Bool) -> some View {
+        let opponentSide: Player = session.mode.aiSide ?? .north
+        let seeds = session.state.store(of: opponentSide)
+        let active = !session.isGameOver && session.state.sideToMove == opponentSide
+        return HStack(spacing: 10) {
+            badge(letter: String(session.opponentName.prefix(1)), active: active)
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 5) {
+                    Text(session.opponentName)
+                        .font(Theme.body(16))
+                        .foregroundStyle(Theme.ivory)
+                    if chevron {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(Theme.ivoryDim)
+                            .rotationEffect(.degrees(showLevels ? 180 : 0))
+                    }
+                }
+                Text(session.mode.isResumable ? "\(seeds) seeds" + (session.opponentRole.map { " · \($0)" } ?? "") : session.mode.title)
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ivoryDim)
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func badge(letter: String, active: Bool) -> some View {
+        ZStack {
+            Circle()
+                .fill(Theme.ember)
+                .overlay(Circle().stroke(active ? Theme.gold : Theme.ivoryDim.opacity(0.35), lineWidth: active ? 1.5 : 1))
+            Text(letter)
+                .font(Theme.body(15))
+                .foregroundStyle(active ? Theme.gold : Theme.ivoryDim)
+        }
+        .frame(width: 30, height: 30)
+        .animation(.easeInOut(duration: 0.3), value: active)
     }
 
     /// Inline level picker under the top bar; changes the running game's opponent.
@@ -143,6 +178,9 @@ struct GameView: View {
 
     private var bottomBar: some View {
         VStack(spacing: 10) {
+            if session.mode.isResumable {
+                youStrip
+            }
             ZStack {
                 Text(session.turnDescription)
                     .font(Theme.body(session.mode.isResumable ? 18 : 16))
@@ -167,6 +205,34 @@ struct GameView: View {
         .animation(.easeInOut(duration: 0.3), value: session.puzzleAttempt)
         .animation(.easeInOut(duration: 0.3), value: session.tutorialStepDone)
         .padding(.bottom, 12)
+    }
+
+    private var youStrip: some View {
+        let mine = session.state.store(of: .south)
+        let active = !session.isGameOver && session.state.sideToMove == .south && session.mode.aiSide != .south
+        let name: String = {
+            if case .passAndPlay = session.mode { return session.state.sideToMove == .south ? "A" : "B" }
+            return "You"
+        }()
+        let seeds: Int = {
+            if case .passAndPlay = session.mode { return session.state.store(of: session.state.sideToMove) }
+            return mine
+        }()
+        return HStack(spacing: 10) {
+            badge(letter: String(name.prefix(1)), active: active)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(name)
+                    .font(Theme.body(16))
+                    .foregroundStyle(Theme.ivory)
+                Text("\(seeds) seeds")
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ivoryDim)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("you-strip")
     }
 
     /// Puzzle and tutorial controls under the board; nothing for ordinary games.
@@ -201,9 +267,16 @@ struct GameView: View {
                         .accessibilityIdentifier("tutorial-after")
                 }
                 HStack(spacing: 28) {
-                    Text("\(index + 1) of \(Tutorial.steps.count)")
-                        .font(Theme.caption())
-                        .foregroundStyle(Theme.ivoryDim)
+                    HStack(spacing: 6) {
+                        ForEach(0..<Tutorial.steps.count, id: \.self) { i in
+                            Circle()
+                                .fill(i <= index ? Theme.gold : Theme.ivoryDim.opacity(0.3))
+                                .frame(width: 6, height: 6)
+                        }
+                    }
+                    .accessibilityElement()
+                    .accessibilityLabel("Step \(index + 1) of \(Tutorial.steps.count)")
+                    .accessibilityIdentifier("tutorial-progress")
                     if session.tutorialStepDone {
                         if index + 1 < Tutorial.steps.count {
                             smallButton("Next", id: "btn-next-step", prominent: true) { session.advanceTutorial() }

@@ -10,6 +10,8 @@ final class BoardScene: SKScene, BoardAnimator {
     var showCounts = true { didSet { countLabels.forEach { $0.isHidden = !showCounts } } }
     var sound: SoundPlayer? = .shared
     var haptics: Haptics? = .shared
+    var theme: BoardTheme = .heritage { didSet { if built { applyTheme() } } }
+    private let highlightLayer = SKNode()
 
     private var layout = BoardLayout(size: CGSize(width: 390, height: 300))
     private let boardNode = SKSpriteNode()
@@ -104,6 +106,47 @@ final class BoardScene: SKScene, BoardAnimator {
         addChild(seedLayer)
         previewLayer.zPosition = 4
         addChild(previewLayer)
+        highlightLayer.zPosition = 4.5
+        addChild(highlightLayer)
+        applyTheme()
+    }
+
+    private func applyTheme() {
+        boardNode.color = theme.uiTint
+        boardNode.colorBlendFactor = theme.tintStrength
+        for rim in rimNodes {
+            rim.alpha = theme.rimOpacity
+            rim.color = theme.uiTint
+            rim.colorBlendFactor = theme.tintStrength * 0.6
+        }
+        for house in houseNodes + storeNodes {
+            house.color = theme.uiTint
+            house.colorBlendFactor = theme.tintStrength * 0.8
+        }
+    }
+
+    /// A slow gold pulse on one house (used by the lesson to say "tap this one").
+    func highlight(house: Int?) {
+        highlightLayer.removeAllChildren()
+        guard built, let house else { return }
+        let c = layout.sk(layout.houseCenter(house))
+        let radius = layout.houseRadius * 1.12
+        let ring = SKShapeNode(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius * 0.86, width: radius * 2, height: radius * 1.72))
+        ring.fillColor = .clear
+        ring.strokeColor = UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.95)
+        ring.lineWidth = 2
+        ring.glowWidth = 3
+        // Pulse around the ring's own centre: offset the ring inside a holder placed at the house.
+        let holder = SKNode()
+        holder.position = c
+        ring.position = CGPoint(x: -c.x, y: -c.y)
+        holder.addChild(ring)
+        highlightLayer.addChild(holder)
+        let pulse = SKAction.repeatForever(SKAction.sequence([
+            SKAction.group([SKAction.scale(to: 1.06, duration: 0.9), SKAction.fadeAlpha(to: 0.55, duration: 0.9)]),
+            SKAction.group([SKAction.scale(to: 1.0, duration: 0.9), SKAction.fadeAlpha(to: 1.0, duration: 0.9)]),
+        ]))
+        holder.run(pulse, withKey: "pulse")
     }
 
     private func relayout() {
@@ -150,6 +193,14 @@ final class BoardScene: SKScene, BoardAnimator {
             storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
         }
         render(current)
+        applyTheme()
+        highlight(house: highlightedHouse)
+    }
+
+    private var highlightedHouse: Int?
+    func setHighlight(house: Int?) {
+        highlightedHouse = house
+        highlight(house: house)
     }
 
     // MARK: - Seeds
