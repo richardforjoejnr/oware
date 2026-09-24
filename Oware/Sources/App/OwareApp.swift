@@ -16,6 +16,8 @@ struct OwareApp: App {
             UserDefaults.standard.removeObject(forKey: "solvedPuzzleIDs")
             UserDefaults.standard.removeObject(forKey: "journeyStars")
             UserDefaults.standard.removeObject(forKey: "hasFullJourney")
+            UserDefaults.standard.removeObject(forKey: "tutorialSeen")
+            UserDefaults.standard.removeObject(forKey: "preferredDifficulty")
         }
         _session = State(initialValue: GameSession())
         _settings = State(initialValue: AppSettings())

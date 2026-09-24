@@ -12,16 +12,31 @@ final class HomeScreenUITests: XCTestCase {
         app.launch()
     }
 
+    /// The home screen shows one primary action; the rest is behind "More".
+    private func openMore() {
+        let more = app.buttons["btn-more"]
+        XCTAssertTrue(more.waitForExistence(timeout: 5))
+        if !app.buttons["btn-settings"].exists { more.tap() }
+        XCTAssertTrue(app.buttons["btn-settings"].waitForExistence(timeout: 3))
+    }
+
     @MainActor
-    func testHomeScreenShowsTitleAndModes() throws {
+    func testHomeScreenShowsOnePrimaryActionAndHidesTheRest() throws {
         XCTAssertTrue(app.staticTexts["home-title"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["btn-play-ai"].exists)
-        XCTAssertTrue(app.buttons["btn-pass-play"].exists)
+        XCTAssertTrue(app.buttons["btn-journey"].exists)
+        XCTAssertTrue(app.buttons["btn-learn"].exists, "first launch offers the lesson")
+        XCTAssertFalse(app.buttons["btn-pass-play"].exists, "secondary modes are hidden until More is opened")
         XCTAssertFalse(app.buttons["btn-continue"].exists, "no saved game after --reset-state")
+        openMore()
+        XCTAssertTrue(app.buttons["btn-pass-play"].exists)
+        XCTAssertTrue(app.buttons["btn-puzzles"].exists)
+        XCTAssertTrue(app.buttons["btn-heritage"].exists)
     }
 
     @MainActor
     func testPassAndPlaySowsSeedsCounterClockwise() throws {
+        openMore()
         app.buttons["btn-pass-play"].tap()
         let a1 = app.buttons["house-A1"]
         XCTAssertTrue(a1.waitForExistence(timeout: 5))
@@ -41,6 +56,7 @@ final class HomeScreenUITests: XCTestCase {
 
     @MainActor
     func testUndoRestoresThePreviousPosition() throws {
+        openMore()
         app.buttons["btn-pass-play"].tap()
         let a1 = app.buttons["house-A1"]
         XCTAssertTrue(a1.waitForExistence(timeout: 5))
@@ -71,6 +87,7 @@ final class HomeScreenUITests: XCTestCase {
 
     @MainActor
     func testSolvingTheDailyRiddleMarksItSolved() throws {
+        openMore()
         app.buttons["btn-puzzles"].tap()
         XCTAssertTrue(app.staticTexts["puzzles-title"].waitForExistence(timeout: 5))
         // Open the first capture-in-one riddle and read its answer from the goal text position:
@@ -135,6 +152,8 @@ final class HomeScreenUITests: XCTestCase {
 
     @MainActor
     func testPlayingAgainstTheAIGetsAReply() throws {
+        app.buttons["btn-level"].tap()
+        XCTAssertTrue(app.buttons["level-beginner"].waitForExistence(timeout: 3))
         app.buttons["level-beginner"].tap()
         app.buttons["btn-play-ai"].tap()
         let a3 = app.buttons["house-A3"]
