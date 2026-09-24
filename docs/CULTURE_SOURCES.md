@@ -5,8 +5,8 @@ with at least two independent sources. Reviewed items are marked ✅.
 
 | Item | Used for | Meaning we display | Sources | Reviewed |
 |---|---|---|---|---|
-| Sankofa | Undo / history | "Go back and fetch it" — learn from the past | Wikipedia (Sankofa); adinkrasymbols.org | ☐ |
-| Nyansapo | Hints / tutorial | Wisdom knot — wisdom, ingenuity | adinkrasymbols.org; adinkra.art | ☐ |
+| Sankofa | Undo button icon (`AdinkraIcons.swift`), history | "Go back and fetch it" — learn from the past | Wikipedia (Sankofa); adinkrasymbols.org | ☐ |
+| Nyansapo | Hint button icon (`AdinkraIcons.swift`), tutorial | Wisdom knot — wisdom, ingenuity | adinkrasymbols.org; adinkra.art | ☐ |
 | Adinkrahene | Leaderboard | Chief of Adinkra — greatness, leadership | adinkrasymbols.org; Wikipedia | ☐ |
 | Dwennimmen | Difficulty | Ram's horns — strength with humility | adinkrasymbols.org | ☐ |
 | Gye Nyame | Heritage section only | "Except for God" — supremacy of God | Wikipedia (Gye Nyame) | ☐ |

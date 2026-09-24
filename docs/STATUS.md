@@ -149,6 +149,10 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - **Local gotchas learned today:** macOS has no `timeout` command; Appium hangs at session creation
   when several simulators are booted or a stale WebDriverAgent is left — shut extra sims down and
   reboot "iPhone 18 Pro Max". GitHub closes a PR whose base branch was deleted, so base PRs on main.
+  If Appium then fails with `UND_ERR_HEADERS_TIMEOUT` / "Unable to start WebDriverAgent", kill
+  `wdio`, `appium` and any `WebDriverAgent` xcodebuild, `xcrun simctl uninstall <udid>
+  com.facebook.WebDriverAgentRunner.xctrunner`, reboot the simulator and rerun (CI is unaffected).
+  Two Claude sessions were open in this checkout on 2026-09-24; use a `git worktree` for parallel work.
 - **Owner's Apple ID situation:** developer.apple.com rejected Team ID 9MGS6Q2S9Q; the Xcode dev cert on
   this Mac is for rforjoe@live.co.uk / team 6YH7H8GC4R. He needs to sign in with the Apple ID that
   holds the paid membership and use that Team ID. The app runs on his iPhone from Xcode after trusting
@@ -162,7 +166,9 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 2. **Milestone 5 — polish & ship v1** (new branch `feat/polish`):
    - Real drum audio to replace `SoundPlayer`'s synthesised buffers (owner to source/record CC0 atumpan,
      fontomfrom samples, or approve keeping the synthesised set for v1).
-   - Adinkra vector icons for Undo (Sankofa) and Hint (Nyansapo) drawn cleanly; until then SF Symbols.
+   - ~~Adinkra vector icons for Undo (Sankofa) and Hint (Nyansapo)~~ — done 2026-09-24 in
+     `Oware/Sources/Support/AdinkraIcons.swift` (stroked SwiftUI `Shape`s, `AdinkraGlyph` view; 3 unit tests).
+     Owner to eyeball them on device; refine the bird if it reads badly.
    - Cosmetic unlocks that the purchase promises (at least one alternative seed set and board tint).
    - App Store screenshots: iPhone 6.9" set is produced by `e2e/specs/screenshots.spec.ts` at 1320×2868;
      iPad 13" set from `screenshots-ipad13/` (2064×2752). Add captions in Canva if wanted.
