@@ -156,6 +156,12 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
   toolbar under the board. Portrait board is wider (`BoardLayout` 3.7 cells). `--start-game` launch flag
   opens straight onto a Learner game for screenshots. Assets and Canva ids: `docs/ART_DIRECTION.md` §3b.
   Kept out on purpose (owner ruled them out earlier): coins, tab bar, friends, tournaments, online.
+  **Evening update (same PR):** the owner shared reference photos of real village boards, so Heritage and
+  Evening now draw a pale hand-hewn slab with fire-blackened edges, gouged hollows, grey-green nickernuts,
+  two iron hinges and scratched hatch marks, on red laterite earth; Home hero is a village at sunset
+  (`village`). Purchase looks (Ebony, Cape Coast, Kente) keep the carved Kente frame via
+  `BoardTheme.carvedFrame` / `rustic`. Play pill lost its green fill (read as "selected" on touch).
+  Assets: `docs/ART_DIRECTION.md` §3c.
 - **Local gotchas learned today:** macOS has no `timeout` command; Appium hangs at session creation
   when several simulators are booted or a stale WebDriverAgent is left — shut extra sims down and
   reboot "iPhone 18 Pro Max". GitHub closes a PR whose base branch was deleted, so base PRs on main.

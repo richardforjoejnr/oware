@@ -19,12 +19,12 @@ struct GameView: View {
 
     var body: some View {
         ZStack {
-            Image("table")
+            Image("ground")
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .ignoresSafeArea()
                 .accessibilityHidden(true)
-            LinearGradient(colors: [settings.boardTheme.backgroundTop.opacity(0.72), settings.boardTheme.backgroundBottom.opacity(0.82)],
+            LinearGradient(colors: [settings.boardTheme.backgroundTop.opacity(0.42), settings.boardTheme.backgroundBottom.opacity(0.6)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
             VStack(spacing: 0) {

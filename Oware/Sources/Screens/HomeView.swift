@@ -54,9 +54,9 @@ struct HomeView: View {
         .animation(.easeInOut(duration: 0.2), value: showLevels)
     }
 
-    /// The bowl in warm light, fading into the dark so the title and menu sit on it.
+    /// A village at sunset with a board on the ground, fading into the dark so the menu sits on it.
     private func hero(height: CGFloat) -> some View {
-        Image("bowl")
+        Image("village")
             .resizable()
             .aspectRatio(contentMode: .fill)
             .frame(maxWidth: .infinity)

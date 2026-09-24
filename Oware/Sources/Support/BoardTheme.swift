@@ -13,6 +13,10 @@ struct BoardTheme: Identifiable, Hashable, Sendable {
     /// 0 = texture only, 1 = flat tint colour.
     let tintStrength: CGFloat
     let rimOpacity: CGFloat
+    /// Carved Kente relief round the edge (the purchase looks); otherwise plain hand-hewn edges.
+    var carvedFrame: Bool = true
+    /// Fire-blackened edges, hinges and scratched hatch marks, like a village board.
+    var rustic: Bool = false
     let backgroundTop: Color
     let backgroundBottom: Color
     let requiresPurchase: Bool
@@ -24,13 +28,13 @@ struct BoardTheme: Identifiable, Hashable, Sendable {
 
     static let heritage = BoardTheme(
         id: "heritage", name: "Heritage", tagline: "Osese, redwood and black dye",
-        woodTint: (1, 1, 1), tintStrength: 0, rimOpacity: 0.85,
+        woodTint: (1, 1, 1), tintStrength: 0, rimOpacity: 0.85, carvedFrame: false, rustic: true,
         backgroundTop: Color(red: 0.06, green: 0.04, blue: 0.03), backgroundBottom: Color(red: 0.06, green: 0.04, blue: 0.03),
         requiresPurchase: false)
 
     static let evening = BoardTheme(
         id: "evening", name: "Evening", tagline: "Lamplight after the market",
-        woodTint: (1.0, 0.86, 0.66), tintStrength: 0.18, rimOpacity: 0.85,
+        woodTint: (1.0, 0.86, 0.66), tintStrength: 0.18, rimOpacity: 0.85, carvedFrame: false, rustic: true,
         backgroundTop: Color(red: 0.10, green: 0.06, blue: 0.04), backgroundBottom: Color(red: 0.04, green: 0.03, blue: 0.02),
         requiresPurchase: false)
 

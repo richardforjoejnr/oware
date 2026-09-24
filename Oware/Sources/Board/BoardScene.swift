@@ -18,6 +18,8 @@ final class BoardScene: SKScene, BoardAnimator {
     private let boardShadow = SKShapeNode()
     private let boardShadowSoft = SKShapeNode()
     private var lastBandSizes: [CGSize] = []
+    private var lastScorched = false
+    private let rusticLayer = SKNode()
     private var rimNodes: [SKSpriteNode] = []
     private var houseNodes: [SKSpriteNode] = []
     private let pitTexture = SKTexture(imageNamed: "pit")
@@ -77,6 +79,8 @@ final class BoardScene: SKScene, BoardAnimator {
             addChild(rim)
             rimNodes.append(rim)
         }
+        rusticLayer.zPosition = 0.5
+        addChild(rusticLayer)
         for i in 0..<12 {
             let house = SKSpriteNode(texture: pitTexture)
             house.zPosition = 1
@@ -127,7 +131,15 @@ final class BoardScene: SKScene, BoardAnimator {
     private func applyTheme() {
         boardNode.color = theme.uiTint
         boardNode.colorBlendFactor = theme.tintStrength
+        rusticLayer.isHidden = !theme.rustic
+        if lastScorched != theme.rustic {
+            lastScorched = theme.rustic
+            lastBoardSize = .zero
+            relayout()
+            return
+        }
         for rim in rimNodes {
+            rim.isHidden = !theme.carvedFrame
             rim.alpha = theme.rimOpacity
             rim.color = theme.uiTint
             rim.colorBlendFactor = theme.tintStrength * 0.6
@@ -167,7 +179,7 @@ final class BoardScene: SKScene, BoardAnimator {
         let r = layout.sk(layout.boardRect)
         if lastBoardSize != r.size {
             lastBoardSize = r.size
-            boardNode.texture = BoardTexture.make(size: r.size, cornerRadius: layout.cell * 0.5)
+            boardNode.texture = BoardTexture.make(size: r.size, cornerRadius: layout.cell * 0.5, scorched: theme.rustic)
             boardNode.size = r.size
         }
         boardNode.position = CGPoint(x: r.midX, y: r.midY)
@@ -204,6 +216,7 @@ final class BoardScene: SKScene, BoardAnimator {
             rimNodes[3].zRotation = .pi;      rimNodes[3].position = CGPoint(x: r.midX, y: r.minY + inset + half)
         }
 
+        buildRusticDetails(in: r)
         for i in 0..<12 {
             let c = layout.sk(layout.houseCenter(i))
             let radius = layout.houseRadius
@@ -224,6 +237,79 @@ final class BoardScene: SKScene, BoardAnimator {
         render(current)
         applyTheme()
         highlight(house: highlightedHouse)
+    }
+
+    /// Two iron hinges on the fold between the rows and scratched cross-hatch marks between
+    /// neighbouring hollows, as on the village boards the look is based on.
+    private func buildRusticDetails(in board: CGRect) {
+        rusticLayer.removeAllChildren()
+        let cell = layout.cell
+        let alongLength = layout.orientation == .vertical
+        // Hinges at a third and two thirds of the length, on the centre line.
+        for f in [CGFloat(0.34), CGFloat(0.66)] {
+            let hinge = SKNode()
+            let plateW = cell * 0.3, plateH = cell * 0.17
+            let plate = SKShapeNode(rectOf: CGSize(width: plateW, height: plateH), cornerRadius: plateH * 0.18)
+            plate.fillColor = UIColor(red: 0.36, green: 0.34, blue: 0.32, alpha: 1)
+            plate.strokeColor = UIColor(red: 0.16, green: 0.14, blue: 0.12, alpha: 0.9)
+            plate.lineWidth = 1
+            hinge.addChild(plate)
+            let knuckle = SKShapeNode(rectOf: CGSize(width: plateW * 0.14, height: plateH * 1.1), cornerRadius: plateW * 0.06)
+            knuckle.fillColor = UIColor(red: 0.30, green: 0.28, blue: 0.26, alpha: 1)
+            knuckle.lineWidth = 0
+            hinge.addChild(knuckle)
+            for sx in [-0.3, 0.3] {
+                let screw = SKShapeNode(circleOfRadius: plateH * 0.14)
+                screw.fillColor = UIColor(red: 0.12, green: 0.10, blue: 0.09, alpha: 1)
+                screw.lineWidth = 0
+                screw.position = CGPoint(x: plateW * CGFloat(sx), y: 0)
+                hinge.addChild(screw)
+            }
+            let shadow = SKShapeNode(rectOf: CGSize(width: plateW * 1.08, height: plateH * 1.16), cornerRadius: plateH * 0.2)
+            shadow.fillColor = UIColor(white: 0, alpha: 0.35)
+            shadow.lineWidth = 0
+            shadow.position = CGPoint(x: 1, y: -1.5)
+            shadow.zPosition = -0.1
+            hinge.addChild(shadow)
+            if alongLength {
+                hinge.position = CGPoint(x: board.midX, y: board.minY + board.height * f)
+            } else {
+                hinge.position = CGPoint(x: board.minX + board.width * f, y: board.midY)
+                hinge.zRotation = .pi / 2
+            }
+            rusticLayer.addChild(hinge)
+        }
+        // Scratched hatch marks between neighbouring hollows in each row.
+        let scratch = UIColor(red: 0.16, green: 0.10, blue: 0.05, alpha: 0.55)
+        for player in Player.allCases {
+            let houses = Array(player.houseRange)
+            for k in 0..<(houses.count - 1) {
+                let a = layout.sk(layout.houseCenter(houses[k])), b = layout.sk(layout.houseCenter(houses[k + 1]))
+                let mid = CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+                let path = CGMutablePath()
+                let len = cell * 0.16
+                for i in -1...1 {
+                    let o = CGFloat(i) * cell * 0.05
+                    // two crossed sets of three short lines
+                    path.move(to: CGPoint(x: mid.x - len + o, y: mid.y - len * 0.6))
+                    path.addLine(to: CGPoint(x: mid.x + len * 0.4 + o, y: mid.y + len * 0.6))
+                    path.move(to: CGPoint(x: mid.x - len * 0.4 + o, y: mid.y + len * 0.6))
+                    path.addLine(to: CGPoint(x: mid.x + len + o, y: mid.y - len * 0.6))
+                }
+                let marks = SKShapeNode(path: path)
+                marks.strokeColor = scratch
+                marks.lineWidth = max(0.8, cell * 0.012)
+                marks.zRotation = alongLength ? .pi / 2 : 0
+                // rotate about the mark centre
+                let holder = SKNode()
+                holder.position = mid
+                marks.position = CGPoint(x: -mid.x, y: -mid.y)
+                holder.addChild(marks)
+                holder.zRotation = alongLength ? .pi / 2 : 0
+                marks.zRotation = 0
+                rusticLayer.addChild(holder)
+            }
+        }
     }
 
     private var highlightedHouse: Int?

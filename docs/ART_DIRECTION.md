@@ -75,6 +75,24 @@ Text-to-image only (plus Canva background removal on our own output). Originals 
 Processing is plain PIL/numpy (crop, resize, alpha mask, difference matting, per-channel gain);
 the scripts live in the session transcript, not the repo, and are easy to redo from the originals.
 
+### 3c. Third pass (Canva, 2026-09-24 evening) — village board, reference photos from the owner
+
+The owner shared photos of real hand-carved boards (pale hewn wood, fire-blackened edges, scratched
+hatch marks between hollows, iron hinges, grey-green nickernuts) and a village-at-sunset scene.
+The Heritage and Evening looks now use these; the purchase looks keep the carved Kente frame.
+
+| File | Canva media | Use |
+|---|---|---|
+| `wood3.png` (1264²) | `MAHWIFqZCnY` (a first try `MAHWH3B8I1w` came out as a carved lattice, unused) | `wood`: plain hewn slab, warmed ×(1, 0.93, 0.78) |
+| `pit3.png` (1264²) | `MAHWH4JyuEI` | `pit`: gouged hollow, cut at centre (632, 615) r 537, alpha from 0.88 |
+| `seeds3-black.png` / `seeds3-white.png` | `MAHWH_RytSk` → cut-out `MAHWIF57PpA` | `seed1…8`: grey-green nickernuts, difference-matted |
+| `ground.png` (900×1600) | `MAHWH8fMWiU` | `ground`: red laterite earth behind the board |
+| `hero-village.png` (1200×1600) | `MAHWIOr6Y_M` | `village`: Home hero (board on the ground, huts, sunset) |
+
+Drawn in code, not assets: fire-blackened edges (`BoardTexture.make(scorched:)`), two iron hinges on
+the fold and cross-hatch scratches between hollows (`BoardScene.buildRusticDetails`).
+`bowl` and `table` imagesets from §3b were removed (originals still in `art/canva-exports/`).
+
 **Licence and rights — what Canva's terms actually say (checked 2026-09-24).**
 
 - *Ownership.* Canva's AI Product Terms: "you own your Output, except for any Output that modifies or
