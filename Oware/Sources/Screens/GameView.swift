@@ -13,11 +13,17 @@ struct GameView: View {
 
     @State private var hint: String?
     @State private var hintTask: Task<Void, Never>?
+    @State private var showLevels = false
+    @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.learner.rawValue
 
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
                 topBar
+                if showLevels, session.canChangeDifficulty {
+                    levelRow
+                        .transition(.opacity)
+                }
                 BoardView(onBlockedTap: { showHint($0) })
                     .padding(.horizontal, 6)
                 bottomBar
@@ -55,9 +61,29 @@ struct GameView: View {
             .accessibilityLabel("Home")
 
             Spacer()
-            Text(session.mode.title)
-                .font(Theme.caption(14))
-                .foregroundStyle(Theme.ivoryDim)
+            if session.canChangeDifficulty {
+                Button {
+                    showLevels.toggle()
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(session.mode.title)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 9, weight: .medium))
+                            .rotationEffect(.degrees(showLevels ? 180 : 0))
+                    }
+                    .font(Theme.caption(14))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("btn-mode-title")
+                .accessibilityLabel("Opponent level, \(session.mode.title). Tap to change")
+            } else {
+                Text(session.mode.title)
+                    .font(Theme.caption(14))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .accessibilityIdentifier("mode-title")
+            }
             Spacer()
 
             if session.mode.isResumable {
@@ -84,6 +110,35 @@ struct GameView: View {
         }
         .padding(.horizontal, 8)
         .padding(.top, 8)
+    }
+
+    /// Inline level picker under the top bar; changes the running game's opponent.
+    private var levelRow: some View {
+        HStack(spacing: 18) {
+            ForEach(Difficulty.allCases, id: \.rawValue) { level in
+                let current: Bool = {
+                    if case let .versusAI(d, _, _) = session.mode { return d == level }
+                    return false
+                }()
+                Button {
+                    session.changeDifficulty(to: level)
+                    preferredDifficulty = level.rawValue
+                    showLevels = false
+                    showHint("Now playing against \(level.displayName)")
+                } label: {
+                    Text(level.displayName)
+                        .font(Theme.caption(13))
+                        .foregroundStyle(current ? Theme.gold : Theme.ivoryDim)
+                        .underline(current, color: Theme.gold)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("game-level-\(level.displayName.lowercased())")
+                .accessibilityAddTraits(current ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity)
+        .animation(.easeInOut(duration: 0.2), value: showLevels)
     }
 
     private var bottomBar: some View {

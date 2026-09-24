@@ -151,6 +151,21 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testDifficultyCanBeChangedMidGame() throws {
+        app.buttons["btn-play-ai"].tap()
+        XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))
+        let title = app.buttons["btn-mode-title"]
+        XCTAssertTrue(title.exists)
+        XCTAssertTrue(title.label.contains("Learner"))
+        title.tap()
+        XCTAssertTrue(app.buttons["game-level-strong"].waitForExistence(timeout: 3))
+        app.buttons["game-level-strong"].tap()
+        let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Strong"), object: title)
+        XCTAssertEqual(XCTWaiter().wait(for: [changed], timeout: 5), .completed)
+        XCTAssertEqual(app.buttons["house-A1"].value as? String, "4 seeds", "the position is kept")
+    }
+
+    @MainActor
     func testPlayingAgainstTheAIGetsAReply() throws {
         app.buttons["btn-level"].tap()
         XCTAssertTrue(app.buttons["level-beginner"].waitForExistence(timeout: 3))

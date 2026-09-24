@@ -245,6 +245,22 @@ final class GameSession {
         animator?.render(state)
     }
 
+    /// Change the computer's level mid-game (vs AI only). The position is kept; if the AI is
+    /// currently thinking it restarts at the new level.
+    var canChangeDifficulty: Bool {
+        if case .versusAI = mode { return true }
+        return false
+    }
+
+    func changeDifficulty(to difficulty: Difficulty) {
+        guard case let .versusAI(_, personality, human) = mode else { return }
+        aiTask?.cancel()
+        isThinking = false
+        mode = .versusAI(difficulty: difficulty, personality: personality, humanPlays: human)
+        persist()
+        scheduleAIIfNeeded()
+    }
+
     func resign() {
         guard !state.isOver else { return }
         aiTask?.cancel()
