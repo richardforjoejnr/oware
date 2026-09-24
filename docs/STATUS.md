@@ -140,14 +140,13 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 
 - **Merged today:** #6 art-rights docs, #7 Xcode automatic signing (Product ▸ Archive works), #8 simpler
   home menu (Play / Journey / New here? / More), #10 mid-game level change (tap "vs Level" above the board).
-- **Branch `feat/visual-upgrade`, PR #11 (open):** hero board image on Home; opponent badge/name/seeds
+- **PR #11 merged 2026-09-24:** hero board image on Home; opponent badge/name/seeds
   strip above the board + "You" strip below; five board looks (`BoardTheme.swift`: Heritage, Evening free;
   Ebony, Cape Coast, Kente with the purchase) picked in Settings; lesson highlights the house to tap
   (pulsing gold ring) and shows step dots. Fixed a double-parent SKNode crash in `BoardScene.highlight`.
-  XCUITests 10/10 green locally. **To do:** confirm the TypeScript suite + screenshots pass
-  (`cd e2e && OWARE_SIM_NAME="iPhone 18 Pro Max" OWARE_SCREENSHOTS=1 npx wdio run wdio.conf.ts`),
-  look at `e2e/screenshots/{home,board,tutorial}.png`, then merge PR #11 when CI is green.
-- **Branch `feat/authentic-look` (2026-09-24, afternoon), built on `feat/polish-icons`:** the owner shared a
+  XCUITests 10/10 locally and all four CI checks (incl. the TypeScript suite) green on merge.
+  No open PRs. Next: Milestone 5 polish items below, or whatever the owner asks for.
+- **PR #13 merged 2026-09-24** (Adinkra icons). **PR #14 `feat/authentic-look` (open):** the owner shared a
   mock-up and asked for a more authentic, Ghanaian, realistic look. Home now has a carved-bowl hero
   (`bowl`), gold title with Kente rules, Kente edge bands (`kenteLine`) and pill buttons (`MenuPill`:
   green Play, brown Journey / New here? / More). Board: mahogany slab (`wood`, one tile, no repeat),
