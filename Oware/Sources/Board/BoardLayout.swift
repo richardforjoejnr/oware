@@ -4,8 +4,9 @@ import OwareEngine
 /// Geometry shared by the SpriteKit scene (which draws) and the SwiftUI overlay (which receives
 /// touches and carries accessibility). Coordinates are SwiftUI-style: origin top-left, y down.
 ///
+/// The board fills the whole area it is given, so on a phone the device itself reads as the board.
 /// Two arrangements, both counter-clockwise like a real board:
-/// - **Horizontal** (landscape / iPad): eight columns — north's store, six houses, south's store.
+/// - **Horizontal** (landscape / iPad): north's store, six columns of two houses, south's store.
 ///   A1…A6 run left to right on the bottom row, B1…B6 right to left on the top row.
 /// - **Vertical** (portrait phones): two columns — A1…A6 run bottom to top on the right,
 ///   B1…B6 top to bottom on the left; south's store sits at the top, north's at the bottom.
@@ -14,49 +15,44 @@ struct BoardLayout: Equatable {
 
     let size: CGSize
     let orientation: Orientation
+    /// Base unit: roughly one house's footprint across the short axis.
     let cell: CGFloat
     let boardRect: CGRect
+    /// Distance between neighbouring houses along the long axis (stretches to fill).
+    let pitch: CGFloat
+    /// Depth of each store zone at the ends, including the board's edge.
+    let storeZone: CGFloat
 
     init(size: CGSize) {
         self.size = size
+        boardRect = CGRect(origin: .zero, size: size)
         if size.height > size.width * 1.05 {
             orientation = .vertical
-            let horizontal = size.width / 3.9
-            let vertical = size.height / 9.2
-            cell = max(24, min(horizontal, vertical))
-            let width = cell * 3.7
-            let height = cell * 8.9
-            boardRect = CGRect(x: (size.width - width) / 2, y: (size.height - height) / 2, width: width, height: height)
+            cell = max(24, min(size.width / 3.6, size.height / 9.0))
+            storeZone = cell * 1.25
+            pitch = min(cell * 1.4, max(cell * 0.95, (size.height - 2 * storeZone) / 6))
         } else {
             orientation = .horizontal
-            let horizontal = size.width / 8.6
-            let vertical = size.height / 3.4
-            cell = max(24, min(horizontal, vertical))
-            let width = cell * 8.2
-            let height = cell * 2.9
-            boardRect = CGRect(x: (size.width - width) / 2, y: (size.height - height) / 2, width: width, height: height)
+            cell = max(24, min(size.width / 9.0, size.height / 3.2))
+            storeZone = cell * 1.25
+            pitch = min(cell * 1.4, max(cell * 0.95, (size.width - 2 * storeZone) / 6))
         }
     }
 
-    var houseRadius: CGFloat { cell * 0.45 }
+    var houseRadius: CGFloat { min(cell * 0.5, pitch * 0.47) }
     var seedRadius: CGFloat { cell * 0.095 }
+    /// Corner radius of the slab.
+    var cornerRadius: CGFloat { cell * 0.45 }
 
-    // MARK: Horizontal helpers
+    // MARK: Axis helpers
 
-    private func columnX(_ column: Int) -> CGFloat {
-        boardRect.minX + cell * 0.1 + cell * (CGFloat(column) + 0.5)
+    /// Position along the long axis of house row/column k = 0 … 5, centred in the playing area.
+    private func along(_ k: Int) -> CGFloat {
+        let mid = orientation == .vertical ? boardRect.midY : boardRect.midX
+        return mid + (CGFloat(k) - 2.5) * pitch
     }
-    private var northRowY: CGFloat { boardRect.midY - cell * 0.62 }
-    private var southRowY: CGFloat { boardRect.midY + cell * 0.62 }
-
-    // MARK: Vertical helpers
-
-    /// Row k = 0 (top) … 5 (bottom) of the vertical arrangement.
-    private func rowY(_ k: Int) -> CGFloat {
-        boardRect.midY + (CGFloat(k) - 2.5) * cell * 1.12
-    }
-    private var westColumnX: CGFloat { boardRect.midX - cell * 0.74 }
-    private var eastColumnX: CGFloat { boardRect.midX + cell * 0.74 }
+    private var firstLane: CGFloat { (orientation == .vertical ? boardRect.midX : boardRect.midY) - cell * 0.86 }
+    private var secondLane: CGFloat { (orientation == .vertical ? boardRect.midX : boardRect.midY) + cell * 0.86 }
 
     // MARK: Positions
 
@@ -64,16 +60,18 @@ struct BoardLayout: Equatable {
     func houseCenter(_ index: Int) -> CGPoint {
         switch orientation {
         case .horizontal:
+            // south along the bottom (second lane) left→right; north along the top right→left
             if Player.south.owns(index) {
-                return CGPoint(x: columnX(1 + index), y: southRowY)
+                return CGPoint(x: along(index), y: secondLane)
             } else {
-                return CGPoint(x: columnX(12 - index), y: northRowY)
+                return CGPoint(x: along(11 - index), y: firstLane)
             }
         case .vertical:
+            // south up the right (second lane) bottom→top; north down the left top→bottom
             if Player.south.owns(index) {
-                return CGPoint(x: eastColumnX, y: rowY(5 - index))
+                return CGPoint(x: secondLane, y: along(5 - index))
             } else {
-                return CGPoint(x: westColumnX, y: rowY(index - 6))
+                return CGPoint(x: firstLane, y: along(index - 6))
             }
         }
     }
@@ -82,14 +80,14 @@ struct BoardLayout: Equatable {
     func storeRect(_ player: Player) -> CGRect {
         switch orientation {
         case .horizontal:
-            let x = player == .south ? columnX(7) : columnX(0)
-            let w = cell * 0.78
-            let h = cell * 2.25
+            let x = player == .south ? boardRect.maxX - storeZone * 0.52 : boardRect.minX + storeZone * 0.52
+            let w = cell * 0.8
+            let h = cell * 2.3
             return CGRect(x: x - w / 2, y: boardRect.midY - h / 2, width: w, height: h)
         case .vertical:
-            let y = player == .south ? rowY(0) - cell * 1.12 : rowY(5) + cell * 1.12
-            let w = cell * 2.6
-            let h = cell * 0.82
+            let y = player == .south ? boardRect.minY + storeZone * 0.52 : boardRect.maxY - storeZone * 0.52
+            let w = cell * 2.5
+            let h = cell * 0.8
             return CGRect(x: boardRect.midX - w / 2, y: y - h / 2, width: w, height: h)
         }
     }
@@ -105,20 +103,20 @@ struct BoardLayout: Equatable {
         let c = houseCenter(house)
         switch orientation {
         case .horizontal:
-            return CGPoint(x: c.x, y: c.y + (Player.south.owns(house) ? houseRadius * 1.12 : -houseRadius * 1.12))
+            return CGPoint(x: c.x, y: c.y + (Player.south.owns(house) ? houseRadius * 1.16 : -houseRadius * 1.16))
         case .vertical:
-            return CGPoint(x: c.x + (Player.south.owns(house) ? houseRadius * 1.22 : -houseRadius * 1.22), y: c.y)
+            return CGPoint(x: c.x + (Player.south.owns(house) ? houseRadius * 1.24 : -houseRadius * 1.24), y: c.y)
         }
     }
 
-    /// Where lifted seeds hover while being sown: toward the board centre from the origin.
+    /// Where the sowing hand hovers over a house: toward the board centre, clear of the seeds.
     func handPoint(for house: Int) -> CGPoint {
         let c = houseCenter(house)
         switch orientation {
         case .horizontal:
-            return CGPoint(x: c.x, y: c.y + (Player.south.owns(house) ? -cell * 0.55 : cell * 0.55))
+            return CGPoint(x: c.x, y: c.y + (Player.south.owns(house) ? -cell * 0.5 : cell * 0.5))
         case .vertical:
-            return CGPoint(x: c.x + (Player.south.owns(house) ? -cell * 0.55 : cell * 0.55), y: c.y)
+            return CGPoint(x: c.x + (Player.south.owns(house) ? -cell * 0.5 : cell * 0.5), y: c.y)
         }
     }
 

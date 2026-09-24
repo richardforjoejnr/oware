@@ -11,6 +11,7 @@ enum Theme {
     static let ivoryDim = Color(red: 0.92, green: 0.85, blue: 0.72).opacity(0.55)
     static let gold = Color(red: 0.85, green: 0.65, blue: 0.13)
     static let goldLight = Color(red: 0.96, green: 0.82, blue: 0.42)
+    static let amber = Color(red: 0.70, green: 0.48, blue: 0.10)
     static let emberLight = Color(red: 0.24, green: 0.15, blue: 0.09)
     static let kenteRed = Color(red: 0.70, green: 0.15, blue: 0.12)
     static let kenteGreen = Color(red: 0.12, green: 0.44, blue: 0.29)
@@ -45,5 +46,18 @@ struct QuietButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+    }
+}
+
+
+extension View {
+    /// Floating control chrome: Liquid Glass on iOS 26 and later, a thin material before that.
+    @ViewBuilder
+    func hudChrome<S: Shape>(_ shape: S) -> some View {
+        if #available(iOS 26, *) {
+            self.glassEffect(.regular, in: shape)
+        } else {
+            self.background(.ultraThinMaterial, in: shape)
+        }
     }
 }

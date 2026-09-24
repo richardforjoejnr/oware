@@ -48,6 +48,8 @@ enum LaunchOptions {
     static var startGame: Bool {
         CommandLine.arguments.contains("--start-game") || UserDefaults.standard.bool(forKey: "startGame")
     }
+    /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (for animation checks).
+    static var demoMove: Bool { CommandLine.arguments.contains("--demo-move") }
     static var fastAnimations: Bool {
         CommandLine.arguments.contains("--fast-animations") || UserDefaults.standard.bool(forKey: "fastAnimations")
     }

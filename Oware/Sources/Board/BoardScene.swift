@@ -20,9 +20,13 @@ final class BoardScene: SKScene, BoardAnimator {
     private var lastBandSizes: [CGSize] = []
     private var lastScorched = false
     private let rusticLayer = SKNode()
+    /// Seeds being carried while sowing; hovers over the board between houses.
+    private let handNode = SKNode()
+    private var lastFrameTexture = ""
     private var rimNodes: [SKSpriteNode] = []
     private var houseNodes: [SKSpriteNode] = []
     private let pitTexture = SKTexture(imageNamed: "pit")
+    private let pitHewnTexture = SKTexture(imageNamed: "pitHewn")
     private let seedTextures: [SKTexture] = (1...8).map { SKTexture(imageNamed: "seed\($0)") }
     private var lastBoardSize = CGSize.zero
     private var countLabels: [SKLabelNode] = []
@@ -37,6 +41,7 @@ final class BoardScene: SKScene, BoardAnimator {
     private let glowLayer = SKNode()
     private var current = GameState.initial
     private var built = false
+    private var animating = false
 
     override init() {
         super.init(size: CGSize(width: 390, height: 300))
@@ -81,6 +86,8 @@ final class BoardScene: SKScene, BoardAnimator {
         }
         rusticLayer.zPosition = 0.5
         addChild(rusticLayer)
+        handNode.zPosition = 8
+        addChild(handNode)
         for i in 0..<12 {
             let house = SKSpriteNode(texture: pitTexture)
             house.zPosition = 1
@@ -132,9 +139,11 @@ final class BoardScene: SKScene, BoardAnimator {
         boardNode.color = theme.uiTint
         boardNode.colorBlendFactor = theme.tintStrength
         rusticLayer.isHidden = !theme.rustic
-        if lastScorched != theme.rustic {
+        if !animating, lastScorched != theme.rustic || lastFrameTexture != theme.frameTexture {
             lastScorched = theme.rustic
+            lastFrameTexture = theme.frameTexture
             lastBoardSize = .zero
+            lastBandSizes = []
             relayout()
             return
         }
@@ -145,6 +154,7 @@ final class BoardScene: SKScene, BoardAnimator {
             rim.colorBlendFactor = theme.tintStrength * 0.6
         }
         for house in houseNodes + storeNodes {
+            house.texture = theme.rustic ? pitHewnTexture : pitTexture
             house.color = theme.uiTint
             house.colorBlendFactor = theme.tintStrength * 0.8
         }
@@ -179,18 +189,19 @@ final class BoardScene: SKScene, BoardAnimator {
         let r = layout.sk(layout.boardRect)
         if lastBoardSize != r.size {
             lastBoardSize = r.size
-            boardNode.texture = BoardTexture.make(size: r.size, cornerRadius: layout.cell * 0.5, scorched: theme.rustic)
+            boardNode.texture = BoardTexture.make(size: r.size, cornerRadius: layout.cornerRadius, scorched: theme.rustic,
+                                                  wood: theme.rustic ? "woodHewn" : "wood")
             boardNode.size = r.size
         }
         boardNode.position = CGPoint(x: r.midX, y: r.midY)
-        let shadowRect = r.offsetBy(dx: layout.cell * 0.05, dy: -layout.cell * 0.10).insetBy(dx: -layout.cell * 0.03, dy: -layout.cell * 0.03)
+        let shadowRect = r.offsetBy(dx: layout.cell * 0.03, dy: -layout.cell * 0.06).insetBy(dx: -layout.cell * 0.02, dy: -layout.cell * 0.02)
         boardShadow.path = CGPath(roundedRect: shadowRect, cornerWidth: layout.cell * 0.55, cornerHeight: layout.cell * 0.55, transform: nil)
-        let softRect = r.offsetBy(dx: layout.cell * 0.10, dy: -layout.cell * 0.22).insetBy(dx: -layout.cell * 0.12, dy: -layout.cell * 0.12)
+        let softRect = r.offsetBy(dx: layout.cell * 0.06, dy: -layout.cell * 0.14).insetBy(dx: -layout.cell * 0.08, dy: -layout.cell * 0.08)
         boardShadowSoft.path = CGPath(roundedRect: softRect, cornerWidth: layout.cell * 0.7, cornerHeight: layout.cell * 0.7, transform: nil)
 
         // Carved Kente relief framing all four edges.
-        let bandThickness = layout.cell * 0.19
-        let inset = layout.cell * 0.05
+        let bandThickness = layout.cell * 0.30
+        let inset = layout.cell * 0.04
         let longSide = layout.orientation == .horizontal ? r.width - inset * 2 : r.height - inset * 2
         let shortSide = (layout.orientation == .horizontal ? r.height : r.width) - inset * 2 - bandThickness * 2
         let sizes = [CGSize(width: longSide, height: bandThickness), CGSize(width: longSide, height: bandThickness),
@@ -198,7 +209,7 @@ final class BoardScene: SKScene, BoardAnimator {
         if sizes != lastBandSizes {
             lastBandSizes = sizes
             for (k, rim) in rimNodes.enumerated() {
-                rim.texture = BoardTexture.band(length: sizes[k].width, thickness: sizes[k].height)
+                rim.texture = BoardTexture.band(named: theme.frameTexture, length: sizes[k].width, thickness: sizes[k].height)
                 rim.size = sizes[k]
             }
         }
@@ -234,7 +245,7 @@ final class BoardScene: SKScene, BoardAnimator {
             storeLabels[p.rawValue].fontSize = max(14, layout.cell * 0.5)
             storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
         }
-        render(current)
+        if !animating { render(current) }
         applyTheme()
         highlight(house: highlightedHouse)
     }
@@ -331,8 +342,36 @@ final class BoardScene: SKScene, BoardAnimator {
         shadow.position = CGPoint(x: r * 0.18, y: -r * 0.22)
         shadow.zPosition = -0.5
         shadow.zRotation = -body.zRotation
+        shadow.name = "shadow"
         body.addChild(shadow)
         return body
+    }
+
+    /// Lift a seed toward the viewer (bigger, shadow drifts away and softens) or set it down.
+    private func lift(_ seed: SKNode, up: Bool, duration: TimeInterval) -> SKAction {
+        let r = layout.seedRadius
+        if let shadow = seed.childNode(withName: "shadow") {
+            let move = SKAction.move(to: up ? CGPoint(x: r * 0.9, y: -r * 1.1) : CGPoint(x: r * 0.18, y: -r * 0.22), duration: duration)
+            let fade = SKAction.fadeAlpha(to: up ? 0.22 : 1.0, duration: duration)
+            shadow.run(SKAction.group([move, fade]))
+        }
+        let scale = SKAction.scale(to: up ? 1.3 : 1.0, duration: duration)
+        scale.timingMode = up ? .easeOut : .easeIn
+        return scale
+    }
+
+    /// A faint ring that spreads where a seed lands.
+    private func puff(at point: CGPoint) {
+        let ring = SKShapeNode(circleOfRadius: layout.seedRadius * 0.9)
+        ring.strokeColor = UIColor(white: 1, alpha: 0.35)
+        ring.lineWidth = 1
+        ring.fillColor = .clear
+        ring.position = point
+        glowLayer.addChild(ring)
+        ring.run(SKAction.sequence([
+            SKAction.group([SKAction.scale(to: 2.2, duration: 0.28 / animationSpeed), SKAction.fadeOut(withDuration: 0.28 / animationSpeed)]),
+            SKAction.removeFromParent(),
+        ]))
     }
 
     private func settle(_ seed: SKNode, at point: CGPoint, duration: TimeInterval) -> SKAction {
@@ -361,6 +400,7 @@ final class BoardScene: SKScene, BoardAnimator {
         guard built else { return }
         hand.forEach { $0.removeFromParent() }
         hand = []
+        handNode.removeAllChildren()
         seedLayer.removeAllChildren()
         previewLayer.removeAllChildren()
         glowLayer.removeAllChildren()
@@ -420,47 +460,76 @@ final class BoardScene: SKScene, BoardAnimator {
         }
         // Start from a clean, exact rendering of the position before the move.
         render(before)
+        handNode.removeAllChildren()
+        animating = true
+        defer { animating = false }
         var working = before
         let sowCount = events.filter { if case .sow = $0 { return true } else { return false } }.count
-        let perSeed = min(0.17, max(0.07, 2.2 / Double(max(sowCount, 1))))
+        // The hand carries the seeds and lets one fall into each house in turn. Long laps speed up
+        // a little so a twenty-seed sowing still finishes in a few seconds.
+        let step = min(0.24, max(0.12, 2.8 / Double(max(sowCount, 1))))   // hand travel between houses
+        let drop = min(0.22, max(0.14, step * 0.9))                         // fall time
 
         for event in events {
             switch event {
             case let .pickUp(house, _):
                 let seeds = seedsInHouse[house]
                 seedsInHouse[house] = []
-                hand = seeds
                 working.houses[house] = 0
                 updateLabels(working)
                 sound?.play(.pickUp, volume: 0.8)
                 haptics?.pickUp()
-                let target = layout.handPoint(for: house)
+                handNode.position = layout.sk(layout.houseCenter(house))
                 for (k, seed) in seeds.enumerated() {
+                    // Re-parent into the hand, keeping the world position, then gather into a loose cluster.
+                    let world = seed.position
+                    seed.removeFromParent()
+                    seed.position = CGPoint(x: world.x - handNode.position.x, y: world.y - handNode.position.y)
+                    handNode.addChild(seed)
                     let angle = Double(k) * 2.399963
-                    let r = layout.seedRadius * 1.1 * CGFloat(Double(k).squareRoot())
-                    let spread = CGPoint(x: target.x + r * CGFloat(cos(angle)), y: target.y + r * CGFloat(sin(angle)))
-                    let move = SKAction.move(to: layout.sk(spread), duration: 0.16 / animationSpeed)
-                    move.timingMode = .easeOut
-                    seed.zPosition = 10
-                    seed.run(move, withKey: "move")
+                    let rr = layout.seedRadius * 0.95 * CGFloat(Double(k).squareRoot())
+                    let gather = SKAction.move(to: CGPoint(x: rr * CGFloat(cos(angle)), y: rr * CGFloat(sin(angle))), duration: 0.22 / animationSpeed)
+                    gather.timingMode = .easeOut
+                    seed.run(SKAction.group([gather, lift(seed, up: true, duration: 0.22 / animationSpeed)]), withKey: "move")
                 }
-                await wait(0.2)
+                let rise = SKAction.move(to: layout.sk(layout.handPoint(for: house)), duration: 0.26 / animationSpeed)
+                rise.timingMode = .easeOut
+                handNode.run(rise, withKey: "hand")
+                await wait(0.3)
 
             case let .sow(house, count):
-                guard let seed = hand.popLast() else { continue }
+                guard let seed = handNode.children.last else { continue }
                 working.houses[house] = count
-                let slot = layout.seedSlot(in: house, index: count - 1)
-                let action = settle(seed, at: slot, duration: perSeed / animationSpeed)
+                // Carry the hand over the next house…
+                let travel = SKAction.move(to: layout.sk(layout.handPoint(for: house)), duration: step / animationSpeed)
+                travel.timingMode = .easeInEaseOut
+                handNode.run(travel, withKey: "hand")
+                await wait(step * 0.7)
+                // …and let one seed go. It falls, tumbles, lands with a small settle and a puff.
+                let world = handNode.convert(seed.position, to: self)
+                seed.removeFromParent()
+                seed.position = world
+                seed.zPosition = 10
+                seedLayer.addChild(seed)
                 seedsInHouse[house].append(seed)
-                seed.run(action, withKey: "sow")
-                await wait(perSeed * 0.85)
+                let slot = layout.sk(layout.seedSlot(in: house, index: count - 1))
+                let fall = SKAction.move(to: slot, duration: drop / animationSpeed)
+                fall.timingMode = .easeIn
+                let tumble = SKAction.rotate(byAngle: CGFloat.random(in: -1.4 ... 1.4), duration: drop / animationSpeed)
+                let settle = SKAction.sequence([
+                    SKAction.scale(to: 0.9, duration: 0.05 / animationSpeed),
+                    SKAction.scale(to: 1.0, duration: 0.09 / animationSpeed),
+                ])
+                seed.run(SKAction.sequence([SKAction.group([fall, tumble, lift(seed, up: false, duration: drop / animationSpeed)]), settle]), withKey: "sow")
+                await wait(drop * 0.9)
                 seed.zPosition = 0
                 updateLabels(working)
-                sound?.play(.tick, volume: 0.7)
+                sound?.play(.tick, volume: Float.random(in: 0.5 ... 0.8))
                 haptics?.seedDrop()
+                puff(at: slot)
 
             case .skipOrigin:
-                await wait(0.05)
+                await wait(step * 0.4)
 
             case let .capture(house, seeds, by):
                 await pulse(house: house, color: UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.9))
@@ -474,10 +543,12 @@ final class BoardScene: SKScene, BoardAnimator {
                     let index = seedsInStore[by.rawValue].count
                     seedsInStore[by.rawValue].append(seed)
                     seed.zPosition = 10
-                    let delay = SKAction.wait(forDuration: Double(k) * 0.03 / animationSpeed)
-                    seed.run(SKAction.sequence([delay, settle(seed, at: layout.storeSlot(by, index: index), duration: 0.38 / animationSpeed)]), withKey: "capture")
+                    let delay = SKAction.wait(forDuration: Double(k) * 0.035 / animationSpeed)
+                    let flight = self.settle(seed, at: layout.storeSlot(by, index: index), duration: 0.42 / animationSpeed)
+                    let tumble = SKAction.rotate(byAngle: CGFloat.random(in: -2 ... 2), duration: 0.42 / animationSpeed)
+                    seed.run(SKAction.sequence([delay, SKAction.group([flight, tumble])]), withKey: "capture")
                 }
-                await wait(0.42)
+                await wait(0.42 + Double(taken.count) * 0.035)
                 updateLabels(working)
 
             case let .grandSlamForfeited(_, houses):
@@ -497,7 +568,7 @@ final class BoardScene: SKScene, BoardAnimator {
                         seedsInStore[player.rawValue].append(seed)
                         seed.zPosition = 10
                         let delay = SKAction.wait(forDuration: Double(moved) * 0.02 / animationSpeed)
-                        seed.run(SKAction.sequence([delay, settle(seed, at: layout.storeSlot(player, index: index), duration: 0.45 / animationSpeed)]), withKey: "sweep")
+                        seed.run(SKAction.sequence([delay, self.settle(seed, at: layout.storeSlot(player, index: index), duration: 0.45 / animationSpeed)]), withKey: "sweep")
                         moved += 1
                     }
                 }
@@ -509,6 +580,7 @@ final class BoardScene: SKScene, BoardAnimator {
                 break
             }
         }
+        handNode.removeAllChildren()
         // Snap to the exact final position (guards against any drift).
         render(after)
         playEndSounds(after)

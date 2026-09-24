@@ -4,7 +4,7 @@ import UIKit
 /// Bakes the board slab: tiled osese wood, a rounded silhouette, a warm key light from the
 /// upper left, and a dark vignette so the hollows read as depth. Rebuilt only when the size changes.
 enum BoardTexture {
-    static func make(size: CGSize, cornerRadius: CGFloat, scorched: Bool = false) -> SKTexture {
+    static func make(size: CGSize, cornerRadius: CGFloat, scorched: Bool = false, wood woodName: String = "wood") -> SKTexture {
         let scale = min(UIScreen.main.scale, 3)
         let format = UIGraphicsImageRendererFormat()
         format.scale = scale
@@ -16,7 +16,7 @@ enum BoardTexture {
             let path = UIBezierPath(roundedRect: rect, cornerRadius: cornerRadius)
             path.addClip()
 
-            if let wood = UIImage(named: "wood") {
+            if let wood = UIImage(named: woodName) {
                 // One tile covers the whole slab so no repeat is visible; the grain runs along the board.
                 let tile = max(size.width, size.height) * 1.02
                 cg.saveGState()
@@ -87,14 +87,14 @@ enum BoardTexture {
     }
 
     /// A strip of the carved Kente relief, tiled along its length so the motifs never stretch.
-    static func band(length: CGFloat, thickness: CGFloat) -> SKTexture {
+    static func band(named name: String, length: CGFloat, thickness: CGFloat) -> SKTexture {
         let scale = min(UIScreen.main.scale, 3)
         let format = UIGraphicsImageRendererFormat()
         format.scale = scale
         format.opaque = false
         let size = CGSize(width: max(length, 1), height: max(thickness, 1))
         let image = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
-            guard let relief = UIImage(named: "rimCarved") else { return }
+            guard let relief = UIImage(named: name) else { return }
             let tileWidth = thickness * relief.size.width / relief.size.height
             var x: CGFloat = -tileWidth * 0.5
             while x < size.width {

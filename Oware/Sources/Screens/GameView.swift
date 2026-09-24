@@ -19,14 +19,19 @@ struct GameView: View {
 
     var body: some View {
         ZStack {
-            Image("ground")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .ignoresSafeArea()
-                .accessibilityHidden(true)
+            GeometryReader { geo in
+                Image("ground")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: geo.size.height)
+                    .clipped()
+            }
+            .ignoresSafeArea()
+            .accessibilityHidden(true)
             LinearGradient(colors: [settings.boardTheme.backgroundTop.opacity(0.42), settings.boardTheme.backgroundBottom.opacity(0.6)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
+            // The board takes the whole width; the two thin bars float over its ends.
             VStack(spacing: 0) {
                 topBar
                 if showLevels, session.canChangeDifficulty {
@@ -34,7 +39,6 @@ struct GameView: View {
                         .transition(.opacity)
                 }
                 BoardView(onBlockedTap: { showHint($0) })
-                    .padding(.horizontal, 6)
                 bottomBar
             }
             if session.isGameOver && session.mode.isResumable {
@@ -58,18 +62,12 @@ struct GameView: View {
         }
     }
 
+    /// Home, the opponent, then Hint and Undo: small glass controls, nothing else.
     private var topBar: some View {
-        HStack {
-            Button(action: goHome) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(Theme.ivoryDim)
-                    .frame(width: 44, height: 44)
-            }
-            .accessibilityIdentifier("btn-home")
-            .accessibilityLabel("Home")
+        HStack(spacing: 10) {
+            roundButton(systemName: "chevron.left", id: "btn-home", label: "Home", enabled: true, action: goHome)
 
-            Spacer()
+            Spacer(minLength: 0)
             if session.canChangeDifficulty {
                 Button {
                     showLevels.toggle()
@@ -84,55 +82,47 @@ struct GameView: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityIdentifier("mode-title")
             }
-            Spacer()
-            Color.clear.frame(width: 44, height: 44)
-        }
-        .padding(.horizontal, 8)
-        .padding(.top, 8)
-    }
+            Spacer(minLength: 0)
 
-    /// Undo, Hint and Settings with labels, like the controls under a real board.
-    private var toolbar: some View {
-        HStack(spacing: 0) {
-            toolButton(label: "Undo", id: "btn-undo", enabled: session.canUndo, action: { session.undo() }) {
-                AdinkraGlyph(shape: Adinkra.Sankofa(), size: 26, color: session.canUndo ? Theme.gold : Theme.ivoryDim.opacity(0.35))
-            }
             if session.mode.isResumable {
-                toolButton(label: "Hint", id: "btn-hint", enabled: session.canHint, action: { session.requestHint() }) {
-                    AdinkraGlyph(shape: Adinkra.Nyansapo(), size: 24, color: session.canHint ? Theme.gold : Theme.ivoryDim.opacity(0.35))
+                Button(action: { session.requestHint() }) {
+                    AdinkraGlyph(shape: Adinkra.Nyansapo(), size: 22,
+                                 color: session.canHint ? Theme.gold : Theme.ivoryDim.opacity(0.4))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
+                .buttonStyle(.plain)
+                .hudChrome(Circle())
+                .disabled(!session.canHint)
+                .accessibilityIdentifier("btn-hint")
+                .accessibilityLabel("Hint")
             }
-            toolButton(label: "Settings", id: "btn-settings-game", enabled: true, action: openSettings) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 21, weight: .medium))
-                    .foregroundStyle(Theme.gold)
+            Button(action: { session.undo() }) {
+                AdinkraGlyph(shape: Adinkra.Sankofa(), size: 24,
+                             color: session.canUndo ? Theme.gold : Theme.ivoryDim.opacity(0.4))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Circle())
             }
+            .buttonStyle(.plain)
+            .hudChrome(Circle())
+            .disabled(!session.canUndo)
+            .accessibilityIdentifier("btn-undo")
+            .accessibilityLabel("Undo")
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Theme.night.opacity(0.55))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Theme.ivory.opacity(0.1), lineWidth: 1))
-        )
-        .padding(.horizontal, 24)
+        .frame(height: 56)
     }
 
-    private func toolButton<Icon: View>(label: String, id: String, enabled: Bool, action: @escaping () -> Void,
-                                        @ViewBuilder icon: () -> Icon) -> some View {
+    private func roundButton(systemName: String, id: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            VStack(spacing: 3) {
-                icon()
-                    .frame(height: 28)
-                Text(label)
-                    .font(Theme.caption(12))
-                    .foregroundStyle(enabled ? Theme.ivoryDim : Theme.ivoryDim.opacity(0.4))
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 54)
-            .contentShape(Rectangle())
+            Image(systemName: systemName)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(enabled ? Theme.ivory : Theme.ivoryDim.opacity(0.4))
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .hudChrome(Circle())
         .disabled(!enabled)
         .accessibilityIdentifier(id)
         .accessibilityLabel(label)
@@ -148,7 +138,7 @@ struct GameView: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {
                     Text(session.opponentName)
-                        .font(Theme.body(16))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.ivory)
                     if chevron {
                         Image(systemName: "chevron.down")
@@ -161,16 +151,11 @@ struct GameView: View {
                          showSeed: session.mode.isResumable)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(card)
-        .contentShape(Rectangle())
-    }
-
-    private var card: some View {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
-            .fill(Theme.night.opacity(0.62))
-            .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Theme.ivory.opacity(0.12), lineWidth: 1))
+        .padding(.leading, 6)
+        .padding(.trailing, 14)
+        .padding(.vertical, 5)
+        .hudChrome(Capsule())
+        .contentShape(Capsule())
     }
 
     /// "12 seeds" with a small seed drawn before the number.
@@ -197,7 +182,7 @@ struct GameView: View {
                 .font(Theme.body(15))
                 .foregroundStyle(active ? Theme.gold : Theme.ivoryDim)
         }
-        .frame(width: 34, height: 34)
+        .frame(width: 32, height: 32)
         .animation(.easeInOut(duration: 0.3), value: active)
     }
 
@@ -225,41 +210,50 @@ struct GameView: View {
                 .accessibilityAddTraits(current ? .isSelected : [])
             }
         }
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .hudChrome(Capsule())
+        .padding(.bottom, 6)
         .animation(.easeInOut(duration: 0.2), value: showLevels)
     }
 
     private var bottomBar: some View {
-        VStack(spacing: 10) {
-            if session.mode.isResumable {
-                youStrip
-            }
-            ZStack {
-                Text(session.turnDescription)
-                    .font(Theme.body(session.mode.isResumable ? 18 : 16))
-                    .foregroundStyle(session.humanToMove ? Theme.ivory : Theme.ivoryDim)
-                    .multilineTextAlignment(.center)
-                    .accessibilityIdentifier("turn-indicator")
-                    .opacity(hint == nil ? 1 : 0)
-                if let hint {
-                    Text(hint)
-                        .font(Theme.body(16))
-                        .foregroundStyle(Theme.gold)
-                        .transition(.opacity)
-                        .accessibilityIdentifier("hint")
-                }
-            }
-            .frame(minHeight: 44)
-            .padding(.horizontal, 24)
+        VStack(spacing: 6) {
             modeControls
-            toolbar
+            HStack(spacing: 10) {
+                if session.mode.isResumable {
+                    youStrip
+                }
+                Spacer(minLength: 0)
+                ZStack(alignment: .trailing) {
+                    Text(session.turnDescription)
+                        .font(.system(size: 16, weight: .medium, design: .serif))
+                        .foregroundStyle(session.humanToMove ? Theme.ivory : Theme.ivoryDim)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityIdentifier("turn-indicator")
+                        .opacity(hint == nil ? 1 : 0)
+                    if let hint {
+                        Text(hint)
+                            .font(.system(size: 15, weight: .medium, design: .serif))
+                            .foregroundStyle(Theme.gold)
+                            .multilineTextAlignment(.trailing)
+                            .transition(.opacity)
+                            .accessibilityIdentifier("hint")
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .hudChrome(Capsule())
+                .lineLimit(1)
+            }
+            .frame(height: 48)
         }
-        .frame(minHeight: 56)
+        .padding(.horizontal, 12)
+        .padding(.top, 4)
+        .padding(.bottom, 4)
         .animation(.easeInOut(duration: 0.25), value: hint)
         .animation(.easeInOut(duration: 0.3), value: session.puzzleAttempt)
         .animation(.easeInOut(duration: 0.3), value: session.tutorialStepDone)
-        .padding(.bottom, 12)
     }
 
     private var youStrip: some View {
@@ -273,20 +267,19 @@ struct GameView: View {
             if case .passAndPlay = session.mode { return session.state.store(of: session.state.sideToMove) }
             return mine
         }()
-        return HStack(spacing: 10) {
+        return HStack(spacing: 8) {
             badge(letter: String(name.prefix(1)), active: active)
-            VStack(alignment: .leading, spacing: 1) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(name)
-                    .font(Theme.body(16))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.ivory)
                 seedLine("\(seeds) seeds", showSeed: true)
             }
-            Spacer()
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(card)
-        .padding(.horizontal, 24)
+        .padding(.leading, 6)
+        .padding(.trailing, 14)
+        .padding(.vertical, 5)
+        .hudChrome(Capsule())
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("you-strip")
     }

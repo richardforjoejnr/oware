@@ -97,7 +97,7 @@ struct HomeView: View {
     }
 
     private var menu: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             primaryAction
 
             MenuPill(title: "Journey", subtitle: progress.totalStars == 0 ? "across Ghana" : "\(progress.totalStars) stars",
@@ -154,7 +154,7 @@ struct HomeView: View {
                     Image(systemName: showLevels ? "chevron.up" : "chevron.down")
                         .font(.system(size: 10, weight: .medium))
                 }
-                .font(Theme.caption(14))
+                .font(.subheadline)
                 .foregroundStyle(Theme.ivoryDim)
                 .padding(.vertical, 2)
                 .contentShape(Rectangle())
@@ -184,9 +184,8 @@ struct HomeView: View {
                         showLevels = false
                     } label: {
                         Text(level.displayName)
-                            .font(Theme.caption(14))
+                            .font(.subheadline.weight(level == difficulty ? .semibold : .regular))
                             .foregroundStyle(level == difficulty ? Theme.gold : Theme.ivoryDim)
-                            .underline(level == difficulty, color: Theme.gold)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("level-\(level.displayName.lowercased())")
@@ -234,9 +233,8 @@ struct HomeView: View {
 
 // MARK: - Pieces
 
-/// A rounded menu button in the house style: gold icon on the left, serif title, quiet subtitle.
-/// `prominent` marks the main action with gold text and a gold edge (no filled state, so nothing
-/// looks pre-selected on a touch screen); `quiet` is the low-key More/Less toggle.
+/// A menu button in the system's own style — Liquid Glass on iOS 26, bordered before that —
+/// with a gold symbol, the title and a quiet subtitle. `prominent` marks the main action.
 struct MenuPill: View {
     enum Icon {
         case symbol(String)
@@ -251,35 +249,43 @@ struct MenuPill: View {
     let action: () -> Void
 
     var body: some View {
+        if #available(iOS 26, *) {
+            if prominent {
+                button.buttonStyle(.glassProminent).tint(Theme.amber)
+            } else {
+                button.buttonStyle(.glass)
+            }
+        } else {
+            if prominent {
+                button.buttonStyle(.borderedProminent).tint(Theme.amber)
+            } else {
+                button.buttonStyle(.bordered).tint(Theme.ivory)
+            }
+        }
+    }
+
+    private var button: some View {
         Button(action: action) {
-            HStack(spacing: 14) {
+            HStack(spacing: 12) {
                 iconView
-                    .frame(width: 26, height: 26)
-                    .foregroundStyle(Theme.gold)
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(prominent ? Theme.night : Theme.gold)
                 Text(title)
-                    .font(Theme.body(prominent ? 22 : 19))
-                    .foregroundStyle(prominent ? Theme.goldLight : (quiet ? Theme.ivoryDim : Theme.ivory))
+                    .font(.system(prominent ? .title3 : .body, design: .default, weight: prominent ? .semibold : .medium))
+                    .foregroundStyle(prominent ? Theme.night : (quiet ? Theme.ivoryDim : Theme.ivory))
                 if let subtitle {
                     Text(subtitle)
-                        .font(Theme.caption(13))
-                        .foregroundStyle(Theme.ivoryDim)
+                        .font(.footnote)
+                        .foregroundStyle(prominent ? Theme.night.opacity(0.7) : Theme.ivoryDim)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 18)
-            .frame(height: quiet ? 44 : (prominent ? 58 : 54))
+            .padding(.vertical, quiet ? 0 : 3)
             .frame(maxWidth: .infinity)
-            .background(background)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(prominent ? Theme.gold.opacity(0.55) : Theme.ivory.opacity(quiet ? 0.08 : 0.14), lineWidth: prominent ? 1.5 : 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Theme.night.opacity(prominent ? 0.6 : 0.4), radius: 8, y: 4)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .controlSize(.large)
     }
 
     @ViewBuilder
@@ -287,19 +293,10 @@ struct MenuPill: View {
         switch icon {
         case let .symbol(name):
             Image(systemName: name)
-                .font(.system(size: 19, weight: .medium))
+                .font(.system(size: 18, weight: .semibold))
         case let .adinkra(shape):
             shape.stroke(style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
                 .padding(2)
-        }
-    }
-
-    @ViewBuilder
-    private var background: some View {
-        if quiet {
-            Theme.ember.opacity(0.55)
-        } else {
-            LinearGradient(colors: [Theme.emberLight, Theme.ember], startPoint: .top, endPoint: .bottom)
         }
     }
 }

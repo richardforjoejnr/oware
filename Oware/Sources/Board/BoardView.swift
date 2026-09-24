@@ -33,6 +33,7 @@ struct BoardView: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("board")
+            .accessibilityValue(session.isAnimating ? "Sowing" : "Still")
             .onAppear {
                 scene.size = geo.size
                 configureScene()
@@ -56,8 +57,8 @@ struct BoardView: View {
         scene.setHighlight(house: session.highlightedHouse)
         scene.animationSpeed = settings.effectiveSpeed
         scene.showCounts = settings.showSeedCounts
-        SoundPlayer.shared.enabled = settings.soundEnabled
-        Haptics.shared.enabled = settings.hapticsEnabled
+        SoundPlayer.shared.enabled = settings.effectiveSound
+        Haptics.shared.enabled = settings.effectiveHaptics
     }
 
     @ViewBuilder

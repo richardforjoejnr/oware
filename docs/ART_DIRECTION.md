@@ -93,6 +93,19 @@ Drawn in code, not assets: fire-blackened edges (`BoardTexture.make(scorched:)`)
 the fold and cross-hatch scratches between hollows (`BoardScene.buildRusticDetails`).
 `bowl` and `table` imagesets from §3b were removed (originals still in `art/canva-exports/`).
 
+### 3d. Fourth pass (Canva, 2026-09-24 night) — carved Ahwiaa board, full-screen
+
+The owner asked for quality wood and Ghanaian carving, and for the phone itself to read as the board.
+
+| File | Canva media | Use |
+|---|---|---|
+| `wood4.png` (1264²) | `MAHWIISE5e4` | `wood`: dense amber hardwood for the Heritage look (the hewn slab moved to `woodHewn` for Village) |
+| `adinkra-band.png` (1776×896) | `MAHWIP9WKBk` | `rimAdinkra`: carved Sankofa / Adinkrahene / Nyansapo relief, rows 176–722, framing the Heritage board |
+| `pit4.png` (1264²) | `MAHWINHBCFA` | `pit`: polished hollow with a turned ring (hewn hollow moved to `pitHewn`) |
+
+Board geometry now fills whatever area it is given (`BoardLayout`), with the row pitch stretching to
+fit, so the slab runs to the screen edges under two floating glass bars.
+
 **Licence and rights — what Canva's terms actually say (checked 2026-09-24).**
 
 - *Ownership.* Canva's AI Product Terms: "you own your Output, except for any Output that modifies or
