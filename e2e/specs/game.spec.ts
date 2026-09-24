@@ -1,8 +1,9 @@
 import { expect } from "@wdio/globals";
-import { byId, seedsIn, tapHouse, waitForTurn } from "../helpers/board";
+import { byId, openMore, seedsIn, tapHouse, waitForTurn } from "../helpers/board";
 
 describe("Pass & Play", () => {
   before(async () => {
+    await openMore();
     await byId("btn-pass-play").click();
     await byId("house-A1").waitForDisplayed();
   });

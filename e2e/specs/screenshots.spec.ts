@@ -1,4 +1,4 @@
-import { byId, tapHouse, waitForTurn } from "../helpers/board";
+import { byId, openMore, tapHouse, waitForTurn } from "../helpers/board";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -16,6 +16,7 @@ const dir = path.resolve(__dirname, "../screenshots");
     await byId("home-title").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "home.png"));
 
+    await openMore();
     await byId("btn-pass-play").click();
     await byId("house-A1").waitForDisplayed();
     await tapHouse("A3");
@@ -27,7 +28,7 @@ const dir = path.resolve(__dirname, "../screenshots");
     await browser.saveScreenshot(path.join(dir, "board.png"));
 
     await byId("btn-home").click();
-    await byId("btn-puzzles").waitForDisplayed();
+    await openMore();
     await byId("btn-puzzles").click();
     await byId("puzzles-title").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "puzzles.png"));
@@ -45,7 +46,7 @@ const dir = path.resolve(__dirname, "../screenshots");
     await browser.saveScreenshot(path.join(dir, "tutorial.png"));
 
     await byId("btn-home").click();
-    await byId("btn-heritage").waitForDisplayed();
+    await openMore();
     await byId("btn-heritage").click();
     await byId("rules-title").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "rules.png"));

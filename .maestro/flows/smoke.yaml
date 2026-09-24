@@ -9,6 +9,8 @@ appId: com.richardforjoe.oware
 - assertVisible:
     id: "home-title"
 - tapOn:
+    id: "btn-more"
+- tapOn:
     id: "btn-pass-play"
 - assertVisible:
     id: "house-A1"
