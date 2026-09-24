@@ -83,9 +83,8 @@ struct GameView: View {
 
             if session.mode.isResumable {
                 Button(action: { session.requestHint() }) {
-                    Image(systemName: "lightbulb")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(session.canHint ? Theme.ivoryDim : Theme.ivoryDim.opacity(0.3))
+                    AdinkraGlyph(shape: Adinkra.Nyansapo(), size: 22,
+                                 color: session.canHint ? Theme.ivoryDim : Theme.ivoryDim.opacity(0.3))
                         .frame(width: 44, height: 44)
                 }
                 .disabled(!session.canHint)
@@ -94,9 +93,8 @@ struct GameView: View {
             }
 
             Button(action: { session.undo() }) {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(session.canUndo ? Theme.ivoryDim : Theme.ivoryDim.opacity(0.3))
+                AdinkraGlyph(shape: Adinkra.Sankofa(), size: 24,
+                             color: session.canUndo ? Theme.ivoryDim : Theme.ivoryDim.opacity(0.3))
                     .frame(width: 44, height: 44)
             }
             .disabled(!session.canUndo)
