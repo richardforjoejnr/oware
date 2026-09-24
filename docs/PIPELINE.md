@@ -87,6 +87,16 @@ Branch protection on `main` is configured to require the CI check and a pull req
 
 ---
 
+## Fastest way to a TestFlight build (no CI secrets needed)
+
+1. `export DEVELOPMENT_TEAM=<your 10-character Team ID>` (add it to `~/.zshrc`), then `make open`.
+2. In Xcode choose the **Oware** scheme and destination **Any iOS Device (arm64)**.
+3. Product ▸ Archive. When the Organizer opens: **Distribute App ▸ TestFlight & App Store ▸ Upload**,
+   accept the defaults (automatic signing creates the certificate and profile for you).
+4. In App Store Connect ▸ your app ▸ TestFlight the build appears after processing (5–15 min).
+   Under Internal Testing add a group with yourself; open the TestFlight app on your iPhone and install.
+   Prerequisites: the App ID and app record from section A steps 1–2 must exist first.
+
 ## Day-to-day flow
 1. `git checkout -b feature/thing` → edit → `make engine-test` / `make test`.
 2. Push, open a PR. CI must be green.
