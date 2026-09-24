@@ -235,7 +235,8 @@ struct HomeView: View {
 // MARK: - Pieces
 
 /// A rounded menu button in the house style: gold icon on the left, serif title, quiet subtitle.
-/// `prominent` is the single green call to action; `quiet` is the low-key More/Less toggle.
+/// `prominent` marks the main action with gold text and a gold edge (no filled state, so nothing
+/// looks pre-selected on a touch screen); `quiet` is the low-key More/Less toggle.
 struct MenuPill: View {
     enum Icon {
         case symbol(String)
@@ -254,25 +255,25 @@ struct MenuPill: View {
             HStack(spacing: 14) {
                 iconView
                     .frame(width: 26, height: 26)
-                    .foregroundStyle(prominent ? Theme.ivory : Theme.gold)
+                    .foregroundStyle(Theme.gold)
                 Text(title)
-                    .font(Theme.body(prominent ? 21 : 19))
-                    .foregroundStyle(prominent ? Theme.ivory : (quiet ? Theme.ivoryDim : Theme.ivory))
+                    .font(Theme.body(prominent ? 22 : 19))
+                    .foregroundStyle(prominent ? Theme.goldLight : (quiet ? Theme.ivoryDim : Theme.ivory))
                 if let subtitle {
                     Text(subtitle)
                         .font(Theme.caption(13))
-                        .foregroundStyle(prominent ? Theme.ivory.opacity(0.75) : Theme.ivoryDim)
+                        .foregroundStyle(Theme.ivoryDim)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 18)
-            .frame(height: quiet ? 44 : 54)
+            .frame(height: quiet ? 44 : (prominent ? 58 : 54))
             .frame(maxWidth: .infinity)
             .background(background)
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(prominent ? Theme.goldLight.opacity(0.45) : Theme.ivory.opacity(quiet ? 0.08 : 0.14), lineWidth: 1)
+                    .stroke(prominent ? Theme.gold.opacity(0.55) : Theme.ivory.opacity(quiet ? 0.08 : 0.14), lineWidth: prominent ? 1.5 : 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: Theme.night.opacity(prominent ? 0.6 : 0.4), radius: 8, y: 4)
@@ -295,9 +296,7 @@ struct MenuPill: View {
 
     @ViewBuilder
     private var background: some View {
-        if prominent {
-            LinearGradient(colors: [Theme.kenteGreen, Theme.kenteGreenDeep], startPoint: .top, endPoint: .bottom)
-        } else if quiet {
+        if quiet {
             Theme.ember.opacity(0.55)
         } else {
             LinearGradient(colors: [Theme.emberLight, Theme.ember], startPoint: .top, endPoint: .bottom)
