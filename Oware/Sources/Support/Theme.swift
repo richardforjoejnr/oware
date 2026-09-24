@@ -10,8 +10,11 @@ enum Theme {
     static let ivory = Color(red: 0.92, green: 0.85, blue: 0.72)
     static let ivoryDim = Color(red: 0.92, green: 0.85, blue: 0.72).opacity(0.55)
     static let gold = Color(red: 0.85, green: 0.65, blue: 0.13)
+    static let goldLight = Color(red: 0.96, green: 0.82, blue: 0.42)
+    static let emberLight = Color(red: 0.24, green: 0.15, blue: 0.09)
     static let kenteRed = Color(red: 0.70, green: 0.15, blue: 0.12)
     static let kenteGreen = Color(red: 0.12, green: 0.44, blue: 0.29)
+    static let kenteGreenDeep = Color(red: 0.07, green: 0.30, blue: 0.19)
 
     static func title(_ size: CGFloat = 44) -> Font { .system(size: size, weight: .medium, design: .serif) }
     static func body(_ size: CGFloat = 17) -> Font { .system(size: size, weight: .regular, design: .serif) }

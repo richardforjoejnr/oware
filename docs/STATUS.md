@@ -147,6 +147,16 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
   XCUITests 10/10 green locally. **To do:** confirm the TypeScript suite + screenshots pass
   (`cd e2e && OWARE_SIM_NAME="iPhone 18 Pro Max" OWARE_SCREENSHOTS=1 npx wdio run wdio.conf.ts`),
   look at `e2e/screenshots/{home,board,tutorial}.png`, then merge PR #11 when CI is green.
+- **Branch `feat/authentic-look` (2026-09-24, afternoon), built on `feat/polish-icons`:** the owner shared a
+  mock-up and asked for a more authentic, Ghanaian, realistic look. Home now has a carved-bowl hero
+  (`bowl`), gold title with Kente rules, Kente edge bands (`kenteLine`) and pill buttons (`MenuPill`:
+  green Play, brown Journey / New here? / More). Board: mahogany slab (`wood`, one tile, no repeat),
+  carved Kente relief frame on all four sides (`rimCarved`, tiled by `BoardTexture.band`), new hollow
+  (`pit`), brown-and-cream seed sprites (`seed1…8`, 27 % larger), soft double shadow, table backdrop
+  (`table`) under the theme tint, player cards with a seed glyph, and a labelled Undo / Hint / Settings
+  toolbar under the board. Portrait board is wider (`BoardLayout` 3.7 cells). `--start-game` launch flag
+  opens straight onto a Learner game for screenshots. Assets and Canva ids: `docs/ART_DIRECTION.md` §3b.
+  Kept out on purpose (owner ruled them out earlier): coins, tab bar, friends, tournaments, online.
 - **Local gotchas learned today:** macOS has no `timeout` command; Appium hangs at session creation
   when several simulators are booted or a stale WebDriverAgent is left — shut extra sims down and
   reboot "iPhone 18 Pro Max". GitHub closes a PR whose base branch was deleted, so base PRs on main.

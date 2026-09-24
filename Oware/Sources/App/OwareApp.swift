@@ -44,6 +44,10 @@ enum LaunchOptions {
     static var unlockAll: Bool {
         CommandLine.arguments.contains("--unlock-all") || UserDefaults.standard.bool(forKey: "unlockAll")
     }
+    /// `--start-game` / `-startGame YES`: open straight onto a new game against the Learner (screenshots).
+    static var startGame: Bool {
+        CommandLine.arguments.contains("--start-game") || UserDefaults.standard.bool(forKey: "startGame")
+    }
     static var fastAnimations: Bool {
         CommandLine.arguments.contains("--fast-animations") || UserDefaults.standard.bool(forKey: "fastAnimations")
     }

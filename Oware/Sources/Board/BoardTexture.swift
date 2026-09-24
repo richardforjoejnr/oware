@@ -17,8 +17,8 @@ enum BoardTexture {
             path.addClip()
 
             if let wood = UIImage(named: "wood") {
-                // Tile at a scale that keeps the adze marks readable on any board size.
-                let tile = max(size.width, size.height) / 1.25
+                // One tile covers the whole slab so no repeat is visible; the grain runs along the board.
+                let tile = max(size.width, size.height) * 1.02
                 cg.saveGState()
                 cg.setFillColor(UIColor(patternImage: scaled(wood, to: tile)).cgColor)
                 cg.fill(rect)
@@ -52,6 +52,31 @@ enum BoardTexture {
             cg.setStrokeColor(UIColor(red: 0.55, green: 0.36, blue: 0.2, alpha: 0.35).cgColor)
             cg.setLineWidth(2)
             UIBezierPath(roundedRect: rect.insetBy(dx: 1, dy: 1), cornerRadius: cornerRadius - 1).stroke()
+        }
+        return SKTexture(image: image)
+    }
+
+    /// A strip of the carved Kente relief, tiled along its length so the motifs never stretch.
+    static func band(length: CGFloat, thickness: CGFloat) -> SKTexture {
+        let scale = min(UIScreen.main.scale, 3)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        format.opaque = false
+        let size = CGSize(width: max(length, 1), height: max(thickness, 1))
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            guard let relief = UIImage(named: "rimCarved") else { return }
+            let tileWidth = thickness * relief.size.width / relief.size.height
+            var x: CGFloat = -tileWidth * 0.5
+            while x < size.width {
+                relief.draw(in: CGRect(x: x, y: 0, width: tileWidth, height: thickness))
+                x += tileWidth
+            }
+            // Recess the band a little: dark line above, faint highlight below.
+            let cg = ctx.cgContext
+            cg.setFillColor(UIColor(white: 0, alpha: 0.45).cgColor)
+            cg.fill(CGRect(x: 0, y: 0, width: size.width, height: max(1, thickness * 0.05)))
+            cg.setFillColor(UIColor(red: 1, green: 0.85, blue: 0.6, alpha: 0.18).cgColor)
+            cg.fill(CGRect(x: 0, y: size.height - max(1, thickness * 0.04), width: size.width, height: max(1, thickness * 0.04)))
         }
         return SKTexture(image: image)
     }

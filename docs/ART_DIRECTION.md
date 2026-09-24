@@ -58,6 +58,23 @@ Alternatives seen in Ghana: cowries, palm kernels, pebbles.
 | `hero-board.png` (1776×896) | full traditional board, reference | Home/Heritage hero and art reference |
 | `AppIcon.png` (1024²) | one carved hollow with three nickernuts, warm key light | App icon (Canva media `MAHWDmM5VRg`) |
 
+### 3b. Second pass (Canva, 2026-09-24) — "authentic and realistic" look
+
+Text-to-image only (plus Canva background removal on our own output). Originals in `art/canva-exports/`.
+
+| File | Canva media | Use |
+|---|---|---|
+| `bowl-hero.png` (1200×1600) | `MAHWH8Kq8TQ` | Home hero: carved osese bowl with three seeds |
+| `kente-strip.png` (1776×896) | `MAHWH--ISM0` | `kenteLine` (edge bands on Home) and `kenteBand` |
+| `carved-border.png` (1776×896) | `MAHWH5T7BIk` | `rimCarved`: relief band tiled round the board frame |
+| `table.png` (900×1600) | `MAHWHzMvp84` | Table surface behind the board |
+| `pit2.png` (1264²) | `MAHWH99f9tI` | `pit`: hollow with soft alpha edge, surround colour-matched to the wood |
+| `seeds2-black.png` / `seeds2-white.png` | `MAHWH_hePmk` → cut-out `MAHWH-C9Ryo` | `seed1…8`: difference-matted brown and cream seeds |
+| `wood2.png` (1264²) | `MAHWHznPiRw` | `wood`: mahogany slab texture, edges cross-faded to tile |
+
+Processing is plain PIL/numpy (crop, resize, alpha mask, difference matting, per-channel gain);
+the scripts live in the session transcript, not the repo, and are easy to redo from the originals.
+
 **Licence and rights — what Canva's terms actually say (checked 2026-09-24).**
 
 - *Ownership.* Canva's AI Product Terms: "you own your Output, except for any Output that modifies or

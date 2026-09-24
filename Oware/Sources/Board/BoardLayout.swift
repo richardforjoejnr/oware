@@ -21,10 +21,10 @@ struct BoardLayout: Equatable {
         self.size = size
         if size.height > size.width * 1.05 {
             orientation = .vertical
-            let horizontal = size.width / 3.6
+            let horizontal = size.width / 3.9
             let vertical = size.height / 9.2
             cell = max(24, min(horizontal, vertical))
-            let width = cell * 3.2
+            let width = cell * 3.7
             let height = cell * 8.9
             boardRect = CGRect(x: (size.width - width) / 2, y: (size.height - height) / 2, width: width, height: height)
         } else {
@@ -38,8 +38,8 @@ struct BoardLayout: Equatable {
         }
     }
 
-    var houseRadius: CGFloat { cell * 0.42 }
-    var seedRadius: CGFloat { cell * 0.075 }
+    var houseRadius: CGFloat { cell * 0.45 }
+    var seedRadius: CGFloat { cell * 0.095 }
 
     // MARK: Horizontal helpers
 
@@ -55,8 +55,8 @@ struct BoardLayout: Equatable {
     private func rowY(_ k: Int) -> CGFloat {
         boardRect.midY + (CGFloat(k) - 2.5) * cell * 1.12
     }
-    private var westColumnX: CGFloat { boardRect.midX - cell * 0.62 }
-    private var eastColumnX: CGFloat { boardRect.midX + cell * 0.62 }
+    private var westColumnX: CGFloat { boardRect.midX - cell * 0.74 }
+    private var eastColumnX: CGFloat { boardRect.midX + cell * 0.74 }
 
     // MARK: Positions
 
@@ -88,8 +88,8 @@ struct BoardLayout: Equatable {
             return CGRect(x: x - w / 2, y: boardRect.midY - h / 2, width: w, height: h)
         case .vertical:
             let y = player == .south ? rowY(0) - cell * 1.12 : rowY(5) + cell * 1.12
-            let w = cell * 2.25
-            let h = cell * 0.78
+            let w = cell * 2.6
+            let h = cell * 0.82
             return CGRect(x: boardRect.midX - w / 2, y: y - h / 2, width: w, height: h)
         }
     }

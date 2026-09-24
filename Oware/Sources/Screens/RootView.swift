@@ -56,5 +56,11 @@ struct RootView: View {
                 .presentationBackground(Theme.ember)
         }
         .statusBarHidden(true)
+        .onAppear {
+            if LaunchOptions.startGame, screen == .home {
+                session.newGame(.versusAI(difficulty: .learner, personality: .balanced, humanPlays: .south))
+                screen = .game
+            }
+        }
     }
 }

@@ -7,7 +7,7 @@ import OwareEngine
 final class BoardScene: SKScene, BoardAnimator {
     /// 1 = normal; larger = faster; >= 100 = instant. (SKNode already has `speed`.)
     var animationSpeed: Double = 1
-    var showCounts = true { didSet { countLabels.forEach { $0.isHidden = !showCounts } } }
+    var showCounts = true { didSet { (countLabels + countShadows).forEach { $0.isHidden = !showCounts } } }
     var sound: SoundPlayer? = .shared
     var haptics: Haptics? = .shared
     var theme: BoardTheme = .heritage { didSet { if built { applyTheme() } } }
@@ -16,12 +16,15 @@ final class BoardScene: SKScene, BoardAnimator {
     private var layout = BoardLayout(size: CGSize(width: 390, height: 300))
     private let boardNode = SKSpriteNode()
     private let boardShadow = SKShapeNode()
+    private let boardShadowSoft = SKShapeNode()
+    private var lastBandSizes: [CGSize] = []
     private var rimNodes: [SKSpriteNode] = []
     private var houseNodes: [SKSpriteNode] = []
     private let pitTexture = SKTexture(imageNamed: "pit")
     private let seedTextures: [SKTexture] = (1...8).map { SKTexture(imageNamed: "seed\($0)") }
     private var lastBoardSize = CGSize.zero
     private var countLabels: [SKLabelNode] = []
+    private var countShadows: [SKLabelNode] = []
     private var storeNodes: [SKSpriteNode] = []
     private var storeLabels: [SKLabelNode] = []
     private var seedsInHouse: [[SKNode]] = Array(repeating: [], count: 12)
@@ -58,15 +61,18 @@ final class BoardScene: SKScene, BoardAnimator {
 
     private func build() {
         built = true
+        boardShadowSoft.lineWidth = 0
+        boardShadowSoft.fillColor = UIColor(white: 0, alpha: 0.28)
+        boardShadowSoft.zPosition = -3
+        addChild(boardShadowSoft)
         boardShadow.lineWidth = 0
-        boardShadow.fillColor = UIColor(white: 0, alpha: 0.55)
+        boardShadow.fillColor = UIColor(white: 0, alpha: 0.5)
         boardShadow.zPosition = -2
         addChild(boardShadow)
         boardNode.zPosition = -1
         addChild(boardNode)
-        for _ in 0..<2 {
-            let rim = SKSpriteNode(texture: SKTexture(imageNamed: "rim"))
-            rim.alpha = 0.85
+        for _ in 0..<4 {
+            let rim = SKSpriteNode()
             rim.zPosition = 0
             addChild(rim)
             rimNodes.append(rim)
@@ -77,8 +83,15 @@ final class BoardScene: SKScene, BoardAnimator {
             addChild(house)
             houseNodes.append(house)
 
+            let shadow = SKLabelNode(fontNamed: "Georgia")
+            shadow.fontColor = UIColor(red: 0.08, green: 0.04, blue: 0.02, alpha: 0.85)
+            shadow.verticalAlignmentMode = .center
+            shadow.horizontalAlignmentMode = .center
+            shadow.zPosition = 4.9
+            addChild(shadow)
+            countShadows.append(shadow)
             let label = SKLabelNode(fontNamed: "Georgia")
-            label.fontColor = UIColor(red: 0.92, green: 0.85, blue: 0.72, alpha: 0.55)
+            label.fontColor = UIColor(red: 0.96, green: 0.90, blue: 0.78, alpha: 0.9)
             label.verticalAlignmentMode = .center
             label.horizontalAlignmentMode = .center
             label.zPosition = 5
@@ -158,23 +171,37 @@ final class BoardScene: SKScene, BoardAnimator {
             boardNode.size = r.size
         }
         boardNode.position = CGPoint(x: r.midX, y: r.midY)
-        let shadowRect = r.offsetBy(dx: layout.cell * 0.06, dy: -layout.cell * 0.12).insetBy(dx: -layout.cell * 0.04, dy: -layout.cell * 0.04)
+        let shadowRect = r.offsetBy(dx: layout.cell * 0.05, dy: -layout.cell * 0.10).insetBy(dx: -layout.cell * 0.03, dy: -layout.cell * 0.03)
         boardShadow.path = CGPath(roundedRect: shadowRect, cornerWidth: layout.cell * 0.55, cornerHeight: layout.cell * 0.55, transform: nil)
+        let softRect = r.offsetBy(dx: layout.cell * 0.10, dy: -layout.cell * 0.22).insetBy(dx: -layout.cell * 0.12, dy: -layout.cell * 0.12)
+        boardShadowSoft.path = CGPath(roundedRect: softRect, cornerWidth: layout.cell * 0.7, cornerHeight: layout.cell * 0.7, transform: nil)
 
-        // Carved Adinkra band along the two long edges.
-        let bandThickness = layout.cell * 0.2
-        let inset = layout.cell * 0.07
-        for (k, rim) in rimNodes.enumerated() {
-            switch layout.orientation {
-            case .horizontal:
-                rim.zRotation = 0
-                rim.size = CGSize(width: r.width - inset * 2, height: bandThickness)
-                rim.position = CGPoint(x: r.midX, y: k == 0 ? r.maxY - inset - bandThickness / 2 : r.minY + inset + bandThickness / 2)
-            case .vertical:
-                rim.zRotation = .pi / 2
-                rim.size = CGSize(width: r.height - inset * 2, height: bandThickness)
-                rim.position = CGPoint(x: k == 0 ? r.minX + inset + bandThickness / 2 : r.maxX - inset - bandThickness / 2, y: r.midY)
+        // Carved Kente relief framing all four edges.
+        let bandThickness = layout.cell * 0.19
+        let inset = layout.cell * 0.05
+        let longSide = layout.orientation == .horizontal ? r.width - inset * 2 : r.height - inset * 2
+        let shortSide = (layout.orientation == .horizontal ? r.height : r.width) - inset * 2 - bandThickness * 2
+        let sizes = [CGSize(width: longSide, height: bandThickness), CGSize(width: longSide, height: bandThickness),
+                     CGSize(width: shortSide, height: bandThickness), CGSize(width: shortSide, height: bandThickness)]
+        if sizes != lastBandSizes {
+            lastBandSizes = sizes
+            for (k, rim) in rimNodes.enumerated() {
+                rim.texture = BoardTexture.band(length: sizes[k].width, thickness: sizes[k].height)
+                rim.size = sizes[k]
             }
+        }
+        let half = bandThickness / 2
+        switch layout.orientation {
+        case .horizontal:
+            rimNodes[0].zRotation = 0;        rimNodes[0].position = CGPoint(x: r.midX, y: r.maxY - inset - half)
+            rimNodes[1].zRotation = .pi;      rimNodes[1].position = CGPoint(x: r.midX, y: r.minY + inset + half)
+            rimNodes[2].zRotation = .pi / 2;  rimNodes[2].position = CGPoint(x: r.minX + inset + half, y: r.midY)
+            rimNodes[3].zRotation = -.pi / 2; rimNodes[3].position = CGPoint(x: r.maxX - inset - half, y: r.midY)
+        case .vertical:
+            rimNodes[0].zRotation = .pi / 2;  rimNodes[0].position = CGPoint(x: r.minX + inset + half, y: r.midY)
+            rimNodes[1].zRotation = -.pi / 2; rimNodes[1].position = CGPoint(x: r.maxX - inset - half, y: r.midY)
+            rimNodes[2].zRotation = 0;        rimNodes[2].position = CGPoint(x: r.midX, y: r.maxY - inset - half)
+            rimNodes[3].zRotation = .pi;      rimNodes[3].position = CGPoint(x: r.midX, y: r.minY + inset + half)
         }
 
         for i in 0..<12 {
@@ -184,6 +211,8 @@ final class BoardScene: SKScene, BoardAnimator {
             houseNodes[i].size = CGSize(width: radius * 2.15, height: radius * 1.9)
             countLabels[i].fontSize = max(10, layout.cell * 0.2)
             countLabels[i].position = layout.sk(layout.countLabelPoint(i))
+            countShadows[i].fontSize = countLabels[i].fontSize
+            countShadows[i].position = CGPoint(x: countLabels[i].position.x + 0.7, y: countLabels[i].position.y - 0.9)
         }
         for p in Player.allCases {
             let rect = layout.sk(layout.storeRect(p))
@@ -208,10 +237,10 @@ final class BoardScene: SKScene, BoardAnimator {
     private func makeSeed() -> SKNode {
         let r = layout.seedRadius
         let body = SKSpriteNode(texture: seedTextures.randomElement()!)
-        body.size = CGSize(width: r * 2.6, height: r * 2.6)
+        body.size = CGSize(width: r * 2.3, height: r * 2.3)
         body.zRotation = CGFloat.random(in: -.pi ... .pi)
-        let shadow = SKShapeNode(ellipseIn: CGRect(x: -r * 0.95, y: -r * 0.8, width: r * 1.9, height: r * 1.6))
-        shadow.fillColor = UIColor(white: 0, alpha: 0.35)
+        let shadow = SKShapeNode(ellipseIn: CGRect(x: -r * 1.0, y: -r * 0.85, width: r * 2.0, height: r * 1.7))
+        shadow.fillColor = UIColor(white: 0, alpha: 0.42)
         shadow.lineWidth = 0
         shadow.position = CGPoint(x: r * 0.18, y: -r * 0.22)
         shadow.zPosition = -0.5
@@ -274,9 +303,11 @@ final class BoardScene: SKScene, BoardAnimator {
         for i in 0..<12 {
             countLabels[i].text = state.houses[i] == 0 ? "" : "\(state.houses[i])"
             countLabels[i].isHidden = !showCounts
+            countShadows[i].text = countLabels[i].text
+            countShadows[i].isHidden = !showCounts
         }
         for p in Player.allCases {
-            storeLabels[p.rawValue].text = "\(state.stores[p.rawValue])"
+            storeLabels[p.rawValue].text = state.stores[p.rawValue] == 0 ? "" : "\(state.stores[p.rawValue])"
         }
     }
 
