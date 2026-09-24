@@ -147,10 +147,13 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
    - App Store screenshots: iPhone 6.9" set is produced by `e2e/specs/screenshots.spec.ts` at 1320×2868;
      iPad 13" set from `screenshots-ipad13/` (2064×2752). Add captions in Canva if wanted.
    - Accessibility sweep with VoiceOver on device; Dynamic Type check for the Heritage text.
-3. **Owner-gated release steps** (`docs/PIPELINE.md`): Apple secrets → `SIGNING_READY=true` → first
+3. **Owner decision on art rights** — read `docs/ART_DIRECTION.md` §3: Canva's terms permit commercial
+   use of the generated images in a free or paid app, but AI images are not themselves copyrightable
+   in the US and carry no indemnity. Keep them, or commission a Ghanaian artist for the five source images.
+4. **Owner-gated release steps** (`docs/PIPELINE.md`): Apple secrets → `SIGNING_READY=true` → first
    TestFlight build on merge; create IAP product `com.richardforjoe.oware.fulljourney`; host the
    privacy policy and add the support email; fill App Store Connect from `docs/APP_STORE.md`.
-4. **v1.1 — Online** via Game Center turn-based matches (GAME_PLAN §3.1), leaderboards, achievements.
+5. **v1.1 — Online** via Game Center turn-based matches (GAME_PLAN §3.1), leaderboards, achievements.
 
 ## Useful commands
 

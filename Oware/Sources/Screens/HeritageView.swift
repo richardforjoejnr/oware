@@ -101,6 +101,6 @@ struct HeritageView: View {
         para("Oware is famously social. Onlookers are expected to advise, argue and laugh, and the game has long been used to teach counting and foresight to children. In this app, Nana is that voice at your shoulder.")
         sub("Words you will see")
         para("Akwaaba: welcome. Medaase: thank you. Ayekoo: well done. Nana: an elder, a title of respect.")
-        note("Where this app says 'it is said', it means tradition rather than documented history. Sources are listed in the project's cultural sources log.")
+        note("Where this app says 'it is said', it means tradition rather than documented history. Sources are listed in the project's cultural sources log. The board and seed artwork were generated with AI tools and adapted for this app.")
     }
 }

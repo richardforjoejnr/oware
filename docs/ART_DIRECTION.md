@@ -58,10 +58,38 @@ Alternatives seen in Ghana: cowries, palm kernels, pebbles.
 | `hero-board.png` (1776×896) | full traditional board, reference | Home/Heritage hero and art reference |
 | `AppIcon.png` (1024²) | one carved hollow with three nickernuts, warm key light | App icon (Canva media `MAHWDmM5VRg`) |
 
-**Licence note (owner to confirm before submission).** These were generated with Canva's AI image
-tool under the owner's Canva account. Canva's terms permit commercial use of generated content;
-keep the Canva media IDs (`MAHWDeGSt8I`, `MAHWDWhl30o`, `MAHWDSefze8`, `MAHWDUtKk1A`, `MAHWDTiWR1Y`)
-with the assets as provenance, and do not present them as photographs of a specific real board.
+**Licence and rights — what Canva's terms actually say (checked 2026-09-24).**
+
+- *Ownership.* Canva's AI Product Terms: "you own your Output, except for any Output that modifies or
+  incorporates Licensed Content", and "You may use your Output for any lawful purpose … at your own
+  risk." Our images were pure text-to-image (plus Canva's background-removal tool applied to our own
+  output), so no Canva library content is involved and the outputs are ours. The official terms make
+  **no distinction between Free and paid plans** for AI output; some third-party blogs claim Free-plan
+  outputs are non-commercial, but that is not in Canva's own terms. The Content License Agreement's
+  "no trademarks / no on-demand products" list (§9) applies to Canva *library* content, not to AI
+  Output you own.
+- *Free app, paid app or in-app purchase.* Canva's terms do not care how the app is monetised: "any
+  lawful purpose" covers a free download, a one-time purchase, or a paid app. Monetising does raise
+  the stakes of any dispute, and standard plans carry **no IP indemnity** (Canva Shield is Enterprise
+  only) and an explicit "no warranty" on outputs. Our prompts were generic (wood, seeds, carved
+  symbols), which keeps the risk that an output resembles a specific artist's work low.
+- *Copyright in the images themselves.* Purely AI-generated images are generally **not copyrightable in
+  the US** (Copyright Office, Jan 2025 report: prompting alone is not authorship); the UK's
+  computer-generated-works rule (CDPA s.9(3)) is more favourable. Practical meaning: we can use and
+  sell with these images, but we may not be able to stop someone else copying *the raw textures*.
+  The app as a whole — code, board composition, processing, layout — is human-authored and protected.
+- *App icon / trademark.* Using the AI-generated icon as the app icon is fine. If the brand is ever to
+  be registered as a trademark, use a human-designed wordmark rather than this image.
+- *Obligations we must keep.* Canva prohibits (a) misleading anyone that AI output is human-made and
+  (b) removing or altering provenance/C2PA metadata. Our processing re-saves PNGs and therefore does
+  not carry the metadata through, so we keep the **original exports untouched in `art/canva-exports/`**
+  as the provenance record, this document credits Canva by media ID, and the app's Heritage screen
+  states that the board and seed artwork were generated with AI tools and adapted.
+- *Apple.* App Review has no rule against AI-generated art; guideline 5.2 only requires that you hold
+  the rights, which the AI Product Terms grant. The privacy label is unaffected.
+- *Alternative if the owner wants stronger protection:* commission a Ghanaian illustrator or
+  photographer for the board and seeds (the composition and pipeline stay the same; only the five
+  source images change). This is the only route to images that are themselves copyrightable.
 
 ## 4. Sources
 - Adu-Agyem, J., Sabutey, G. T. & Mensah, E. (2013). *New trends in the Ahwiaa wood carving industry
