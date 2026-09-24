@@ -70,6 +70,28 @@ final class GameSession {
         if case let .tutorial(i) = mode, Tutorial.steps.indices.contains(i) { return Tutorial.steps[i] }
         return nil
     }
+    /// The house the lesson wants tapped next, if any.
+    var highlightedHouse: Int? {
+        guard let step = currentTutorialStep, !tutorialStepDone, let move = step.requiredMove else { return nil }
+        return move.absoluteIndex
+    }
+    /// A short name for whoever the human is playing.
+    var opponentName: String {
+        switch mode {
+        case let .versusAI(difficulty, _, _): difficulty.displayName
+        case .passAndPlay: sideToMove == .south ? "B" : "A"
+        case .journey: mode.journeyOpponent?.name ?? "Journey"
+        case .puzzle: "Ananse"
+        case .tutorial: "Nana"
+        }
+    }
+    var opponentRole: String? {
+        switch mode {
+        case .versusAI: "computer"
+        case .journey: mode.journeyOpponent?.role
+        default: nil
+        }
+    }
     func isHumanSide(_ player: Player) -> Bool { mode.aiSide != player }
 
     var turnDescription: String {

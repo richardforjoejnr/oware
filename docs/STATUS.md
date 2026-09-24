@@ -136,6 +136,27 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
   real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
 
+## In flight on 2026-09-24 (read this first after a restart)
+
+- **Merged today:** #6 art-rights docs, #7 Xcode automatic signing (Product ▸ Archive works), #8 simpler
+  home menu (Play / Journey / New here? / More), #10 mid-game level change (tap "vs Level" above the board).
+- **Branch `feat/visual-upgrade`, PR #11 (open):** hero board image on Home; opponent badge/name/seeds
+  strip above the board + "You" strip below; five board looks (`BoardTheme.swift`: Heritage, Evening free;
+  Ebony, Cape Coast, Kente with the purchase) picked in Settings; lesson highlights the house to tap
+  (pulsing gold ring) and shows step dots. Fixed a double-parent SKNode crash in `BoardScene.highlight`.
+  XCUITests 10/10 green locally. **To do:** confirm the TypeScript suite + screenshots pass
+  (`cd e2e && OWARE_SIM_NAME="iPhone 18 Pro Max" OWARE_SCREENSHOTS=1 npx wdio run wdio.conf.ts`),
+  look at `e2e/screenshots/{home,board,tutorial}.png`, then merge PR #11 when CI is green.
+- **Local gotchas learned today:** macOS has no `timeout` command; Appium hangs at session creation
+  when several simulators are booted or a stale WebDriverAgent is left — shut extra sims down and
+  reboot "iPhone 18 Pro Max". GitHub closes a PR whose base branch was deleted, so base PRs on main.
+- **Owner's Apple ID situation:** developer.apple.com rejected Team ID 9MGS6Q2S9Q; the Xcode dev cert on
+  this Mac is for rforjoe@live.co.uk / team 6YH7H8GC4R. He needs to sign in with the Apple ID that
+  holds the paid membership and use that Team ID. The app runs on his iPhone from Xcode after trusting
+  the developer certificate in Settings ▸ General ▸ VPN & Device Management.
+- **Owner ideas from a mock-up he shared (not done, by design):** tab bar, coins, online matches,
+  leaderboards, friends — online is v1.1; coins ruled out; he asked for a simple menu.
+
 ## Next steps (in order)
 
 1. **Merge PR #5** when CI is green (I merge once green unless told otherwise).

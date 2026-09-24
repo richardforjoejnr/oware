@@ -37,6 +37,11 @@ final class AppSettings {
         didSet { defaults.set(grandSlamRule.rawValue, forKey: "grandSlamRule") }
     }
     var rules: RuleSet { RuleSet(grandSlam: grandSlamRule) }
+    /// Chosen board look (see `BoardTheme`).
+    var boardThemeID: String {
+        didSet { defaults.set(boardThemeID, forKey: "boardTheme") }
+    }
+    var boardTheme: BoardTheme { BoardTheme.named(boardThemeID) }
 
     /// Honour the system Reduce Motion setting: sowing becomes instant.
     var effectiveSpeed: Double {
@@ -53,6 +58,7 @@ final class AppSettings {
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
         showSeedCounts = defaults.object(forKey: "showSeedCounts") as? Bool ?? true
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
+        boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id
         if LaunchOptions.fastAnimations {
             // Not persisted: UI-test runs must not change the player's real preferences.
             animationSpeed = .instant
