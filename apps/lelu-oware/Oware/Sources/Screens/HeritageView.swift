@@ -72,7 +72,7 @@ struct HeritageView: View {
             .accessibilityIdentifier("rules-title")
         para("Oware is played on two rows of six houses with 48 seeds, four in each house. You own the row nearest you. The aim is to capture more seeds than the other player: 25 wins, 24 each is a draw.")
         sub("Sowing")
-        para("On your turn, pick up all the seeds in one of your houses and drop them one by one into the following houses, moving anticlockwise: along your row to the right, then along the far row to the left. Never sow into the stores, and if a house holds 12 or more seeds, skip the house you started from on each lap so it always ends empty.")
+        para("On your turn, pick up all the seeds in one of your houses and drop them one by one into the following houses, moving anticlockwise: along your own row away from your store, then back along the other player's row (on a phone held upright the rows stand as columns). Never sow into the stores, and if a house holds 12 or more seeds, skip the house you started from on each lap so it always ends empty.")
         sub("Capturing")
         para("If your last seed lands in the other player's row and brings that house to exactly two or three seeds, you capture them. Then look at the house before it: if it also holds two or three, capture that too, and keep going backwards until you reach a house that does not, or the end of the row. You never capture in your own row.")
         sub("Leave them something")

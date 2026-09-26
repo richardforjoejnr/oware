@@ -56,10 +56,18 @@ jobs:
             -resultBundlePath TestResults.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             | xcbeautify --renderer github-actions
+      - name: Export test summary for the Pages report
+        if: always()
+        run: |
+          xcrun xcresulttool get test-results summary --path TestResults.xcresult > test-summary.json || true
+          xcrun xcresulttool get test-results tests --path TestResults.xcresult > test-tests.json || true
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: TestResults
-          path: apps/lelu-oware/TestResults.xcresult
+          path: |
+            apps/lelu-oware/TestResults.xcresult
+            apps/lelu-oware/test-summary.json
+            apps/lelu-oware/test-tests.json
           if-no-files-found: ignore
