@@ -43,7 +43,7 @@ final class BoardLayoutTests: XCTestCase {
             for i in 0..<12 {
                 for j in (i + 1)..<12 {
                     let d = hypot(centres[i].x - centres[j].x, centres[i].y - centres[j].y)
-                    XCTAssertGreaterThan(d, layout.houseRadius * 2.0, "\(size) houses \(i) and \(j) overlap")
+                    XCTAssertGreaterThan(d, layout.pitSpriteDiameter * 1.04, "\(size) pit sprites \(i) and \(j) touch")
                 }
                 for player in Player.allCases {
                     let store = layout.storeRect(player).insetBy(dx: -layout.houseRadius, dy: -layout.houseRadius)

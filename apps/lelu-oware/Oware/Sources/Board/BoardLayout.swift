@@ -39,7 +39,10 @@ struct BoardLayout: Equatable {
         }
     }
 
-    var houseRadius: CGFloat { min(cell * 0.5, pitch * 0.47) }
+    var houseRadius: CGFloat { min(cell * 0.5, pitch * 0.42) }
+    /// The carved pit sprite's footprint: a little wider than the hollow, always short of the
+    /// next pit so neighbouring rims never touch.
+    var pitSpriteDiameter: CGFloat { min(houseRadius * 2.3, pitch * 0.9) }
     var seedRadius: CGFloat { cell * 0.095 }
     /// Corner radius of the slab.
     var cornerRadius: CGFloat { cell * 0.45 }

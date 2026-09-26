@@ -240,7 +240,7 @@ final class BoardScene: SKScene, BoardAnimator {
             let c = layout.sk(layout.houseCenter(i))
             let radius = layout.houseRadius
             houseNodes[i].position = c
-            houseNodes[i].size = theme.rustic ? CGSize(width: radius * 2.15, height: radius * 1.9) : CGSize(width: radius * 2.4, height: radius * 2.4)
+            houseNodes[i].size = theme.rustic ? CGSize(width: radius * 2.15, height: radius * 1.9) : CGSize(width: layout.pitSpriteDiameter, height: layout.pitSpriteDiameter)
             countLabels[i].fontSize = max(10, layout.cell * 0.2)
             countLabels[i].position = layout.sk(layout.countLabelPoint(i))
             countShadows[i].fontSize = countLabels[i].fontSize
