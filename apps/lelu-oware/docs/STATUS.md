@@ -6,6 +6,9 @@
 
 ## Latest (2026-09-27): Nam-Nam rules, PR #21
 
+Splash: 2.8 s, tap to skip; Reduce Motion no longer shortens it (the owner has Reduce Motion on and found it too fast).
+
+
 The owner plays Nam-Nam and asked for it as the **default**. `RuleSet.Variant` = `.namNam` (default for
 new AI and Pass & Play games) or `.abapa` (Settings ▸ Rules; Journey, riddles and the lesson always use
 Abapa). Nam-Nam in `GameState`: relay sowing (last seed in a non-empty house → scoop and carry on, each
