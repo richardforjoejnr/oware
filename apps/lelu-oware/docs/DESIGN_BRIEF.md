@@ -26,13 +26,13 @@ distillation is `../../docs/DESIGN_PRINCIPLES.md`. This file maps the brief to t
 | File | Used as |
 |---|---|
 | `ghana_hardwood_texture.png` 2048² | `wood` (seam-free 1024² from the upper plank, +12 % brightness) and `ground` (same wood at 42 % brightness, desaturated) |
-| `oware_pit.png` 1536² alpha | `pit` — every house is its own sprite with a bevelled rim |
-| `oware_score_trough.png` 1536² alpha | `trough` — the two scoring bowls, sprite keeps its 2.9:1 proportions |
+| `oware_pit.png` 1536² alpha | superseded the same evening (read as a bowl standing on the board) |
+| `oware_score_trough.png` 1536² alpha | superseded the same evening by the board-sheet trough |
 | `home_woodworker.png` 1440×2560 | `heroHome` — the carver's bench replaces the village sunset on Home |
 | `oware_board_master_reference.png` | reference only (it shows eight houses); the board is built from parts |
 | `journey_ghana_reference.png` | reference only — the generated place names are garbled, so it is not shipped; a text-free version is wanted |
-| `oware_seed.png` 1024² | arrived later: a dark natural seed; `seed1…8` are eight rotations of it (pixel edges disappear at 20 pt) |
+| `oware_seed.png` 1024² | superseded by the six stones from the board sheet |
 | `sheet_journey_medallions.png` | `Journey/chapter-<id>` for the eight chapters, `chapter-locked`, `chapter-done`, `star-gold`, `star-empty`, `chapter-link` — shown in `JourneyView` |
 | `sheet_wood_icons.png` | `Icons/wood-*` (back, play, plus, map, book, people, knot, gear, sound, mute, more, info, lock, unlock, star, home, close, restart, trophy, five round buttons) — the Home menu glyphs |
 | `sheet_wood_panels.png` | reference only for now (carved pills would put wooden chrome back around everything) |
-| `sheet_board_pits_seeds.png` | reference: the plain horizontal board is the model for landscape; the gold-ring and glow pit states are not used |
+| `sheet_board_pits_seeds.png` | **the source for the board**: `pit` (top-down hollow), `trough` (3.09:1, bowl = 84 % of width), `seed1…8` (six grey-green stones, two rotated). Gold-ring and glow states unused. The plain horizontal board is the model for landscape |

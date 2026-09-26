@@ -120,10 +120,10 @@ final class BoardScene: SKScene, BoardAnimator {
             storeNodes.append(store)
 
             let label = SKLabelNode(fontNamed: "Georgia")
-            label.fontColor = UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.55)
+            label.fontColor = UIColor(red: 0.93, green: 0.89, blue: 0.82, alpha: 0.9)
             label.verticalAlignmentMode = .center
             label.horizontalAlignmentMode = .center
-            label.zPosition = 2   // behind the seeds: a quiet numeral in the bowl
+            label.zPosition = 5   // at the bowl's end, clear of the seeds
             addChild(label)
             storeLabels.append(label)
         }
@@ -240,7 +240,7 @@ final class BoardScene: SKScene, BoardAnimator {
             let c = layout.sk(layout.houseCenter(i))
             let radius = layout.houseRadius
             houseNodes[i].position = c
-            houseNodes[i].size = theme.rustic ? CGSize(width: radius * 2.15, height: radius * 1.9) : CGSize(width: radius * 2.3, height: radius * 2.3)
+            houseNodes[i].size = theme.rustic ? CGSize(width: radius * 2.15, height: radius * 1.9) : CGSize(width: radius * 2.4, height: radius * 2.4)
             countLabels[i].fontSize = max(10, layout.cell * 0.2)
             countLabels[i].position = layout.sk(layout.countLabelPoint(i))
             countShadows[i].fontSize = countLabels[i].fontSize
@@ -252,11 +252,11 @@ final class BoardScene: SKScene, BoardAnimator {
             if theme.rustic {
                 storeNodes[p.rawValue].size = CGSize(width: rect.width * 1.08, height: rect.height * 1.06)
             } else {
-                // The trough sprite keeps its own proportions (about 2.9:1) and sits a little proud of the slot.
-                let w = rect.width * 1.12
-                storeNodes[p.rawValue].size = CGSize(width: w, height: w / 2.9)
+                // The trough sprite keeps its own proportions (3.09:1); the layout's store rect is its bowl.
+                let w = rect.width / BoardLayout.troughBowlFraction
+                storeNodes[p.rawValue].size = CGSize(width: w, height: w / 3.09)
             }
-            storeLabels[p.rawValue].fontSize = max(14, layout.cell * 0.5)
+            storeLabels[p.rawValue].fontSize = max(13, layout.cell * 0.3)
             storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
         }
         if !animating { render(current) }

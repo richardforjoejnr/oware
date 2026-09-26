@@ -292,6 +292,25 @@ final class GameSession {
     }
 
     /// Re-render after the board view (re)appears.
+    #if DEBUG
+    /// Screenshot aid: a mid-game position with `n` seeds in each store, no AI move pending.
+    func loadDemoPosition(storeSeeds n: Int) {
+        aiTask?.cancel()
+        var s = GameState.initial
+        let perStore = min(n, 24)
+        s.stores = [perStore, perStore]
+        let remaining = 48 - perStore * 2
+        var houses = Array(repeating: 0, count: 12)
+        for i in 0..<remaining { houses[(i * 5) % 12] += 1 }
+        s.houses = houses
+        state = s
+        history = []
+        isThinking = false
+        isAnimating = false
+        animator?.render(state)
+    }
+    #endif
+
     func attach(_ animator: any BoardAnimator) {
         self.animator = animator
         animator.render(state)

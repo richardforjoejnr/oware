@@ -76,26 +76,32 @@ struct BoardLayout: Equatable {
         }
     }
 
-    /// The store (score house) at either end.
+    /// How much of the trough sprite's width is bowl (the rest is rim). `storeRect` is the bowl.
+    static let troughBowlFraction: CGFloat = 0.84
+
+    /// The store's bowl at either end: the area seeds may rest in.
     func storeRect(_ player: Player) -> CGRect {
         switch orientation {
         case .horizontal:
             let x = player == .south ? boardRect.maxX - storeZone * 0.52 : boardRect.minX + storeZone * 0.52
-            let w = cell * 0.8
+            let w = cell * 0.62
             let h = cell * 2.3
             return CGRect(x: x - w / 2, y: boardRect.midY - h / 2, width: w, height: h)
         case .vertical:
             let y = player == .south ? boardRect.minY + storeZone * 0.52 : boardRect.maxY - storeZone * 0.52
             let w = cell * 2.5
-            let h = cell * 0.8
+            let h = cell * 0.62
             return CGRect(x: boardRect.midX - w / 2, y: y - h / 2, width: w, height: h)
         }
     }
 
-    /// Where the store's count is drawn: centred in the store, behind the seeds.
+    /// The store's count sits at the bowl's outer end, clear of the seeds.
     func storeLabelPoint(_ player: Player) -> CGPoint {
         let r = storeRect(player)
-        return CGPoint(x: r.midX, y: r.midY)
+        switch orientation {
+        case .horizontal: return CGPoint(x: r.midX, y: player == .south ? r.maxY - r.width * 0.5 : r.minY + r.width * 0.5)
+        case .vertical:   return CGPoint(x: r.maxX - r.height * 0.5, y: r.midY)
+        }
     }
 
     /// Where a house's seed count is drawn (outside the house, away from the board centre).
@@ -133,15 +139,31 @@ struct BoardLayout: Equatable {
         return CGPoint(x: c.x + spread * CGFloat(cos(angle)), y: c.y + spread * CGFloat(sin(angle)))
     }
 
-    /// Resting spot for the k-th seed in a store: fills from the bottom up in a loose grid.
+    /// Resting spot for the k-th seed in a store: rows of seeds packed along the bowl, leaving
+    /// the outer end for the count. Overflow beyond the grid stacks loosely on top.
     func storeSlot(_ player: Player, index k: Int) -> CGPoint {
         let r = storeRect(player)
-        let pitch = seedRadius * 2.1
-        let columns = max(1, Int((r.width - seedRadius * 1.2) / pitch))
-        let row = k / columns
-        let col = k % columns
-        let x = r.minX + seedRadius * 1.5 + CGFloat(col) * pitch + (row % 2 == 0 ? 0 : pitch * 0.3)
-        let y = r.maxY - seedRadius * 1.6 - CGFloat(row) * pitch * 0.9
-        return CGPoint(x: min(x, r.maxX - seedRadius * 1.2), y: max(r.minY + seedRadius * 1.6, y))
+        let pitch = seedRadius * 2.05
+        // Usable area: inset from the bowl edge, minus the label end.
+        let long = (orientation == .vertical ? r.width : r.height) - seedRadius * 2.6 - (orientation == .vertical ? r.height : r.width) * 0.9
+        let short = (orientation == .vertical ? r.height : r.width) - seedRadius * 2.4
+        let perRow = max(1, Int(long / pitch))
+        let rows = max(1, Int(short / (pitch * 0.9)))
+        let capacity = perRow * rows
+        let i = k % capacity
+        let layer = k / capacity
+        let row = i / perRow, col = i % perRow
+        let alongOffset = (CGFloat(col) - CGFloat(perRow - 1) / 2) * pitch + (row % 2 == 0 ? 0 : pitch * 0.25) + CGFloat(layer) * seedRadius * 0.4
+        let acrossOffset = (CGFloat(row) - CGFloat(rows - 1) / 2) * pitch * 0.9 + CGFloat(layer) * seedRadius * 0.3
+        // Centre of the seed area is shifted away from the label end.
+        switch orientation {
+        case .vertical:
+            let cx = r.minX + seedRadius * 1.3 + long / 2
+            return CGPoint(x: cx + alongOffset, y: r.midY + acrossOffset)
+        case .horizontal:
+            let labelAtBottom = player == .south
+            let cy = labelAtBottom ? r.minY + seedRadius * 1.3 + long / 2 : r.maxY - seedRadius * 1.3 - long / 2
+            return CGPoint(x: r.midX + acrossOffset, y: cy + alongOffset)
+        }
     }
 }

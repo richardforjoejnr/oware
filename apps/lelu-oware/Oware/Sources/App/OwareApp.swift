@@ -56,6 +56,10 @@ enum LaunchOptions {
     static var startScreen: String? {
         CommandLine.arguments.first { $0.hasPrefix("--screen=") }.map { String($0.dropFirst("--screen=".count)) }
     }
+    /// `--demo-stores=N`: with `--start-game`, put N seeds in each store and scatter the rest (screenshots).
+    static var demoStores: Int? {
+        CommandLine.arguments.first { $0.hasPrefix("--demo-stores=") }.flatMap { Int($0.dropFirst("--demo-stores=".count)) }
+    }
     static var fastAnimations: Bool {
         CommandLine.arguments.contains("--fast-animations") || UserDefaults.standard.bool(forKey: "fastAnimations")
     }

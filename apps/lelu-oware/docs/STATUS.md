@@ -143,7 +143,7 @@ Owner supplied an asset pack and a direction change: wood is the identity, symbo
 belong, small quiet controls, 120–160 ms sow steps, a 3 % press lift instead of colour. Applied:
 `wood`/`ground` from the hardwood texture, `pit` and `trough` sprites, `heroHome` (carver's bench),
 darker seeds; Heritage has no carved frame and no faint carvings; HUD chips smaller and bone-coloured;
-`BoardScene.press(house:)`. Later the same evening he sent the seed (now `seed1…8`), Journey chapter medallions (`Journey/chapter-*`, used in `JourneyView`), a carved icon set (`Icons/wood-*`, used on the Home menu) and panel/board sheets (reference). `--screen=journey|puzzles|heritage` opens a screen directly for screenshots. Journey map art is still outstanding.
+`BoardScene.press(house:)`. Later the same evening he sent the seed (now `seed1…8`), Journey chapter medallions (`Journey/chapter-*`, used in `JourneyView`), a carved icon set (`Icons/wood-*`, used on the Home menu) and panel/board sheets (reference). `--screen=journey|puzzles|heritage` opens a screen directly for screenshots. He then pointed out misalignment (bowl-like pits, store seeds spilling onto the rim under the count) and chose the board sheet: `pit`/`trough`/`seed1…8` now come from it, `BoardLayout.storeRect` is the bowl (`troughBowlFraction`), seeds pack in rows clear of the count at the bowl's end, and `BoardLayoutTests` pins seeds inside pits and bowls in both orientations. Journey map art is still outstanding.
 
 ## Tip jar (2026-09-26, branch `feat/tip-jar`, stacked on #16)
 
