@@ -148,6 +148,7 @@ final class GameSession {
         state = .initial(rules: rules)
         history = []
         previewMove = nil
+        roundMessage = nil
         puzzleAttempt = nil
         tutorialStepDone = false
         isThinking = false
@@ -293,7 +294,9 @@ final class GameSession {
     func resign() {
         guard !state.isOver else { return }
         aiTask?.cancel()
-        _ = state.endByAgreement()
+        // Resigning ends the whole game (in Nam-Nam, not just the round): the other side wins.
+        let loser = mode.aiSide?.opponent ?? state.sideToMove
+        state.outcome = .win(loser.opponent, .agreement)
         persist()
         animator?.render(state)
     }
@@ -346,7 +349,7 @@ final class GameSession {
 
     /// "Round 1: you 28, Nana 20 — you gain a house"
     static func describe(_ round: RoundResult, in mode: GameMode) -> String {
-        let you = mode.aiSide == .south || mode.aiSide == nil ? Player.south : Player.north
+        let you = mode.aiSide?.opponent ?? .south
         let mine = you == .south ? round.southSeeds : round.northSeeds
         let theirs = you == .south ? round.northSeeds : round.southSeeds
         let myHouses = you == .south ? round.southHouses : round.northHouses
