@@ -3,11 +3,14 @@
 name: Oware
 options:
   bundleIdPrefix: com.richardforjoe
+  xcodeVersion: "27.0"
   deploymentTarget:
     iOS: "17.0"
-  xcodeVersion: "26.0"
   createIntermediateGroups: true
   generateEmptyDirectories: true
+
+attributes:
+  LastUpgradeCheck: "2700"
 
 settings:
   base:

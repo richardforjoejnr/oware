@@ -64,6 +64,12 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("setting-speed")
+                if settings.calmMotion {
+                    Text("Reduce Motion is on in iOS Settings: seeds still travel, without tumble or bounce.")
+                        .font(Theme.caption(12))
+                        .foregroundStyle(Theme.ivoryDim)
+                        .accessibilityIdentifier("setting-speed-note")
+                }
             }
 
             Toggle("Sound", isOn: $settings.soundEnabled)

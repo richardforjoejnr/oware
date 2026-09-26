@@ -485,6 +485,10 @@ final class BoardScene: SKScene, BoardAnimator {
     }
 
     func animate(events: [MoveEvent], from before: GameState, to after: GameState) async {
+        // A paused view (app just came to the foreground, or SpriteView's own pause) would swallow
+        // every action, so make sure it is running before deciding whether to animate at all.
+        if let view, view.isPaused { view.isPaused = false }
+        if isPaused { isPaused = false }
         if isInstant {
             render(after)
             playEndSounds(after)
