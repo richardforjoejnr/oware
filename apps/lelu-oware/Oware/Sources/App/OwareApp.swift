@@ -64,7 +64,7 @@ enum LaunchOptions {
     static var resetState: Bool { flag("--reset-state", defaultsKey: "resetState") }
     /// `--fast-animations` / `-fastAnimations YES`: instant, silent, no splash (UI tests).
     static var fastAnimations: Bool { flag("--fast-animations", defaultsKey: "fastAnimations") }
-    /// `--start-game` / `-startGame YES`: open straight onto a new game against the Learner.
+    /// `--start-game` / `-startGame YES`: open straight onto a new game at Casual level.
     static var startGame: Bool { flag("--start-game", defaultsKey: "startGame") }
     /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (animation checks).
     static var demoMove: Bool { flag("--demo-move") }

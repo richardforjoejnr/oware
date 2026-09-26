@@ -47,12 +47,25 @@ public enum Difficulty: Int, Sendable, Codable, CaseIterable, Comparable {
 
     public var displayName: String {
         switch self {
-        case .beginner: "Beginner"
-        case .learner: "Learner"
-        case .player: "Player"
-        case .strong: "Strong"
-        case .master: "Master"
+        // The owner's names (2026-09-27). Only four levels are offered in the app; the two in
+        // between are used by Journey opponents and share the nearest name.
+        case .beginner, .learner: "Novice"
+        case .player: "Intermediate"
+        case .strong, .master: "Strategist"
         case .grandmaster: "Grandmaster"
+        }
+    }
+
+    /// The levels a player can pick: Novice, Intermediate, Strategist, Grandmaster.
+    public static let menuLevels: [Difficulty] = [.beginner, .player, .master, .grandmaster]
+
+    /// The picker level this one is shown as (older saves may hold an in-between level).
+    public var menuLevel: Difficulty {
+        switch self {
+        case .beginner, .learner: .beginner
+        case .player: .player
+        case .strong, .master: .master
+        case .grandmaster: .grandmaster
         }
     }
 }

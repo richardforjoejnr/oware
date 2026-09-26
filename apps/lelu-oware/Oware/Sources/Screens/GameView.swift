@@ -15,7 +15,7 @@ struct GameView: View {
     @State private var hint: String?
     @State private var hintTask: Task<Void, Never>?
     @State private var showLevels = false
-    @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.learner.rawValue
+    @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
 
     var body: some View {
         ZStack {
@@ -205,10 +205,10 @@ struct GameView: View {
 
     /// Inline level picker under the top bar; changes the running game's opponent.
     private var levelRow: some View {
-        HStack(spacing: 18) {
-            ForEach(Difficulty.allCases, id: \.rawValue) { level in
+        HStack(spacing: 16) {
+            ForEach(Difficulty.menuLevels, id: \.rawValue) { level in
                 let current: Bool = {
-                    if case let .versusAI(d, _, _) = session.mode { return d == level }
+                    if case let .versusAI(d, _, _) = session.mode { return d.menuLevel == level }
                     return false
                 }()
                 Button {
@@ -218,6 +218,8 @@ struct GameView: View {
                     showHint("Now playing against \(level.displayName)")
                 } label: {
                     Text(level.displayName)
+                        .lineLimit(1)
+                        .fixedSize()
                         .font(Theme.caption(13))
                         .foregroundStyle(current ? Theme.gold : Theme.ivoryDim)
                         .underline(current, color: Theme.gold)
