@@ -9,7 +9,7 @@ const APP_PATH =
 // Reuse the same simulator-picking logic as the Makefile / CI.
 const DEVICE_NAME =
   process.env.OWARE_SIM_NAME ??
-  execSync(path.resolve(__dirname, "../scripts/pick-simulator.sh")).toString().trim();
+  execSync(path.resolve(__dirname, "../../../scripts/pick-simulator.sh")).toString().trim();
 
 // Resolve the simulator UDID (booted one preferred). Passing `appium:udid` makes the
 // XCUITest driver attach to exactly this simulator and skip its own

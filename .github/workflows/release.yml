@@ -20,6 +20,9 @@ jobs:
   release:
     name: Build & upload to App Store Connect
     runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/lelu-oware
     environment: production   # add required reviewers on this environment for a manual gate
     if: ${{ vars.SIGNING_READY == 'true' }}
     steps:
@@ -50,4 +53,4 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           BUILD_NUMBER: ${{ github.run_number }}
           SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review || 'false' }}
-        run: bundle exec fastlane ios release
+        run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios release
