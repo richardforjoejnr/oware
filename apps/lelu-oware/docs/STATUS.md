@@ -207,6 +207,9 @@ move; read old paths as relative to `apps/lelu-oware/`.
   (`effectiveSpeed` / `effectiveSound` / `effectiveHaptics`) and a one-time repair clears the leaked values.
   Covered by `AppSettingsTests` and `BoardSceneTimingTests` (a four-seed sowing must take over a second).
   Debug aid: `--start-game --demo-move` sows A1 two seconds after launch for screenshot bursts.
+- **Gotcha (2026-09-26):** running `swift test` inside a package leaves `packages/<Pkg>/.swiftpm` and Xcode then
+  reports "Couldn't load project … .swiftpm" / "Missing package product". Fix: `rm -rf packages/*/.swiftpm`,
+  regenerate the project, reopen. `make engine-test` now cleans up after itself.
 - **Local gotchas learned today:** macOS has no `timeout` command; Appium hangs at session creation
   when several simulators are booted or a stale WebDriverAgent is left — shut extra sims down and
   reboot "iPhone 18 Pro Max". GitHub closes a PR whose base branch was deleted, so base PRs on main.
