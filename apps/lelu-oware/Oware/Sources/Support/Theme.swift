@@ -16,6 +16,12 @@ enum Theme {
     static let kenteRed = Color(red: 0.70, green: 0.15, blue: 0.12)
     static let kenteGreen = Color(red: 0.12, green: 0.44, blue: 0.29)
     static let kenteGreenDeep = Color(red: 0.07, green: 0.30, blue: 0.19)
+    // Owner's brief (docs/DESIGN_PRINCIPLES.md): wood browns, bone text, brass and olive accents.
+    static let bark = Color(red: 0x4A / 255, green: 0x2C / 255, blue: 0x2A / 255)
+    static let barkLight = Color(red: 0x5A / 255, green: 0x3E / 255, blue: 0x36 / 255)
+    static let bone = Color(red: 0xED / 255, green: 0xE3 / 255, blue: 0xD2 / 255)
+    static let brass = Color(red: 0xC4 / 255, green: 0x96 / 255, blue: 0x27 / 255)
+    static let olive = Color(red: 0x70 / 255, green: 0x82 / 255, blue: 0x38 / 255)
 
     static func title(_ size: CGFloat = 44) -> Font { .system(size: size, weight: .medium, design: .serif) }
     static func body(_ size: CGFloat = 17) -> Font { .system(size: size, weight: .regular, design: .serif) }

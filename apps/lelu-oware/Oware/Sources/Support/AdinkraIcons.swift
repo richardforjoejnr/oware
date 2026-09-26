@@ -70,6 +70,22 @@ enum Adinkra {
     }
 }
 
+extension Adinkra {
+    /// Adinkrahene, three concentric circles: greatness, leadership, the chief of the symbols.
+    struct Adinkrahene: Shape {
+        func path(in rect: CGRect) -> Path {
+            var p = Path()
+            let c = CGPoint(x: rect.midX, y: rect.midY)
+            let r = min(rect.width, rect.height) / 2
+            for f in [1.0, 0.68, 0.36] as [CGFloat] {
+                p.addEllipse(in: CGRect(x: c.x - r * f, y: c.y - r * f, width: r * f * 2, height: r * f * 2))
+            }
+            p.addEllipse(in: CGRect(x: c.x - r * 0.08, y: c.y - r * 0.08, width: r * 0.16, height: r * 0.16))
+            return p
+        }
+    }
+}
+
 /// A stroked Adinkra glyph sized like an SF Symbol icon.
 struct AdinkraGlyph<S: Shape>: View {
     let shape: S

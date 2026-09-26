@@ -137,6 +137,26 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
   real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
 
+## Rules review (2026-09-26, owner asked "are the rules actually correct?")
+
+Read `GameState` against Abapa and found it faithful: anticlockwise sowing skipping the origin on
+every lap; capture only when the last seed lands on the opponent's row making 2 or 3, walking back
+through contiguous 2s/3s and stopping at the row edge; grand slam allowed but forfeited (default),
+with illegal / capture-ends-game variants; feeding obligation when the opponent's row is empty and,
+if nothing can feed, the mover keeps their own seeds; 25 wins at once, empty board ends, 24–24 draws;
+threefold repetition ends with each side keeping its seeds. The in-app rules text (Heritage ▸ Rules)
+says the same. Added `AbapaReferenceTests`: an independent plain implementation plays 2,000 random
+games against the engine and every position, store and result must agree (plus a hand-checked
+capture). Existing coverage: 45 engine tests including random-playout conservation.
+
+## Restraint pass (2026-09-26 evening, branch `feat/design-brief`, PR #18)
+
+Owner supplied an asset pack and a direction change: wood is the identity, symbols only where they
+belong, small quiet controls, 120–160 ms sow steps, a 3 % press lift instead of colour. Applied:
+`wood`/`ground` from the hardwood texture, `pit` and `trough` sprites, `heroHome` (carver's bench),
+darker seeds; Heritage has no carved frame and no faint carvings; HUD chips smaller and bone-coloured;
+`BoardScene.press(house:)`. Later the same evening he sent the seed (now `seed1…8`), Journey chapter medallions (`Journey/chapter-*`, used in `JourneyView`), a carved icon set (`Icons/wood-*`, used on the Home menu) and panel/board sheets (reference). `--screen=journey|puzzles|heritage` opens a screen directly for screenshots. He then pointed out misalignment (bowl-like pits, store seeds spilling onto the rim under the count) and chose the board sheet: `pit`/`trough`/`seed1…8` now come from it, `BoardLayout.storeRect` is the bowl (`troughBowlFraction`), seeds pack in rows clear of the count at the bowl's end, and `BoardLayoutTests` pins seeds inside pits and bowls in both orientations. Then the opening and menu: `SplashView` (carved Ghana map `splashMap`, title, thin brass loading line, 1.5 s, skipped for test launches and cut to 0.5 s under Reduce Motion) → `HomeView` rebuilt as dark wood, title, one dominant Continue/Play plank (64 pt), a 2×2 grid of matte `WoodTile`s (New game or Riddles / Journey / New here? or Learn / More) and `WoodPlank` rows under More; red·gold·green only as tiny `Inlay` dots; `PressLift` sinks a pressed control 2 %. The map was regenerated text-free through Canva (`journey_ghana_map_clean.png`) so the splash carries no garbled labels. Landscape: the menu gets a side-by-side layout (title left, controls right) and the trough sprite is rotated for the horizontal board so the stores are the same size as in portrait; `LandscapeUITests` rotates the device, asserts houses/stores/tiles are present and tappable, and keeps screenshots. Compiler warnings cleared (BoardTexture is `@MainActor`, TipJar's task is `@ObservationIgnored` with an `isolated deinit`, PuzzleGenerator's unused `try?` discarded).
+
 ## Tip jar (2026-09-26, branch `feat/tip-jar`, stacked on #16)
 
 The owner chose a tip jar as the only monetisation. `packages/SupportKit` (shared across apps) holds
@@ -200,13 +220,14 @@ move; read old paths as relative to `apps/lelu-oware/`.
   Heritage = carved amber board with Adinkra frame (`rimAdinkra`); Village = hewn scorched board.
   Assets: `docs/ART_DIRECTION.md` §3d. Apple guidance followed: immediate feedback on every tap, haptics
   tied to physical events, Reduce Motion honoured, controls kept to 44 pt, chrome hidden while playing.
+- **Owner report 2026-09-26 (iPhone 16e): sowing perfect on the simulator, seeds "just appear" on the phone.** Two device-only causes fixed: Reduce Motion used to force Instant (now it only calms motion — `AppSettings.calmMotion` → `BoardScene.calmMotion`: no tumble/lift/puff, seeds still travel), and the first preference repair only fired if speed, sound *and* haptics were all in the test state, so a phone where sound had been switched back on kept Instant (repair v2, marker `preferencesRepaired.2026-09-26`, resets each independently). His phone showed Sowing speed = Slow, so the leak was not it; Reduce Motion remains the likely cause. Also added: a note under the speed picker when Reduce Motion is on, and `BoardScene.animate` un-pauses a paused SKView/scene before deciding to animate (a paused view would otherwise snap every move). Xcode's "update to recommended settings" nag quieted via `LastUpgradeCheck` in project.yml. He also reports **no sound on the phone**: `SoundPlayer` uses the `.ambient` session category, which obeys the Silent switch / Silent mode (correct for a game), and it permanently disabled itself if the first `engine.start()` failed and never restarted after an interruption — Cause confirmed: the phone was on Silent. Fixed anyway: the engine retries on each play and restarts after interruptions/route changes; Settings says sounds follow Silent mode. Then, at his request, the sounds were resynthesised as pebble-on-wood impacts: a 3 ms noise burst plus decaying wood modes (520/790/1240/2650 Hz) for a seed on bare wood (`tick`), a brighter stone-on-stone `clack` when a seed lands on others (the scene picks by house count), a scooped-handful `pickUp`, and a trough `capture` thud with a scatter of clacks; four detuned takes of each so no two drops sound identical. Real recorded samples remain the Milestone 5 upgrade path (same `Sound` cases). Pre-release tidy-ups done: `LaunchOptions` compile to no-ops outside Debug, the heritage credit names all three generators, Game Center dropped from the release checklist until v1.1, splash lengthened to 2.2 s at the owner's request.
 - **Root cause of "seeds just show up" (fixed 2026-09-24 night):** `--fast-animations` was being *saved*
   into the player's real preferences (sowing speed Instant, sound and haptics off) because `@Observable`
   routes assignments in `AppSettings.init` through the observed setters. Any UI-test or screenshot run on a
   device/simulator left the app instant and silent. Now `AppSettings.testMode` overrides at read time
   (`effectiveSpeed` / `effectiveSound` / `effectiveHaptics`) and a one-time repair clears the leaked values.
   Covered by `AppSettingsTests` and `BoardSceneTimingTests` (a four-seed sowing must take over a second).
-  Debug aid: `--start-game --demo-move` sows A1 two seconds after launch for screenshot bursts.
+  Debug aids: `--start-game --demo-move` sows A1 two seconds after launch for screenshot bursts; `--start-game --demo-stores=N` loads a position with N seeds in each store (checked at 16 and 24: seeds stay inside the bowls, count clear at the end); `--screen=journey|puzzles|heritage` opens a screen.
 - **Gotcha (2026-09-26):** running `swift test` inside a package leaves `packages/<Pkg>/.swiftpm` and Xcode then
   reports "Couldn't load project … .swiftpm" / "Missing package product". Fix: `rm -rf packages/*/.swiftpm`,
   regenerate the project, reopen. `make engine-test` now cleans up after itself.

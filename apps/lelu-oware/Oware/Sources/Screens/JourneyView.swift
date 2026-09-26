@@ -35,20 +35,32 @@ struct JourneyView: View {
 
                     ForEach(Array(Journey.chapters.enumerated()), id: \.element.id) { index, chapter in
                         let unlocked = progress.isReached(chapterIndex: index)
+                        let finished = chapter.opponents.allSatisfy { progress.stars(for: $0) > 0 }
                         VStack(alignment: .leading, spacing: 8) {
-                            HStack(alignment: .firstTextBaseline) {
-                                Text(chapter.title)
-                                    .font(Theme.body(22))
-                                    .foregroundStyle(unlocked ? Theme.ivory : Theme.ivoryDim.opacity(0.6))
-                                Text(chapter.region)
-                                    .font(Theme.caption())
-                                    .foregroundStyle(Theme.ivoryDim)
-                                Spacer()
-                                if !unlocked {
-                                    Image(systemName: "lock")
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(Theme.ivoryDim.opacity(0.6))
+                            HStack(alignment: .center, spacing: 14) {
+                                ZStack(alignment: .bottomTrailing) {
+                                    Image("chapter-\(chapter.id)")
+                                        .resizable()
+                                        .scaledToFit()
+                                        .saturation(unlocked ? 1 : 0.15)
+                                        .opacity(unlocked ? 1 : 0.55)
+                                    if !unlocked {
+                                        Image("chapter-locked").resizable().scaledToFit().frame(width: 30, height: 30)
+                                    } else if finished {
+                                        Image("chapter-done").resizable().scaledToFit().frame(width: 30, height: 30)
+                                    }
                                 }
+                                .frame(width: 84, height: 84)
+                                .accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(chapter.title)
+                                        .font(Theme.body(22))
+                                        .foregroundStyle(unlocked ? Theme.ivory : Theme.ivoryDim.opacity(0.6))
+                                    Text(chapter.region)
+                                        .font(Theme.caption())
+                                        .foregroundStyle(Theme.ivoryDim)
+                                }
+                                Spacer()
                             }
                             Text(chapter.blurb)
                                 .font(Theme.caption(14))

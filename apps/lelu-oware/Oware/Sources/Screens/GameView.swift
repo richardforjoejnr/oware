@@ -28,7 +28,7 @@ struct GameView: View {
             }
             .ignoresSafeArea()
             .accessibilityHidden(true)
-            LinearGradient(colors: [settings.boardTheme.backgroundTop.opacity(0.42), settings.boardTheme.backgroundBottom.opacity(0.6)],
+            LinearGradient(colors: [settings.boardTheme.backgroundTop.opacity(0.25), settings.boardTheme.backgroundBottom.opacity(0.35)],
                            startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
             // The board takes the whole width; the two thin bars float over its ends.
@@ -86,8 +86,8 @@ struct GameView: View {
 
             if session.mode.isResumable {
                 Button(action: { session.requestHint() }) {
-                    AdinkraGlyph(shape: Adinkra.Nyansapo(), size: 22,
-                                 color: session.canHint ? Theme.gold : Theme.ivoryDim.opacity(0.4))
+                    AdinkraGlyph(shape: Adinkra.Nyansapo(), size: 19,
+                                 color: session.canHint ? Theme.bone : Theme.ivoryDim.opacity(0.4))
                         .frame(width: 44, height: 44)
                         .contentShape(Circle())
                 }
@@ -98,8 +98,8 @@ struct GameView: View {
                 .accessibilityLabel("Hint")
             }
             Button(action: { session.undo() }) {
-                AdinkraGlyph(shape: Adinkra.Sankofa(), size: 24,
-                             color: session.canUndo ? Theme.gold : Theme.ivoryDim.opacity(0.4))
+                AdinkraGlyph(shape: Adinkra.Sankofa(), size: 21,
+                             color: session.canUndo ? Theme.bone : Theme.ivoryDim.opacity(0.4))
                     .frame(width: 44, height: 44)
                     .contentShape(Circle())
             }
@@ -109,15 +109,15 @@ struct GameView: View {
             .accessibilityIdentifier("btn-undo")
             .accessibilityLabel("Undo")
         }
-        .padding(.horizontal, 12)
-        .frame(height: 56)
+        .padding(.horizontal, 10)
+        .frame(height: 50)
     }
 
     private func roundButton(systemName: String, id: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(enabled ? Theme.ivory : Theme.ivoryDim.opacity(0.4))
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(enabled ? Theme.bone : Theme.ivoryDim.opacity(0.4))
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
         }
@@ -140,6 +140,7 @@ struct GameView: View {
                     Text(session.opponentName)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.ivory)
+                    kenteMark(active: active)
                     if chevron {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 9, weight: .medium))
@@ -173,6 +174,19 @@ struct GameView: View {
         }
     }
 
+    /// Three tiny Kente dots: the only colour on the HUD, and it marks whose turn it is.
+    private func kenteMark(active: Bool) -> some View {
+        HStack(spacing: 3) {
+            Circle().fill(Theme.kenteRed)
+            Circle().fill(Theme.gold)
+            Circle().fill(Theme.kenteGreen)
+        }
+        .frame(width: 22, height: 5)
+        .opacity(active ? 1 : 0)
+        .animation(.easeInOut(duration: 0.3), value: active)
+        .accessibilityHidden(true)
+    }
+
     private func badge(letter: String, active: Bool) -> some View {
         ZStack {
             Circle()
@@ -182,7 +196,7 @@ struct GameView: View {
                 .font(Theme.body(15))
                 .foregroundStyle(active ? Theme.gold : Theme.ivoryDim)
         }
-        .frame(width: 32, height: 32)
+        .frame(width: 28, height: 28)
         .animation(.easeInOut(duration: 0.3), value: active)
     }
 
@@ -246,11 +260,11 @@ struct GameView: View {
                 .hudChrome(Capsule())
                 .lineLimit(1)
             }
-            .frame(height: 48)
+            .frame(height: 44)
         }
-        .padding(.horizontal, 12)
-        .padding(.top, 4)
-        .padding(.bottom, 4)
+        .padding(.horizontal, 10)
+        .padding(.top, 3)
+        .padding(.bottom, 2)
         .animation(.easeInOut(duration: 0.25), value: hint)
         .animation(.easeInOut(duration: 0.3), value: session.puzzleAttempt)
         .animation(.easeInOut(duration: 0.3), value: session.tutorialStepDone)
@@ -270,9 +284,12 @@ struct GameView: View {
         return HStack(spacing: 8) {
             badge(letter: String(name.prefix(1)), active: active)
             VStack(alignment: .leading, spacing: 0) {
-                Text(name)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.ivory)
+                HStack(spacing: 5) {
+                    Text(name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.ivory)
+                    kenteMark(active: active)
+                }
                 seedLine("\(seeds) seeds", showSeed: true)
             }
         }

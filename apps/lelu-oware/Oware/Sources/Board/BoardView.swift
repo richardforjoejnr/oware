@@ -56,6 +56,7 @@ struct BoardView: View {
         scene.theme = settings.boardTheme
         scene.setHighlight(house: session.highlightedHouse)
         scene.animationSpeed = settings.effectiveSpeed
+        scene.calmMotion = settings.calmMotion
         scene.showCounts = settings.showSeedCounts
         SoundPlayer.shared.enabled = settings.effectiveSound
         Haptics.shared.enabled = settings.effectiveHaptics
@@ -76,6 +77,7 @@ struct BoardView: View {
             .frame(width: layout.houseRadius * 2.2, height: layout.houseRadius * 2.2)
             .position(center)
             .onTapGesture {
+                scene.press(house: index)
                 guard isTurn else { return }
                 if let reason = session.reasonHouseIsBlocked(relative) {
                     onBlockedTap?(reason)

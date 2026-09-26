@@ -32,7 +32,7 @@ merging is safe before Apple credentials are configured.
 2. **App record in App Store Connect** — https://appstoreconnect.apple.com → My Apps → "+" → New App
    - Platform iOS, name (e.g. "Oware: Seeds of Ghana"), primary language English (UK),
      Bundle ID `com.richardforjoe.oware` (register it first under Certificates, IDs & Profiles → Identifiers,
-     enable **Game Center** and **In-App Purchase**), SKU `oware-ios`.
+     enable **In-App Purchase**; Game Center waits for the v1.1 online update), SKU `oware-ios`.
 3. **App Store Connect API key** — Users and Access → Integrations → App Store Connect API → "+"
    - Name: `github-actions`, Access: **App Manager**. Download the `.p8` **once** (it can't be re-downloaded).
    - Note the **Key ID** and **Issuer ID**.
@@ -107,10 +107,15 @@ Branch protection on `main` is configured to require the CI check and a pull req
    Connect attach the build to the version, fill metadata/screenshots, and submit (or set
    `submit_for_review` on a manual run).
 
+## Hosted pages
+GitHub Pages serves the repo's `docs/` folder from `main` (Settings ▸ Pages: *Deploy from a branch*,
+`main`, `/docs`). `docs/index.md` lists the apps; each app has `docs/<app>/privacy.md` and
+`docs/<app>/support.md`. Lelu Oware: https://richardforjoejnr.github.io/oware/lelu-oware/privacy and
+…/support. Fill in the support email in both before submitting.
+
 ## Before the first App Store submission (checklist)
 - [ ] App Store Connect: privacy policy URL, support URL, age rating questionnaire (4+), category **Games › Board**
 - [ ] App Privacy: "Data Not Collected" (true as long as we add no analytics/ads)
 - [ ] Screenshots for 6.9" iPhone and 13" iPad (generated from the real app)
 - [ ] App icon 1024×1024 in `Oware/Resources/Assets.xcassets/AppIcon.appiconset`
-- [ ] Game Center leaderboards/achievements configured
 - [ ] Export compliance already answered in Info.plist (`ITSAppUsesNonExemptEncryption = false`)

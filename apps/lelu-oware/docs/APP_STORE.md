@@ -10,7 +10,7 @@ bracketed items.
 - **Primary category:** Games › Board · **Secondary:** Games › Strategy
 - **Age rating:** 4+ (no objectionable content; answer "No" to every questionnaire item)
 - **Price:** Free, no ads. Three optional **tip** in-app purchases (consumable; they unlock nothing).
-- **Privacy policy URL:** [host `docs/PRIVACY.md`, e.g. GitHub Pages] · **Support URL:** [owner]
+- **Privacy policy URL:** https://richardforjoejnr.github.io/oware/lelu-oware/privacy · **Support URL:** https://richardforjoejnr.github.io/oware/lelu-oware/support (GitHub Pages, main branch, /docs folder; source files `docs/lelu-oware/*.md`)
 - **Copyright:** © 2026 Richard Forjoe
 
 ## Promotional text (170)
