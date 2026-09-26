@@ -57,6 +57,12 @@ struct RootView: View {
         }
         .statusBarHidden(true)
         .onAppear {
+            switch LaunchOptions.startScreen {
+            case "journey": screen = .journey
+            case "puzzles": screen = .puzzles
+            case "heritage": screen = .heritage
+            default: break
+            }
             if LaunchOptions.startGame, screen == .home {
                 session.newGame(.versusAI(difficulty: .learner, personality: .balanced, humanPlays: .south))
                 screen = .game

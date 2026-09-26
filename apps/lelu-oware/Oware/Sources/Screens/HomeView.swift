@@ -54,9 +54,9 @@ struct HomeView: View {
         .animation(.easeInOut(duration: 0.2), value: showLevels)
     }
 
-    /// A village at sunset with a board on the ground, fading into the dark so the menu sits on it.
+    /// A carver's bench with a half-made board, fading into the dark so the menu sits on it.
     private func hero(height: CGFloat) -> some View {
-        Image("village")
+        Image("heroHome")
             .resizable()
             .aspectRatio(contentMode: .fill)
             .frame(maxWidth: .infinity)
@@ -101,11 +101,11 @@ struct HomeView: View {
             primaryAction
 
             MenuPill(title: "Journey", subtitle: progress.totalStars == 0 ? "across Ghana" : "\(progress.totalStars) stars",
-                     icon: .symbol("map")) { openJourney() }
+                     icon: .wood("map")) { openJourney() }
                 .accessibilityIdentifier("btn-journey")
 
             if !tutorialSeen {
-                MenuPill(title: "New here?", subtitle: "learn in five minutes", icon: .symbol("book")) {
+                MenuPill(title: "New here?", subtitle: "learn in five minutes", icon: .wood("book")) {
                     tutorialSeen = true
                     session.startTutorial(step: 0)
                     startGame()
@@ -113,7 +113,7 @@ struct HomeView: View {
                 .accessibilityIdentifier("btn-learn")
             }
 
-            MenuPill(title: showMore ? "Less" : "More", icon: .symbol(showMore ? "chevron.up" : "ellipsis"), quiet: true) {
+            MenuPill(title: showMore ? "Less" : "More", icon: showMore ? .symbol("chevron.up") : .wood("more"), quiet: true) {
                 showMore.toggle()
             }
             .accessibilityIdentifier("btn-more")
@@ -131,17 +131,17 @@ struct HomeView: View {
     @ViewBuilder
     private var primaryAction: some View {
         if session.hasResumableGame {
-            MenuPill(title: "Continue", subtitle: session.mode.title, icon: .symbol("play.fill"), prominent: true) {
+            MenuPill(title: "Continue", subtitle: session.mode.title, icon: .wood("play"), prominent: true) {
                 startGame()
             }
             .accessibilityIdentifier("btn-continue")
 
-            MenuPill(title: "New game", subtitle: "against \(difficulty.displayName)", icon: .symbol("plus")) {
+            MenuPill(title: "New game", subtitle: "against \(difficulty.displayName)", icon: .wood("plus")) {
                 startNewGame()
             }
             .accessibilityIdentifier("btn-play-ai")
         } else {
-            MenuPill(title: "Play", subtitle: nil, icon: .symbol("play.fill"), prominent: true) {
+            MenuPill(title: "Play", subtitle: nil, icon: .wood("play"), prominent: true) {
                 startNewGame()
             }
             .accessibilityIdentifier("btn-play-ai")
@@ -202,30 +202,30 @@ struct HomeView: View {
 
     private var moreItems: some View {
         VStack(spacing: 10) {
-            MenuPill(title: "Pass & Play", subtitle: "two players, one board", icon: .symbol("person.2")) {
+            MenuPill(title: "Pass & Play", subtitle: "two players, one board", icon: .wood("people")) {
                 session.newGame(.passAndPlay, rules: settings.rules)
                 startGame()
             }
             .accessibilityIdentifier("btn-pass-play")
 
             MenuPill(title: "Riddles", subtitle: library.dailySolved ? "today's solved · \(library.solvedIDs.count) of \(library.puzzles.count)" : "a new one every day",
-                     icon: .adinkra(AnyShape(Adinkra.Nyansapo()))) {
+                     icon: .wood("knot")) {
                 openPuzzles()
             }
             .accessibilityIdentifier("btn-puzzles")
 
             if tutorialSeen {
-                MenuPill(title: "Learn", subtitle: "the five-minute lesson", icon: .symbol("book")) {
+                MenuPill(title: "Learn", subtitle: "the five-minute lesson", icon: .wood("book")) {
                     session.startTutorial(step: 0)
                     startGame()
                 }
                 .accessibilityIdentifier("btn-learn")
             }
 
-            MenuPill(title: "Rules & heritage", icon: .symbol("building.columns")) { openHeritage() }
+            MenuPill(title: "Rules & heritage", icon: .wood("info")) { openHeritage() }
                 .accessibilityIdentifier("btn-heritage")
 
-            MenuPill(title: "Settings", icon: .symbol("gearshape")) { openSettings() }
+            MenuPill(title: "Settings", icon: .wood("gear")) { openSettings() }
                 .accessibilityIdentifier("btn-settings")
         }
     }
@@ -239,6 +239,8 @@ struct MenuPill: View {
     enum Icon {
         case symbol(String)
         case adinkra(AnyShape)
+        /// A carved wooden glyph from the asset pack (`Icons/wood-*`).
+        case wood(String)
     }
 
     let title: String
@@ -268,7 +270,7 @@ struct MenuPill: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 iconView
-                    .frame(width: 24, height: 24)
+                    .frame(width: 28, height: 28)
                     .foregroundStyle(prominent ? Theme.night : Theme.gold)
                 Text(title)
                     .font(.system(prominent ? .title3 : .body, design: .default, weight: prominent ? .semibold : .medium))
@@ -297,6 +299,11 @@ struct MenuPill: View {
         case let .adinkra(shape):
             shape.stroke(style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
                 .padding(2)
+        case let .wood(name):
+            Image("wood-\(name)")
+                .resizable()
+                .scaledToFit()
+                .accessibilityHidden(true)
         }
     }
 }

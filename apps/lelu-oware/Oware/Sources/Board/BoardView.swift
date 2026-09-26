@@ -76,6 +76,7 @@ struct BoardView: View {
             .frame(width: layout.houseRadius * 2.2, height: layout.houseRadius * 2.2)
             .position(center)
             .onTapGesture {
+                scene.press(house: index)
                 guard isTurn else { return }
                 if let reason = session.reasonHouseIsBlocked(relative) {
                     onBlockedTap?(reason)

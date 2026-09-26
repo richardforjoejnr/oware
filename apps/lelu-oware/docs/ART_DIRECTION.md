@@ -149,3 +149,9 @@ fit, so the slab runs to the screen edges under two floating glass bars.
 - Wikipedia, *Oware* (board forms: pedestal, hinged diptych with stores in the lid; nickernut seeds).
 - Wikipedia, *Nickernut* / *Guilandina bonduc*; Mancala World, *Nickernut* ("oware aba").
 - Wikipedia, *Ahwiaa*; adanwomase.com "Woodcarving in Ghana" (sese and tweneboa woods).
+
+### 3e. Owner's asset pack (2026-09-26 evening)
+
+Not Canva: the owner supplied an Adobe-generated pack (originals in `art/pack-2026-09-26/`, see
+`DESIGN_BRIEF.md` for the mapping). Direction: restraint — the wood is the identity; the Heritage
+board is plain hardwood with bevelled pit and trough sprites; Home shows a carver's bench.

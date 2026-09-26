@@ -27,8 +27,8 @@ struct BoardTheme: Identifiable, Hashable, Sendable {
     var uiTint: UIColor { UIColor(red: woodTint.r, green: woodTint.g, blue: woodTint.b, alpha: 1) }
 
     static let heritage = BoardTheme(
-        id: "heritage", name: "Heritage", tagline: "Ahwiaa-carved amber wood, Adinkra border",
-        woodTint: (1, 1, 1), tintStrength: 0, rimOpacity: 1, carvedFrame: true, frameTexture: "rimAdinkra", rustic: false,
+        id: "heritage", name: "Heritage", tagline: "Hand-finished Ghanaian hardwood",
+        woodTint: (1, 1, 1), tintStrength: 0, rimOpacity: 1, carvedFrame: false, rustic: false,
         backgroundTop: Color(red: 0.06, green: 0.04, blue: 0.03), backgroundBottom: Color(red: 0.06, green: 0.04, blue: 0.03))
 
     static let village = BoardTheme(

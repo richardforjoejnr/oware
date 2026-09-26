@@ -137,6 +137,14 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
   real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
 
+## Restraint pass (2026-09-26 evening, branch `feat/design-brief`, PR #18)
+
+Owner supplied an asset pack and a direction change: wood is the identity, symbols only where they
+belong, small quiet controls, 120–160 ms sow steps, a 3 % press lift instead of colour. Applied:
+`wood`/`ground` from the hardwood texture, `pit` and `trough` sprites, `heroHome` (carver's bench),
+darker seeds; Heritage has no carved frame and no faint carvings; HUD chips smaller and bone-coloured;
+`BoardScene.press(house:)`. Later the same evening he sent the seed (now `seed1…8`), Journey chapter medallions (`Journey/chapter-*`, used in `JourneyView`), a carved icon set (`Icons/wood-*`, used on the Home menu) and panel/board sheets (reference). `--screen=journey|puzzles|heritage` opens a screen directly for screenshots. Journey map art is still outstanding.
+
 ## Tip jar (2026-09-26, branch `feat/tip-jar`, stacked on #16)
 
 The owner chose a tip jar as the only monetisation. `packages/SupportKit` (shared across apps) holds

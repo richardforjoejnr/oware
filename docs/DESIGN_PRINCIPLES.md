@@ -14,6 +14,21 @@ authentically Ghanaian, native iOS. Shared code for this will live in `packages/
 - **Communal.** Oware is played with people around the board; layouts stay centred and uncluttered
   so a phone can be passed across a table.
 
+## Restraint (owner's direction, 2026-09-26 evening)
+Ghana is felt through **craftsmanship, place, language, story and material** — not through
+symbols on every surface. No Kente everywhere, no flag colours everywhere, no Adinkra on every
+button: that turns the game into a themed souvenir. The wood is the identity. Use a meaningful
+symbol occasionally, where it belongs (Undo is Sankofa, Hint is Nyansapo; the heritage screen may
+show more). During play the screen should communicate only: **wood → pits → seeds → whose turn**.
+
+Game screen structure: quiet dark wood background · opponent HUD (~7 % height) · board (~78 %)
+built from parts — hardwood texture, trough, twelve pit sprites with seed sprites, trough — so hit
+areas and animation stay exact · player HUD (~7 %). Never one flat photograph as the play surface.
+
+Motion: 120–160 ms per sow step, a small lift, a small wooden landing sound, a subtle haptic. No
+trails, particles, glow or arcade bounce. A pressed house answers with a 2–3 % lift and warmer light,
+never yellow or neon.
+
 ## Ghanaian material
 - **Wood first.** West African hardwoods (mahogany, obeche, osese): pronounced grain, hand-tool
   marks, bevelled pit edges, carved trays. Textures at 1024² or better, tiled invisibly.

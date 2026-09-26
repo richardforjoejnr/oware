@@ -52,6 +52,10 @@ enum LaunchOptions {
     }
     /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (for animation checks).
     static var demoMove: Bool { CommandLine.arguments.contains("--demo-move") }
+    /// `--screen=journey|puzzles|heritage`: open on that screen (screenshots).
+    static var startScreen: String? {
+        CommandLine.arguments.first { $0.hasPrefix("--screen=") }.map { String($0.dropFirst("--screen=".count)) }
+    }
     static var fastAnimations: Bool {
         CommandLine.arguments.contains("--fast-animations") || UserDefaults.standard.bool(forKey: "fastAnimations")
     }

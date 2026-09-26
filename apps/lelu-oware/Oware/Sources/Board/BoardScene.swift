@@ -21,8 +21,6 @@ final class BoardScene: SKScene, BoardAnimator {
     private var lastBandSizes: [CGSize] = []
     private var lastScorched = false
     private let rusticLayer = SKNode()
-    /// Faint carved Adinkra beside the stores (Adinkrahene and Nyansapo; never Gye Nyame).
-    private let carvingLayer = SKNode()
     /// Seeds being carried while sowing; hovers over the board between houses.
     private let handNode = SKNode()
     private var lastFrameTexture = ""
@@ -30,6 +28,7 @@ final class BoardScene: SKScene, BoardAnimator {
     private var houseNodes: [SKSpriteNode] = []
     private let pitTexture = SKTexture(imageNamed: "pit")
     private let pitHewnTexture = SKTexture(imageNamed: "pitHewn")
+    private let troughTexture = SKTexture(imageNamed: "trough")
     private let seedTextures: [SKTexture] = (1...8).map { SKTexture(imageNamed: "seed\($0)") }
     private var lastBoardSize = CGSize.zero
     private var countLabels: [SKLabelNode] = []
@@ -89,8 +88,7 @@ final class BoardScene: SKScene, BoardAnimator {
         }
         rusticLayer.zPosition = 0.5
         addChild(rusticLayer)
-        carvingLayer.zPosition = 0.4
-        addChild(carvingLayer)
+
         handNode.zPosition = 8
         addChild(handNode)
         for i in 0..<12 {
@@ -158,8 +156,13 @@ final class BoardScene: SKScene, BoardAnimator {
             rim.color = theme.uiTint
             rim.colorBlendFactor = theme.tintStrength * 0.6
         }
-        for house in houseNodes + storeNodes {
+        for house in houseNodes {
             house.texture = theme.rustic ? pitHewnTexture : pitTexture
+        }
+        for store in storeNodes {
+            store.texture = theme.rustic ? pitHewnTexture : troughTexture
+        }
+        for house in houseNodes + storeNodes {
             house.color = theme.uiTint
             house.colorBlendFactor = theme.tintStrength * 0.8
         }
@@ -233,12 +236,11 @@ final class BoardScene: SKScene, BoardAnimator {
         }
 
         buildRusticDetails(in: r)
-        buildCarvings()
         for i in 0..<12 {
             let c = layout.sk(layout.houseCenter(i))
             let radius = layout.houseRadius
             houseNodes[i].position = c
-            houseNodes[i].size = CGSize(width: radius * 2.15, height: radius * 1.9)
+            houseNodes[i].size = theme.rustic ? CGSize(width: radius * 2.15, height: radius * 1.9) : CGSize(width: radius * 2.3, height: radius * 2.3)
             countLabels[i].fontSize = max(10, layout.cell * 0.2)
             countLabels[i].position = layout.sk(layout.countLabelPoint(i))
             countShadows[i].fontSize = countLabels[i].fontSize
@@ -247,7 +249,13 @@ final class BoardScene: SKScene, BoardAnimator {
         for p in Player.allCases {
             let rect = layout.sk(layout.storeRect(p))
             storeNodes[p.rawValue].position = CGPoint(x: rect.midX, y: rect.midY)
-            storeNodes[p.rawValue].size = CGSize(width: rect.width * 1.08, height: rect.height * 1.06)
+            if theme.rustic {
+                storeNodes[p.rawValue].size = CGSize(width: rect.width * 1.08, height: rect.height * 1.06)
+            } else {
+                // The trough sprite keeps its own proportions (about 2.9:1) and sits a little proud of the slot.
+                let w = rect.width * 1.12
+                storeNodes[p.rawValue].size = CGSize(width: w, height: w / 2.9)
+            }
             storeLabels[p.rawValue].fontSize = max(14, layout.cell * 0.5)
             storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
         }
@@ -258,39 +266,6 @@ final class BoardScene: SKScene, BoardAnimator {
 
     /// Two iron hinges on the fold between the rows and scratched cross-hatch marks between
     /// neighbouring hollows, as on the village boards the look is based on.
-    /// Emboss = a dark stroke with a lighter stroke offset by a point, at low alpha, so the
-    /// symbol reads as cut into the wood rather than printed on it.
-    private func buildCarvings() {
-        carvingLayer.removeAllChildren()
-        let size = layout.cell * 0.42
-        for player in Player.allCases {
-            let store = layout.sk(layout.storeRect(player))
-            let gap = layout.cell * 0.32
-            let spots: [(CGPoint, any Shape)] = layout.orientation == .vertical
-                ? [(CGPoint(x: store.minX - gap - size / 2, y: store.midY), Adinkra.Adinkrahene()),
-                   (CGPoint(x: store.maxX + gap + size / 2, y: store.midY), Adinkra.Nyansapo())]
-                : [(CGPoint(x: store.midX, y: store.maxY + gap + size / 2), Adinkra.Adinkrahene()),
-                   (CGPoint(x: store.midX, y: store.minY - gap - size / 2), Adinkra.Nyansapo())]
-            for (centre, shape) in spots {
-                let rect = CGRect(x: -size / 2, y: -size / 2, width: size, height: size)
-                let path = shape.path(in: rect).cgPath
-                let holder = SKNode()
-                holder.position = centre
-                holder.yScale = -1   // SwiftUI paths are y-down
-                let light = SKShapeNode(path: path)
-                light.strokeColor = UIColor(red: 1, green: 0.9, blue: 0.7, alpha: 0.16)
-                light.lineWidth = max(1, layout.cell * 0.012)
-                light.position = CGPoint(x: 0.8, y: 0.8)
-                let dark = SKShapeNode(path: path)
-                dark.strokeColor = UIColor(red: 0.1, green: 0.05, blue: 0.02, alpha: 0.32)
-                dark.lineWidth = max(1, layout.cell * 0.012)
-                holder.addChild(light)
-                holder.addChild(dark)
-                carvingLayer.addChild(holder)
-            }
-        }
-    }
-
     private func buildRusticDetails(in board: CGRect) {
         rusticLayer.removeAllChildren()
         let cell = layout.cell
@@ -362,6 +337,17 @@ final class BoardScene: SKScene, BoardAnimator {
         }
     }
 
+    /// The house answers a touch like a real board would: a 3 % lift and back, nothing coloured.
+    func press(house: Int) {
+        guard built, houseNodes.indices.contains(house) else { return }
+        let node = houseNodes[house]
+        node.removeAction(forKey: "press")
+        node.run(SKAction.sequence([
+            SKAction.scale(to: 1.03, duration: 0.06),
+            SKAction.scale(to: 1.0, duration: 0.12),
+        ]), withKey: "press")
+    }
+
     private var highlightedHouse: Int?
     func setHighlight(house: Int?) {
         highlightedHouse = house
@@ -394,7 +380,7 @@ final class BoardScene: SKScene, BoardAnimator {
             let fade = SKAction.fadeAlpha(to: up ? 0.22 : 1.0, duration: duration)
             shadow.run(SKAction.group([move, fade]))
         }
-        let scale = SKAction.scale(to: up ? 1.3 : 1.0, duration: duration)
+        let scale = SKAction.scale(to: up ? 1.18 : 1.0, duration: duration)
         scale.timingMode = up ? .easeOut : .easeIn
         return scale
     }
@@ -506,8 +492,8 @@ final class BoardScene: SKScene, BoardAnimator {
         let sowCount = events.filter { if case .sow = $0 { return true } else { return false } }.count
         // The hand carries the seeds and lets one fall into each house in turn. Long laps speed up
         // a little so a twenty-seed sowing still finishes in a few seconds.
-        let step = min(0.24, max(0.12, 2.8 / Double(max(sowCount, 1))))   // hand travel between houses
-        let drop = min(0.22, max(0.14, step * 0.9))                         // fall time
+        let step = min(0.16, max(0.12, 2.0 / Double(max(sowCount, 1))))   // hand travel between houses (120–160 ms)
+        let drop = min(0.14, max(0.11, step * 0.85))                        // fall time
 
         for event in events {
             switch event {
