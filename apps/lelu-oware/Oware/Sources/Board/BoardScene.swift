@@ -1,4 +1,5 @@
 import SpriteKit
+import SwiftUI
 import OwareEngine
 
 /// Draws the board and animates moves. Rendering only: touches and accessibility live in the
@@ -20,6 +21,8 @@ final class BoardScene: SKScene, BoardAnimator {
     private var lastBandSizes: [CGSize] = []
     private var lastScorched = false
     private let rusticLayer = SKNode()
+    /// Faint carved Adinkra beside the stores (Adinkrahene and Nyansapo; never Gye Nyame).
+    private let carvingLayer = SKNode()
     /// Seeds being carried while sowing; hovers over the board between houses.
     private let handNode = SKNode()
     private var lastFrameTexture = ""
@@ -86,6 +89,8 @@ final class BoardScene: SKScene, BoardAnimator {
         }
         rusticLayer.zPosition = 0.5
         addChild(rusticLayer)
+        carvingLayer.zPosition = 0.4
+        addChild(carvingLayer)
         handNode.zPosition = 8
         addChild(handNode)
         for i in 0..<12 {
@@ -228,6 +233,7 @@ final class BoardScene: SKScene, BoardAnimator {
         }
 
         buildRusticDetails(in: r)
+        buildCarvings()
         for i in 0..<12 {
             let c = layout.sk(layout.houseCenter(i))
             let radius = layout.houseRadius
@@ -252,6 +258,39 @@ final class BoardScene: SKScene, BoardAnimator {
 
     /// Two iron hinges on the fold between the rows and scratched cross-hatch marks between
     /// neighbouring hollows, as on the village boards the look is based on.
+    /// Emboss = a dark stroke with a lighter stroke offset by a point, at low alpha, so the
+    /// symbol reads as cut into the wood rather than printed on it.
+    private func buildCarvings() {
+        carvingLayer.removeAllChildren()
+        let size = layout.cell * 0.42
+        for player in Player.allCases {
+            let store = layout.sk(layout.storeRect(player))
+            let gap = layout.cell * 0.32
+            let spots: [(CGPoint, any Shape)] = layout.orientation == .vertical
+                ? [(CGPoint(x: store.minX - gap - size / 2, y: store.midY), Adinkra.Adinkrahene()),
+                   (CGPoint(x: store.maxX + gap + size / 2, y: store.midY), Adinkra.Nyansapo())]
+                : [(CGPoint(x: store.midX, y: store.maxY + gap + size / 2), Adinkra.Adinkrahene()),
+                   (CGPoint(x: store.midX, y: store.minY - gap - size / 2), Adinkra.Nyansapo())]
+            for (centre, shape) in spots {
+                let rect = CGRect(x: -size / 2, y: -size / 2, width: size, height: size)
+                let path = shape.path(in: rect).cgPath
+                let holder = SKNode()
+                holder.position = centre
+                holder.yScale = -1   // SwiftUI paths are y-down
+                let light = SKShapeNode(path: path)
+                light.strokeColor = UIColor(red: 1, green: 0.9, blue: 0.7, alpha: 0.16)
+                light.lineWidth = max(1, layout.cell * 0.012)
+                light.position = CGPoint(x: 0.8, y: 0.8)
+                let dark = SKShapeNode(path: path)
+                dark.strokeColor = UIColor(red: 0.1, green: 0.05, blue: 0.02, alpha: 0.32)
+                dark.lineWidth = max(1, layout.cell * 0.012)
+                holder.addChild(light)
+                holder.addChild(dark)
+                carvingLayer.addChild(holder)
+            }
+        }
+    }
+
     private func buildRusticDetails(in board: CGRect) {
         rusticLayer.removeAllChildren()
         let cell = layout.cell
@@ -532,7 +571,7 @@ final class BoardScene: SKScene, BoardAnimator {
                 await wait(step * 0.4)
 
             case let .capture(house, seeds, by):
-                await pulse(house: house, color: UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.9))
+                await pulse(house: house, color: UIColor(red: 0.10, green: 0.05, blue: 0.02, alpha: 0.6))
                 let taken = seedsInHouse[house]
                 seedsInHouse[house] = []
                 working.houses[house] = 0
@@ -546,9 +585,15 @@ final class BoardScene: SKScene, BoardAnimator {
                     let delay = SKAction.wait(forDuration: Double(k) * 0.035 / animationSpeed)
                     let flight = self.settle(seed, at: layout.storeSlot(by, index: index), duration: 0.42 / animationSpeed)
                     let tumble = SKAction.rotate(byAngle: CGFloat.random(in: -2 ... 2), duration: 0.42 / animationSpeed)
-                    seed.run(SKAction.sequence([delay, SKAction.group([flight, tumble])]), withKey: "capture")
+                    // One flip as it comes to rest in the bowl says "captured" without any glow.
+                    let flip = SKAction.sequence([
+                        SKAction.scaleY(to: 0.15, duration: 0.09 / animationSpeed),
+                        SKAction.scaleY(to: 1.0, duration: 0.11 / animationSpeed),
+                    ])
+                    seed.run(SKAction.sequence([delay, SKAction.group([flight, tumble, self.lift(seed, up: true, duration: 0.2 / animationSpeed)]),
+                                                self.lift(seed, up: false, duration: 0.1 / animationSpeed), flip]), withKey: "capture")
                 }
-                await wait(0.42 + Double(taken.count) * 0.035)
+                await wait(0.62 + Double(taken.count) * 0.035)
                 updateLabels(working)
 
             case let .grandSlamForfeited(_, houses):
@@ -598,9 +643,9 @@ final class BoardScene: SKScene, BoardAnimator {
         let c = layout.sk(layout.houseCenter(house))
         let radius = layout.houseRadius
         let glow = SKShapeNode(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius * 0.86, width: radius * 2, height: radius * 1.72))
-        glow.fillColor = color.withAlphaComponent(0.25)
+        glow.fillColor = .clear
         glow.strokeColor = color
-        glow.lineWidth = 1.5
+        glow.lineWidth = 2
         glow.alpha = 0
         glowLayer.addChild(glow)
         let sequence = SKAction.sequence([

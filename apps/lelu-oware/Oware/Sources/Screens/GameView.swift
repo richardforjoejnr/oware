@@ -140,6 +140,7 @@ struct GameView: View {
                     Text(session.opponentName)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Theme.ivory)
+                    kenteMark(active: active)
                     if chevron {
                         Image(systemName: "chevron.down")
                             .font(.system(size: 9, weight: .medium))
@@ -171,6 +172,19 @@ struct GameView: View {
                 .font(Theme.caption(12))
                 .foregroundStyle(Theme.ivoryDim)
         }
+    }
+
+    /// Three tiny Kente dots: the only colour on the HUD, and it marks whose turn it is.
+    private func kenteMark(active: Bool) -> some View {
+        HStack(spacing: 3) {
+            Circle().fill(Theme.kenteRed)
+            Circle().fill(Theme.gold)
+            Circle().fill(Theme.kenteGreen)
+        }
+        .frame(width: 22, height: 5)
+        .opacity(active ? 1 : 0)
+        .animation(.easeInOut(duration: 0.3), value: active)
+        .accessibilityHidden(true)
     }
 
     private func badge(letter: String, active: Bool) -> some View {
@@ -270,9 +284,12 @@ struct GameView: View {
         return HStack(spacing: 8) {
             badge(letter: String(name.prefix(1)), active: active)
             VStack(alignment: .leading, spacing: 0) {
-                Text(name)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.ivory)
+                HStack(spacing: 5) {
+                    Text(name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Theme.ivory)
+                    kenteMark(active: active)
+                }
                 seedLine("\(seeds) seeds", showSeed: true)
             }
         }
