@@ -28,9 +28,9 @@ distillation is `../../docs/DESIGN_PRINCIPLES.md`. This file maps the brief to t
 | `ghana_hardwood_texture.png` 2048² | `wood` (seam-free 1024² from the upper plank, +12 % brightness) and `ground` (same wood at 42 % brightness, desaturated) |
 | `oware_pit.png` 1536² alpha | superseded the same evening (read as a bowl standing on the board) |
 | `oware_score_trough.png` 1536² alpha | superseded the same evening by the board-sheet trough |
-| `home_woodworker.png` 1440×2560 | `heroHome` — the carver's bench replaces the village sunset on Home |
+| `home_woodworker.png` 1440×2560 | `heroHome` — kept for the heritage screen; Home no longer has a hero image (dark wood, title, Continue, 2×2 grid) |
 | `oware_board_master_reference.png` | reference only (it shows eight houses); the board is built from parts |
-| `journey_ghana_reference.png` | reference only — the generated place names are garbled, so it is not shipped; a text-free version is wanted |
+| `journey_ghana_map.png` | `splashMap`: the carved map (cropped to drop the generated caption blocks) is the **splash screen**; the small generated labels on the map remain and are worth regenerating text-free |
 | `oware_seed.png` 1024² | superseded by the six stones from the board sheet |
 | `sheet_journey_medallions.png` | `Journey/chapter-<id>` for the eight chapters, `chapter-locked`, `chapter-done`, `star-gold`, `star-empty`, `chapter-link` — shown in `JourneyView` |
 | `sheet_wood_icons.png` | `Icons/wood-*` (back, play, plus, map, book, people, knot, gear, sound, mute, more, info, lock, unlock, star, home, close, restart, trophy, five round buttons) — the Home menu glyphs |

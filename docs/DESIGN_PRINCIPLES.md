@@ -29,6 +29,14 @@ Motion: 120–160 ms per sow step, a small lift, a small wooden landing sound, a
 trails, particles, glow or arcade bounce. A pressed house answers with a 2–3 % lift and warmer light,
 never yellow or neon.
 
+## Opening and menu (owner's direction, 2026-09-26 night)
+Launch → carved-map splash with the title and a thin loading line, 1.2–1.8 s at most → menu. The
+menu is quiet and strong: title, one dominant Continue (or Play), then a 2×2 grid of flat matte
+wooden tiles (New game / Journey / New here? / More). Red · gold · green only as tiny inlays. No
+raised glossy buttons — that reads as a casino game within minutes. Controls 56–64 pt tall with
+generous gaps; nothing important near the Dynamic Island or the home indicator. Once you tap
+Continue, all of this disappears and the board is the whole experience.
+
 ## Ghanaian material
 - **Wood first.** West African hardwoods (mahogany, obeche, osese): pronounced grain, hand-tool
   marks, bevelled pit edges, carved trays. Textures at 1024² or better, tiled invisibly.

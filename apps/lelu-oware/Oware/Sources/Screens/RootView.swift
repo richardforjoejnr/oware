@@ -14,10 +14,17 @@ struct RootView: View {
     @Environment(JourneyProgress.self) private var progress
     @State private var screen: Screen = .home
     @State private var showSettings = false
+    /// The carved-map opening; skipped for test launches so suites are not slowed.
+    @State private var showSplash = !LaunchOptions.fastAnimations && !LaunchOptions.startGame && LaunchOptions.startScreen == nil
 
     var body: some View {
         ZStack {
             Theme.night.ignoresSafeArea()
+            if showSplash {
+                SplashView { withAnimation(.easeInOut(duration: 0.6)) { showSplash = false } }
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
             switch screen {
             case .home:
                 HomeView(startGame: { screen = .game },
