@@ -79,7 +79,7 @@ the scripts live in the session transcript, not the repo, and are easy to redo f
 
 The owner shared photos of real hand-carved boards (pale hewn wood, fire-blackened edges, scratched
 hatch marks between hollows, iron hinges, grey-green nickernuts) and a village-at-sunset scene.
-The Heritage and Evening looks now use these; the purchase looks keep the carved Kente frame.
+The Heritage and Evening looks now use these; Ebony, Cape Coast and Kente keep the carved Kente frame (all looks are free since 2026-09-26).
 
 | File | Canva media | Use |
 |---|---|---|

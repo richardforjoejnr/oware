@@ -117,20 +117,14 @@ final class JourneyProgress {
     var totalStars: Int { stars.values.reduce(0, +) }
 
     /// Chapters included with the free download; the rest need the one-time purchase.
-    static let freeChapterCount = 2
-
     /// A chapter opens once every opponent in the previous chapter has been beaten.
     func isReached(chapterIndex: Int) -> Bool {
         guard chapterIndex > 0, let previous = Journey.chapter(chapterIndex - 1) else { return true }
         return previous.opponents.allSatisfy { stars(for: $0) > 0 }
     }
 
-    static func requiresPurchase(chapterIndex: Int) -> Bool { chapterIndex >= freeChapterCount }
-
-    /// Reached by play and either free or purchased.
-    func isUnlocked(chapterIndex: Int, hasFullJourney: Bool) -> Bool {
-        isReached(chapterIndex: chapterIndex) && (hasFullJourney || !Self.requiresPurchase(chapterIndex: chapterIndex))
-    }
+    /// Every chapter is free; play is the only gate.
+    func isUnlocked(chapterIndex: Int) -> Bool { isReached(chapterIndex: chapterIndex) }
 
     func record(stars newStars: Int, for opponent: Journey.Opponent) {
         guard newStars > stars(for: opponent) else { return }

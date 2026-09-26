@@ -13,8 +13,7 @@ no sign-in, no analytics, no advertising and no third-party SDK.
 
 - Your current game, riddle progress, Journey stars and settings are saved only on your device
   (and in your device backups, if you have those enabled).
-- If you buy the optional in-app purchase, the purchase is handled entirely by Apple. We receive
-  no personal information from it. You can restore it on another device from Settings.
+- There are no in-app purchases.
 
 ## Game Center (future versions)
 

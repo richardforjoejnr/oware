@@ -2,10 +2,8 @@ import SwiftUI
 
 struct JourneyView: View {
     @Environment(JourneyProgress.self) private var progress
-    @Environment(StoreManager.self) private var store
     let goBack: () -> Void
     let startMatch: (Int, Int) -> Void
-    @State private var showUnlock = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -36,9 +34,7 @@ struct JourneyView: View {
                         .accessibilityIdentifier("journey-title")
 
                     ForEach(Array(Journey.chapters.enumerated()), id: \.element.id) { index, chapter in
-                        let reached = progress.isReached(chapterIndex: index)
-                        let needsPurchase = JourneyProgress.requiresPurchase(chapterIndex: index) && !store.hasFullJourney
-                        let unlocked = reached && !needsPurchase
+                        let unlocked = progress.isReached(chapterIndex: index)
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(alignment: .firstTextBaseline) {
                                 Text(chapter.title)
@@ -48,13 +44,7 @@ struct JourneyView: View {
                                     .font(Theme.caption())
                                     .foregroundStyle(Theme.ivoryDim)
                                 Spacer()
-                                if reached && needsPurchase {
-                                    Button("Unlock") { showUnlock = true }
-                                        .buttonStyle(.plain)
-                                        .font(Theme.caption(15))
-                                        .foregroundStyle(Theme.gold)
-                                        .accessibilityIdentifier("btn-unlock-\(chapter.id)")
-                                } else if !unlocked {
+                                if !unlocked {
                                     Image(systemName: "lock")
                                         .font(.system(size: 13))
                                         .foregroundStyle(Theme.ivoryDim.opacity(0.6))
@@ -95,11 +85,6 @@ struct JourneyView: View {
                 .frame(maxWidth: 560, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-        }
-        .sheet(isPresented: $showUnlock) {
-            UnlockView()
-                .presentationDetents([.large])
-                .presentationBackground(Theme.ember)
         }
     }
 }

@@ -93,10 +93,8 @@ schemes:
         OwareUITests: [test]
     run:
       config: Debug
-      storeKitConfiguration: Oware/Resources/Products.storekit
     test:
       config: Debug
-      storeKitConfiguration: Oware/Resources/Products.storekit
       gatherCoverageData: true
       targets: [OwareTests, OwareUITests]
     archive:
