@@ -72,8 +72,13 @@ struct SettingsView: View {
                 }
             }
 
-            Toggle("Sound", isOn: $settings.soundEnabled)
-                .accessibilityIdentifier("setting-sound")
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Sound", isOn: $settings.soundEnabled)
+                    .accessibilityIdentifier("setting-sound")
+                Text("Sounds follow your phone's Silent mode.")
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ivoryDim)
+            }
             Toggle("Haptics", isOn: $settings.hapticsEnabled)
                 .accessibilityIdentifier("setting-haptics")
             Toggle("Show seed counts", isOn: $settings.showSeedCounts)

@@ -57,8 +57,9 @@ Continue, all of this disappears and the board is the whole experience.
   are an acceptable alternative look).
 - **Capture**: lift, fly, drop into the bowl, one flip as the seed settles. No glows, no neon.
 - **Turn**: a tiny Kente mark (red · gold · green) beside the player to move; the only HUD colour.
-- **Sound**: wooden percussion for moves (synthesised today, real samples later); optional soft
-  acoustic music (kalimba, guitar) that defaults off.
+- **Sound**: wooden percussion for moves — a seed landing is an impact click plus the hollow's
+  resonances, brighter when it lands on other seeds, never twice the same (detuned takes). Sounds
+  follow the phone's Silent switch. Optional soft acoustic music (kalimba, guitar) defaults off.
 - **Type**: light text on dark wood, big enough to read at a glance. A retro pixel or rounded
   sans is an option for the *scoreboard numerals only*; a carved display face for the title.
 

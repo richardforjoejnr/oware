@@ -560,7 +560,7 @@ final class BoardScene: SKScene, BoardAnimator {
                 await wait(drop * 0.9)
                 seed.zPosition = 0
                 updateLabels(working)
-                sound?.play(.tick, volume: Float.random(in: 0.5 ... 0.8))
+                sound?.play(count > 1 ? .clack : .tick, volume: Float.random(in: 0.55 ... 0.85))
                 haptics?.seedDrop()
                 puff(at: slot)
 
