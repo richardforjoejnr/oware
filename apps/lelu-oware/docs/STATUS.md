@@ -137,6 +137,15 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
   real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
 
+## Tip jar (2026-09-26, branch `feat/tip-jar`, stacked on #16)
+
+The owner chose a tip jar as the only monetisation. `packages/SupportKit` (shared across apps) holds
+`TipJar` (StoreKit 2 consumables, remembers only a tip count) and `TipJarView` (styled by the host via
+`TipJarStyle`). Lelu Oware wires it in `OwareApp` (`Tips.productIDs`), shows a "Support the maker"
+row at the bottom of Settings and tests it in `testTipJarOpensFromSettingsAndUnlocksNothing`. Local
+products: `Oware/Resources/Tips.storekit`. **Owner:** create the three consumables in App Store Connect
+(`docs/APP_STORE.md`).
+
 ## Purchase removed (2026-09-26, branch `feat/remove-purchase`, stacked on #15)
 
 The owner asked for the payment capability to go. `StoreManager`, `UnlockView`, `Products.storekit`, the
@@ -198,6 +207,9 @@ move; read old paths as relative to `apps/lelu-oware/`.
   (`effectiveSpeed` / `effectiveSound` / `effectiveHaptics`) and a one-time repair clears the leaked values.
   Covered by `AppSettingsTests` and `BoardSceneTimingTests` (a four-seed sowing must take over a second).
   Debug aid: `--start-game --demo-move` sows A1 two seconds after launch for screenshot bursts.
+- **Gotcha (2026-09-26):** running `swift test` inside a package leaves `packages/<Pkg>/.swiftpm` and Xcode then
+  reports "Couldn't load project … .swiftpm" / "Missing package product". Fix: `rm -rf packages/*/.swiftpm`,
+  regenerate the project, reopen. `make engine-test` now cleans up after itself.
 - **Local gotchas learned today:** macOS has no `timeout` command; Appium hangs at session creation
   when several simulators are booted or a stale WebDriverAgent is left — shut extra sims down and
   reboot "iPhone 18 Pro Max". GitHub closes a PR whose base branch was deleted, so base PRs on main.
@@ -228,7 +240,7 @@ move; read old paths as relative to `apps/lelu-oware/`.
 3. ~~Owner decision on art rights~~ — **decided 2026-09-24: keep the Canva-generated art** (see
    `docs/ART_DIRECTION.md` §3 for the terms, obligations and provenance record).
 4. **Owner-gated release steps** (`docs/PIPELINE.md`): Apple secrets → `SIGNING_READY=true` → first
-   TestFlight build on merge; ~~create IAP product~~ (none now); host the
+   TestFlight build on merge; create the three tip consumables; host the
    privacy policy and add the support email; fill App Store Connect from `docs/APP_STORE.md`.
 5. **v1.1 — Online** via Game Center turn-based matches (GAME_PLAN §3.1), leaderboards, achievements.
 

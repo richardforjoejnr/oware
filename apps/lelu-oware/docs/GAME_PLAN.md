@@ -272,7 +272,7 @@ Each milestone ends with a TestFlight build you can play.
 
 Resolved 2026-09-23 by the owner:
 
-1. **Monetisation** — free, no ads, **no IAP** (changed 2026-09-26; the original plan was a one-time IAP unlocking Journey chapters 3–8 and
+1. **Monetisation** — free, no ads, **tip jar only** (three consumable tips, nothing unlocked; decided 2026-09-26 after the original one-time IAP unlocking Journey chapters 3–8 and
    cosmetic packs. Everything needed to play (AI, Pass & Play, tutorial, puzzles) is free.
 2. **Online** — not in v1; ships in v1.1 via Game Center turn-based.
 3. **Art production** — concept art generated with the connected Adobe/Canva tools, licence-checked,

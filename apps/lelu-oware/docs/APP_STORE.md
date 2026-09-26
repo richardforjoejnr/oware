@@ -9,7 +9,7 @@ bracketed items.
 - **Bundle ID:** com.richardforjoe.oware · **SKU:** oware-ios
 - **Primary category:** Games › Board · **Secondary:** Games › Strategy
 - **Age rating:** 4+ (no objectionable content; answer "No" to every questionnaire item)
-- **Price:** Free. No in-app purchases, no ads (decided 2026-09-26).
+- **Price:** Free, no ads. Three optional **tip** in-app purchases (consumable; they unlock nothing).
 - **Privacy policy URL:** [host `docs/PRIVACY.md`, e.g. GitHub Pages] · **Support URL:** [owner]
 - **Copyright:** © 2026 Richard Forjoe
 
@@ -44,10 +44,19 @@ oware,awale,mancala,ayo,warri,ghana,board game,strategy,seeds,african,abapa,puzz
 ## What's new (1.0)
 First release.
 
-## In-app purchases
+## In-app purchases — tip jar
 
-None. The app was planned with a one-time "Full Journey" purchase; that was removed on
-2026-09-26 and everything (all chapters, all board looks) is free.
+The game is entirely free; the only purchases are tips (decided 2026-09-26, replacing the earlier
+"Full Journey" unlock). Create three **Consumable** products in App Store Connect:
+
+| Product ID | Reference name | Display name | Description | Tier |
+|---|---|---|---|---|
+| `com.richardforjoe.oware.tip.small` | Tip (small) | Small tip | A small thank-you to the maker. | ~£0.99 |
+| `com.richardforjoe.oware.tip.medium` | Tip (medium) | Medium tip | A medium thank-you to the maker. | ~£2.99 |
+| `com.richardforjoe.oware.tip.large` | Tip (large) | Generous tip | A generous thank-you to the maker. | ~£4.99 |
+
+Review note: "The in-app purchases are optional tips. They unlock no content; every level, chapter
+and board look is available to all users." Local testing uses `Oware/Resources/Tips.storekit`.
 
 ## App Privacy (nutrition label)
 - Data collection: **No, we do not collect data from this app.**
@@ -62,6 +71,6 @@ Required sizes: 6.9" iPhone (1320×2868), 13" iPad (2064×2752). Order:
 6. Heritage — "Ghana's game, told properly"
 
 ## Review notes for Apple
-- No login, no purchases.
+- No login. Tips can be tested with the local StoreKit configuration or a sandbox account.
 - The app works fully offline.
 - Cultural content is traditional (Adinkra symbols, Kente colours); artwork is original.

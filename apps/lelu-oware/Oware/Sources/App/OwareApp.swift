@@ -1,4 +1,5 @@
 import SwiftUI
+import SupportKit
 
 @main
 struct OwareApp: App {
@@ -6,6 +7,7 @@ struct OwareApp: App {
     @State private var settings: AppSettings
     @State private var library = PuzzleLibrary()
     @State private var progress = JourneyProgress()
+    @State private var tipJar = TipJar(productIDs: Tips.productIDs)
 
     init() {
         // Launch options used by UI tests: `--reset-state` / `-resetState YES` wipe the saved game,
@@ -16,6 +18,7 @@ struct OwareApp: App {
             UserDefaults.standard.removeObject(forKey: "journeyStars")
             UserDefaults.standard.removeObject(forKey: "tutorialSeen")
             UserDefaults.standard.removeObject(forKey: "preferredDifficulty")
+            UserDefaults.standard.removeObject(forKey: "supportkit.tipCount")
         }
         _session = State(initialValue: GameSession())
         _settings = State(initialValue: AppSettings())
@@ -28,9 +31,15 @@ struct OwareApp: App {
                 .environment(settings)
                 .environment(library)
                 .environment(progress)
+                .environment(tipJar)
                 .preferredColorScheme(.dark)
         }
     }
+}
+
+/// The tip jar's products. Consumables, nothing unlocked: the whole game is free.
+enum Tips {
+    static let productIDs = ["com.richardforjoe.oware.tip.small", "com.richardforjoe.oware.tip.medium", "com.richardforjoe.oware.tip.large"]
 }
 
 enum LaunchOptions {

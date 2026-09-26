@@ -32,7 +32,7 @@ merging is safe before Apple credentials are configured.
 2. **App record in App Store Connect** — https://appstoreconnect.apple.com → My Apps → "+" → New App
    - Platform iOS, name (e.g. "Oware: Seeds of Ghana"), primary language English (UK),
      Bundle ID `com.richardforjoe.oware` (register it first under Certificates, IDs & Profiles → Identifiers,
-     enable **Game Center**; no In-App Purchase capability is needed), SKU `oware-ios`.
+     enable **Game Center** and **In-App Purchase**), SKU `oware-ios`.
 3. **App Store Connect API key** — Users and Access → Integrations → App Store Connect API → "+"
    - Name: `github-actions`, Access: **App Manager**. Download the `.p8` **once** (it can't be re-downloaded).
    - Note the **Key ID** and **Issuer ID**.
@@ -48,7 +48,10 @@ merging is safe before Apple credentials are configured.
    bundle exec fastlane match appstore --readonly false
    bundle exec fastlane match development --readonly false   # for running on your own iPhone
    ```
-6. ~~In-app purchase~~ — removed 2026-09-26; Lelu Oware has no purchases.
+6. **Tip jar products** — App Store Connect → your app → Monetization → In-App Purchases → "+":
+   three **Consumable** products exactly as listed in `apps/lelu-oware/docs/APP_STORE.md` (tip.small /
+   tip.medium / tip.large). They unlock nothing; submit them with the first build (Apple reviews IAPs
+   alongside the binary). Add the review note from that doc.
 7. **TestFlight testers** — App Store Connect → TestFlight → Internal Testing → add yourself.
    Install the TestFlight app on your iPhone.
 

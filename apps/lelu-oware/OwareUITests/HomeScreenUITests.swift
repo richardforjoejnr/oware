@@ -128,6 +128,19 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testTipJarOpensFromSettingsAndUnlocksNothing() throws {
+        let more = app.buttons["btn-more"]
+        if !app.buttons["btn-settings"].exists { more.tap() }
+        app.buttons["btn-settings"].tap()
+        let row = app.buttons["btn-tip-jar"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(app.staticTexts["tip-jar-title"].waitForExistence(timeout: 5))
+        // Every look is still selectable regardless of tips.
+        XCTAssertFalse(app.buttons["theme-kente"].label.contains("locked"))
+    }
+
+    @MainActor
     func testDifficultyCanBeChangedMidGame() throws {
         app.buttons["btn-play-ai"].tap()
         XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))
