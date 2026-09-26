@@ -137,6 +137,18 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
   real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
 
+## Rules review (2026-09-26, owner asked "are the rules actually correct?")
+
+Read `GameState` against Abapa and found it faithful: anticlockwise sowing skipping the origin on
+every lap; capture only when the last seed lands on the opponent's row making 2 or 3, walking back
+through contiguous 2s/3s and stopping at the row edge; grand slam allowed but forfeited (default),
+with illegal / capture-ends-game variants; feeding obligation when the opponent's row is empty and,
+if nothing can feed, the mover keeps their own seeds; 25 wins at once, empty board ends, 24–24 draws;
+threefold repetition ends with each side keeping its seeds. The in-app rules text (Heritage ▸ Rules)
+says the same. Added `AbapaReferenceTests`: an independent plain implementation plays 2,000 random
+games against the engine and every position, store and result must agree (plus a hand-checked
+capture). Existing coverage: 45 engine tests including random-playout conservation.
+
 ## Restraint pass (2026-09-26 evening, branch `feat/design-brief`, PR #18)
 
 Owner supplied an asset pack and a direction change: wood is the identity, symbols only where they
