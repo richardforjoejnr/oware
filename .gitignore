@@ -13,14 +13,15 @@ build/
 # Swift Package Manager
 .build/
 .swiftpm/
-Packages/*/.build/
+packages/*/.build/
+apps/*/build/
 
 # Fastlane
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/screenshots/**/*.png
-fastlane/test_output
-fastlane/README.md
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots/**/*.png
+**/fastlane/test_output
+**/fastlane/README.md
 
 # Ruby
 vendor/bundle/

@@ -14,6 +14,9 @@ jobs:
   beta:
     name: Build & upload to TestFlight
     runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/lelu-oware
     environment: testflight
     # Skip gracefully until signing secrets are configured (see docs/PIPELINE.md).
     if: ${{ vars.SIGNING_READY == 'true' }}
@@ -38,11 +41,11 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           BUILD_NUMBER: ${{ github.run_number }}
-        run: bundle exec fastlane ios beta
+        run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios beta
       - name: Upload IPA artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: Oware-ipa
-          path: "*.ipa"
+          path: "apps/lelu-oware/*.ipa"
           if-no-files-found: ignore
