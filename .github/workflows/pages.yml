@@ -34,6 +34,10 @@ jobs:
         with:
           source: ./docs
           destination: ./_site
+      # jekyll-build-pages runs in a Docker container as root, so _site comes out root-owned
+      # and the report step below can't write into it. Hand it back to the runner user.
+      - name: Take ownership of _site
+        run: sudo chown -R "$(id -u):$(id -g)" _site
       - name: Download the latest main-branch test artifacts
         env:
           GH_TOKEN: ${{ github.token }}
