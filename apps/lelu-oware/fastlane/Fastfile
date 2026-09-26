@@ -1,0 +1,91 @@
+# Lelu Oware — fastlane lanes used by GitHub Actions (see .github/workflows) and locally.
+#
+#   bundle exec fastlane ios test       # unit tests on simulator
+#   bundle exec fastlane ios beta       # signed build -> TestFlight
+#   bundle exec fastlane ios release    # signed build -> App Store (submit for review)
+#
+# Required env (CI secrets): see docs/PIPELINE.md at the repo root. Run from apps/lelu-oware with
+#   BUNDLE_GEMFILE=../../Gemfile bundle exec fastlane ios <lane>
+
+default_platform(:ios)
+
+SCHEME     = "Oware"
+PROJECT    = "Oware.xcodeproj"
+BUNDLE_ID  = "com.richardforjoe.oware"
+
+platform :ios do
+  before_all do
+    setup_ci if ENV["CI"]
+    sh("cd .. && xcodegen generate") unless File.exist?("../#{PROJECT}")
+  end
+
+  desc "Run unit tests on the iOS simulator"
+  lane :test do
+    run_tests(
+      project: PROJECT,
+      scheme: SCHEME,
+      devices: [sh("../../../scripts/pick-simulator.sh").strip],
+      code_coverage: true,
+      xcodebuild_formatter: "xcbeautify",
+      result_bundle: true,
+      output_directory: "fastlane/test_output"
+    )
+  end
+
+  desc "Authenticate with App Store Connect via API key (from secrets)"
+  private_lane :asc_auth do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_CONTENT"),   # base64-encoded .p8
+      is_key_content_base64: true,
+      in_house: false
+    )
+  end
+
+  desc "Fetch signing certs/profiles (read-only) and build a signed Release archive"
+  private_lane :build_signed do
+    asc_auth
+    match(type: "appstore", readonly: true)
+    build_number = ENV.fetch("BUILD_NUMBER", Time.now.strftime("%Y%m%d%H%M"))
+    increment_build_number(build_number: build_number, xcodeproj: PROJECT)
+    build_app(
+      project: PROJECT,
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      xcodebuild_formatter: "xcbeautify",
+      # The project defaults to automatic signing (for Xcode archives); CI signs manually with match.
+      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV.fetch('DEVELOPMENT_TEAM')} " \
+              "CODE_SIGN_IDENTITY='Apple Distribution' " \
+              "PROVISIONING_PROFILE_SPECIFIER='match AppStore #{BUNDLE_ID}'",
+      export_options: {
+        provisioningProfiles: { BUNDLE_ID => "match AppStore #{BUNDLE_ID}" }
+      }
+    )
+  end
+
+  desc "Build and upload to TestFlight (runs on every merge to main)"
+  lane :beta do
+    build_signed
+    changelog = sh("git log -1 --pretty=%B").strip
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: changelog,
+      distribute_external: false
+    )
+  end
+
+  desc "Build, upload to App Store Connect and submit for review (runs on GitHub Release)"
+  lane :release do
+    build_signed
+    upload_to_app_store(
+      submit_for_review: ENV.fetch("SUBMIT_FOR_REVIEW", "false") == "true",
+      automatic_release: false,
+      skip_screenshots: true,
+      skip_metadata: ENV.fetch("SKIP_METADATA", "true") == "true",
+      precheck_include_in_app_purchases: false,
+      force: true
+    )
+  end
+end
