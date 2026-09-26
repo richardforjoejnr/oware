@@ -1,4 +1,5 @@
 import SwiftUI
+import OwareEngine
 import SupportKit
 
 @main
@@ -71,4 +72,13 @@ enum LaunchOptions {
     static var startScreen: String? { value("--screen=") }
     /// `--demo-stores=N`: with `--start-game`, put N seeds in each store and scatter the rest.
     static var demoStores: Int? { value("--demo-stores=").flatMap(Int.init) }
+    /// `--rules=abapa|namnam` / `-rules abapa`: pin the variant for a test run (not persisted).
+    static var rulesOverride: RuleSet.Variant? {
+        let raw = value("--rules=") ?? (enabled ? UserDefaults.standard.string(forKey: "rules") : nil)
+        switch raw?.lowercased() {
+        case "abapa": return .abapa
+        case "namnam", "nam-nam": return .namNam
+        default: return nil
+        }
+    }
 }

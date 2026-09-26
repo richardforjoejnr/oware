@@ -6,6 +6,7 @@ appId: com.richardforjoe.oware
     clearState: true
     arguments:
       fastAnimations: true
+      rules: abapa
 - assertVisible:
     id: "home-title"
 - tapOn:

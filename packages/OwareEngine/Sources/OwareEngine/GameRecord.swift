@@ -29,7 +29,8 @@ public struct GameRecord: Sendable, Codable, Hashable {
     public func replay(upTo count: Int? = nil) throws -> GameState {
         var state = GameState.initial(rules: rules)
         for move in moves.prefix(count ?? moves.count) {
-            try state.apply(move)
+            // Notation names the house; the mover is whoever is to move (Nam-Nam territory crosses rows).
+            try state.apply(Move(player: state.sideToMove, absoluteHouse: move.absoluteIndex))
         }
         if endedByAgreement, (count ?? moves.count) >= moves.count {
             _ = state.endByAgreement()
@@ -42,7 +43,7 @@ public struct GameRecord: Sendable, Codable, Hashable {
         var state = GameState.initial(rules: rules)
         var out = [state]
         for move in moves {
-            try state.apply(move)
+            try state.apply(Move(player: state.sideToMove, absoluteHouse: move.absoluteIndex))
             out.append(state)
         }
         return out

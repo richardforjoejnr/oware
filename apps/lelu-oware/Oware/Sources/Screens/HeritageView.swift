@@ -79,6 +79,11 @@ struct HeritageView: View {
         para("A move that would capture every seed on the other side is allowed, but the capture is forfeited: the seeds stay. And if the other row is empty at the start of your turn, you must play a move that gives them seeds if you can. If no move can, you keep the seeds on your side and the game ends.")
         sub("Ending")
         para("The game ends when someone has 25 seeds, when the board is empty, when a player cannot be fed, or when the position keeps repeating, in which case each player keeps the seeds on their own side.")
+
+        heading("Nam-Nam")
+        para("Nam-Nam is the game most Ghanaian children learn first, and the one this app plays unless you choose Abapa in Settings. Sow the same way, but if your last seed lands in a house that already holds seeds, scoop that house up and keep going; your turn ends only when the last seed lands in an empty house.")
+        para("You capture by making four. Any house on your own territory that reaches four seeds is yours, whoever sowed it, at any point in the sowing. A house on the other player's territory is yours only when your own last seed makes it four.")
+        para("When a capture leaves just four seeds on the board, the player who made it takes those too and the round ends. Each player then fills houses with the seeds they won, four to a house: win more than 24 and you take over a house on the other side for the next round. The game ends when one player owns all twelve houses.")
         note("These are the Abapa rules used in adult and tournament play. The app's settings offer the other common grand-slam conventions.")
     }
 
@@ -101,6 +106,9 @@ struct HeritageView: View {
         para("Oware is famously social. Onlookers are expected to advise, argue and laugh, and the game has long been used to teach counting and foresight to children. In this app, Nana is that voice at your shoulder.")
         sub("Words you will see")
         para("Akwaaba: welcome. Medaase: thank you. Ayekoo: well done. Nana: an elder, a title of respect.")
+
+        heading("Nam-Nam")
+        para("Nam-nam is a Twi word (the language of the Akan peoples of Ghana) meaning \"to roam\", which describes the way the seeds keep travelling round the board in this version of the game. It is played all along the West African coast and in the Caribbean under many names: Jerin-Jerin among the Yoruba of Nigeria, Round and Round in Antigua. It is often the first version children learn, before the stricter tournament game, Abapa.")
         note("Where this app says 'it is said', it means tradition rather than documented history. Sources are listed in the project's cultural sources log. The artwork — board, seeds, icons, medallions and scenes — was generated with AI tools (Canva, Adobe Firefly, ChatGPT) and adapted for this app.")
     }
 }

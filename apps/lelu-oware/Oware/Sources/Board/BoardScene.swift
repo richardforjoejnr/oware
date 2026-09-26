@@ -23,6 +23,8 @@ final class BoardScene: SKScene, BoardAnimator {
     private var lastBandSizes: [CGSize] = []
     private var lastScorched = false
     private let rusticLayer = SKNode()
+    /// Nam-Nam: marks houses held by the player who does not usually own that row.
+    private let territoryLayer = SKNode()
     /// Seeds being carried while sowing; hovers over the board between houses.
     private let handNode = SKNode()
     private var lastFrameTexture = ""
@@ -90,6 +92,8 @@ final class BoardScene: SKScene, BoardAnimator {
         }
         rusticLayer.zPosition = 0.5
         addChild(rusticLayer)
+        territoryLayer.zPosition = 1.5
+        addChild(territoryLayer)
 
         handNode.zPosition = 8
         addChild(handNode)
@@ -430,6 +434,7 @@ final class BoardScene: SKScene, BoardAnimator {
     func render(_ state: GameState) {
         current = state
         guard built else { return }
+        drawTerritory(state)
         hand.forEach { $0.removeFromParent() }
         hand = []
         handNode.removeAllChildren()
@@ -455,6 +460,22 @@ final class BoardScene: SKScene, BoardAnimator {
             }
         }
         updateLabels(state)
+    }
+
+    /// A thin bone ring around every house whose owner this round is not the row's usual owner.
+    private func drawTerritory(_ state: GameState) {
+        territoryLayer.removeAllChildren()
+        guard state.rules.variant == .namNam else { return }
+        for house in 0..<GameState.houseCount where state.owner(of: house) != (house < 6 ? .south : .north) {
+            let c = layout.sk(layout.houseCenter(house))
+            let r = layout.pitSpriteDiameter / 2 * 1.04
+            let ring = SKShapeNode(circleOfRadius: r)
+            ring.position = c
+            ring.fillColor = .clear
+            ring.strokeColor = UIColor(red: 0.93, green: 0.89, blue: 0.82, alpha: 0.55)
+            ring.lineWidth = 1.5
+            territoryLayer.addChild(ring)
+        }
     }
 
     private func updateLabels(_ state: GameState) {
@@ -564,6 +585,31 @@ final class BoardScene: SKScene, BoardAnimator {
                 haptics?.seedDrop()
                 puff(at: slot)
 
+            case let .relay(house, _):
+                // The last seed landed among others: scoop that house up and carry on sowing.
+                let seeds = seedsInHouse[house]
+                seedsInHouse[house] = []
+                working.houses[house] = 0
+                updateLabels(working)
+                sound?.play(.pickUp, volume: 0.7)
+                haptics?.pickUp()
+                handNode.position = layout.sk(layout.houseCenter(house))
+                for (k, seed) in seeds.enumerated() {
+                    let world = seed.position
+                    seed.removeFromParent()
+                    seed.position = CGPoint(x: world.x - handNode.position.x, y: world.y - handNode.position.y)
+                    handNode.addChild(seed)
+                    let angle = Double(k) * 2.399963
+                    let rr = layout.seedRadius * 0.95 * CGFloat(Double(k).squareRoot())
+                    let gather = SKAction.move(to: CGPoint(x: rr * CGFloat(cos(angle)), y: rr * CGFloat(sin(angle))), duration: 0.18 / animationSpeed)
+                    gather.timingMode = .easeOut
+                    seed.run(SKAction.group([gather, lift(seed, up: true, duration: 0.18 / animationSpeed)]), withKey: "move")
+                }
+                let rise = SKAction.move(to: layout.sk(layout.handPoint(for: house)), duration: 0.22 / animationSpeed)
+                rise.timingMode = .easeOut
+                handNode.run(rise, withKey: "hand")
+                await wait(0.26)
+
             case .skipOrigin:
                 await wait(step * 0.4)
 
@@ -599,9 +645,12 @@ final class BoardScene: SKScene, BoardAnimator {
                 }
                 await wait(0.5)
 
+            case .roundOver:
+                await wait(0.6)
+
             case let .sweep(player, _):
                 var moved = 0
-                for house in player.houseRange {
+                for house in working.houses(of: player) {
                     let taken = seedsInHouse[house]
                     seedsInHouse[house] = []
                     working.houses[house] = 0

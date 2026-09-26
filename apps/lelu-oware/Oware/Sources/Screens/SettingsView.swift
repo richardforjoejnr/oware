@@ -1,4 +1,5 @@
 import SwiftUI
+import OwareEngine
 import SupportKit
 
 struct SettingsView: View {
@@ -51,6 +52,24 @@ struct SettingsView: View {
                 Text(settings.boardTheme.tagline)
                     .font(Theme.caption(12))
                     .foregroundStyle(Theme.ivoryDim)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Rules for new games")
+                    .font(Theme.caption())
+                    .foregroundStyle(Theme.ivoryDim)
+                Picker("Rules", selection: $settings.variant) {
+                    Text("Nam-Nam").tag(RuleSet.Variant.namNam)
+                    Text("Abapa").tag(RuleSet.Variant.abapa)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("setting-rules")
+                Text(settings.variant == .namNam
+                     ? "Nam-Nam, \"to roam\": keep sowing while your last seed lands among other seeds; capture by making four; seeds you win become your houses next round, until one player holds all twelve. Journey, riddles and the lesson stay Abapa."
+                     : "Tournament Abapa: your turn ends where your last seed lands; capture houses you bring to two or three; first to 25 wins.")
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             VStack(alignment: .leading, spacing: 8) {

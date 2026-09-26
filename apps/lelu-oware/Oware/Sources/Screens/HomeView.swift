@@ -45,7 +45,7 @@ struct HomeView: View {
                         HStack(alignment: .center, spacing: 40) {
                             VStack(spacing: 18) {
                                 titleBlock
-                                Text("Oware · Abapa rules · a game of Ghana")
+                                Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
                                     .font(Theme.caption())
                                     .foregroundStyle(Theme.ivoryDim)
                             }
@@ -63,7 +63,7 @@ struct HomeView: View {
                             titleBlock
                                 .padding(.bottom, 36)
                             controls
-                            Text("Oware · Abapa rules · a game of Ghana")
+                            Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
                                 .font(Theme.caption())
                                 .foregroundStyle(Theme.ivoryDim)
                                 .padding(.top, 30)

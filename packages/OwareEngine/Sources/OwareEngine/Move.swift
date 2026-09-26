@@ -1,24 +1,34 @@
 import Foundation
 
-/// A move: the player scoops one of their six houses. `house` is 0–5 relative to the player
-/// (0 is the leftmost house from that player's own seat).
-public struct Move: Sendable, Codable, Hashable, CustomStringConvertible {
+/// A move: which player sows, and from which of the twelve houses. Houses are addressed by their
+/// physical position (0–5 the south row A1–A6, 6–11 the north row B1–B6); under Nam-Nam a player may
+/// own houses on either row, so the mover is stored separately from the house.
+public struct Move: Sendable, Hashable, CustomStringConvertible {
     public let player: Player
-    public let house: Int
+    public let absoluteIndex: Int
 
+    /// Abapa-style: `house` 0–5 within the player's own row.
     public init(player: Player, house: Int) {
         precondition((0..<6).contains(house), "house must be 0...5")
         self.player = player
-        self.house = house
+        self.absoluteIndex = player.houseRange.lowerBound + house
     }
 
-    /// Absolute board index 0–11.
-    public var absoluteIndex: Int { player.houseRange.lowerBound + house }
+    /// Any house on the board (Nam-Nam territory can be on either row).
+    public init(player: Player, absoluteHouse: Int) {
+        precondition((0..<GameState.houseCount).contains(absoluteHouse), "house must be 0...11")
+        self.player = player
+        self.absoluteIndex = absoluteHouse
+    }
 
-    /// Notation such as "A3" or "B6".
-    public var notation: String { "\(player.label)\(house + 1)" }
+    /// Position within the physical row (0–5).
+    public var house: Int { absoluteIndex % 6 }
 
-    /// Parse notation such as "A3" / "b6". Returns nil for anything else.
+    /// Physical notation: A1–A6 for the south row, B1–B6 for the north row.
+    public var notation: String { "\(absoluteIndex < 6 ? "A" : "B")\(house + 1)" }
+
+    /// Parses physical notation; the player defaults to the row's usual owner. Replays under
+    /// Nam-Nam re-attribute the mover from the side to move.
     public init?(notation: String) {
         let text = notation.trimmingCharacters(in: .whitespaces).uppercased()
         guard text.count == 2,
@@ -30,30 +40,59 @@ public struct Move: Sendable, Codable, Hashable, CustomStringConvertible {
     public var description: String { notation }
 }
 
+extension Move: Codable {
+    private enum CodingKeys: String, CodingKey { case player, house, absoluteIndex }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let player = try c.decode(Player.self, forKey: .player)
+        if let absolute = try c.decodeIfPresent(Int.self, forKey: .absoluteIndex) {
+            self.init(player: player, absoluteHouse: absolute)
+        } else {
+            self.init(player: player, house: try c.decode(Int.self, forKey: .house))   // pre-Nam-Nam saves
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(player, forKey: .player)
+        try c.encode(absoluteIndex, forKey: .absoluteIndex)
+    }
+}
+
 public enum MoveError: Error, Sendable, Equatable {
     case gameIsOver
     case notYourTurn
+    case notYourHouse
     case emptyHouse
-    /// The opponent has no seeds and this move would not give them any, but another move would.
     case mustFeedOpponent
-    /// Under `RuleSet.GrandSlamRule.illegalMove`, this move would capture all opponent seeds.
     case grandSlamNotAllowed
 }
 
-/// Everything that happened during one move, in order, so the UI can animate it.
+/// What one round of Nam-Nam settled.
+public struct RoundResult: Sendable, Codable, Hashable {
+    public let round: Int
+    public let southSeeds: Int
+    public let northSeeds: Int
+    public let southHouses: Int
+    public let northHouses: Int
+
+    public var winner: Player? {
+        southSeeds == northSeeds ? nil : (southSeeds > northSeeds ? .south : .north)
+    }
+}
+
 public enum MoveEvent: Sendable, Codable, Hashable {
-    /// All seeds lifted from the origin house.
     case pickUp(house: Int, seeds: Int)
-    /// One seed dropped into `house`, leaving it with `count` seeds.
     case sow(house: Int, count: Int)
-    /// The origin house was skipped on a lap (12+ seeds).
     case skipOrigin(house: Int)
-    /// `seeds` captured from `house` by `player`.
+    /// Relay sowing: the last seed landed in a non-empty house, which is scooped up and sown on.
+    case relay(house: Int, seeds: Int)
     case capture(house: Int, seeds: Int, by: Player)
-    /// A capture of all opponent seeds was forfeited under the grand-slam rule.
     case grandSlamForfeited(by: Player, houses: [Int])
-    /// Remaining seeds on `player`'s side moved to their store at game end.
     case sweep(player: Player, seeds: Int)
+    /// Nam-Nam: a round ended; the board is reset with the new territory (unless the game is over).
+    case roundOver(RoundResult)
     case gameOver(GameOutcome)
 }
 

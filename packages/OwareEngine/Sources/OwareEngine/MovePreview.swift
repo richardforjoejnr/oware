@@ -18,13 +18,31 @@ public struct MovePreview: Sendable, Hashable {
 extension GameState {
     /// Preview a legal-or-not move from a non-empty house. Nil if the house is empty or the game is over.
     public func preview(_ move: Move) -> MovePreview? {
-        guard !isOver, houses[move.absoluteIndex] > 0, move.player == sideToMove else { return nil }
+        guard !isOver, houses[move.absoluteIndex] > 0, move.player == sideToMove,
+              territory[move.absoluteIndex] == move.player else { return nil }
+        if rules.variant == .namNam {
+            let sim = simulateNamNam(move)
+            let path = sim.steps.compactMap { step -> Int? in
+                if case let .dropped(house, _) = step { return house }
+                return nil
+            }
+            var captures: [Int] = []
+            var total = 0
+            for step in sim.steps {
+                if case let .captured(house, seeds, by) = step, by == move.player {
+                    captures.append(house)
+                    total += seeds
+                }
+            }
+            return MovePreview(move: move, path: path, landingHouse: sim.lastHouse, captures: captures,
+                               capturedSeeds: total, grandSlamForfeited: false, resultingHouses: sim.houses)
+        }
         let sowing = simulateSowing(move)
         let path = sowing.steps.compactMap { step -> Int? in
             if case let .dropped(house, _) = step { return house }
             return nil
         }
-        let grandSlam = Self.isGrandSlam(sowing)
+        let grandSlam = Self.isGrandSlam(sowing, in: self)
         let forfeited = grandSlam && rules.grandSlam == .forfeitCapture
         let captures = forfeited ? [] : sowing.captured
         var result = sowing.houses
