@@ -13,7 +13,8 @@ no sign-in, no analytics, no advertising and no third-party SDK.
 
 - Your current game, riddle progress, Journey stars and settings are saved only on your device
   (and in your device backups, if you have those enabled).
-- There are no in-app purchases.
+- Tips are optional in-app purchases handled entirely by Apple. We receive no payment details and
+  keep only a count of tips on your device so the app can say thank you.
 
 ## Game Center (future versions)
 

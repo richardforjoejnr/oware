@@ -10,7 +10,7 @@ set of tooling, CI and release lanes.
 ## Layout
 ```
 apps/<app>/            One iOS app: project.yml (XcodeGen), Sources, tests, e2e, fastlane, docs, art
-packages/<Package>/    Shared Swift packages (OwareEngine: rules + AI, pure Swift)
+packages/<Package>/    Shared Swift packages (OwareEngine: rules + AI; SupportKit: tip jar)
 templates/ios-app/     Starting point for a new app (make new-app NAME=…)
 scripts/               Shared helpers (simulator picker, bootstrap, scaffolding)
 .github/workflows/     CI / E2E / TestFlight / App Store per app

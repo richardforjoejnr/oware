@@ -25,6 +25,9 @@ jobs:
       - name: Test OwareEngine
         working-directory: packages/OwareEngine
         run: swift test --parallel
+      - name: Test SupportKit
+        working-directory: packages/SupportKit
+        run: swift test
 
   app:
     name: iOS app (build + test)

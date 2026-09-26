@@ -10,6 +10,10 @@
 `path: ../../packages/<Package>`. They must build with `swift test` alone (no Xcode), which is what
 the "Engine (swift test)" CI job runs.
 
+## Shared kits
+`packages/SupportKit` is the tip jar every app can adopt: `TipJar(productIDs:)` in the environment plus
+`TipJarView(style:)`. Product ids follow `<bundle id>.tip.small|medium|large`.
+
 ## Bundle ids and names
 `com.richardforjoe.<app-slug-without-dashes>`; display names live in each `project.yml`.
 Fastlane's `Appfile` reads `APP_IDENTIFIER` from the environment with the app's id as default.

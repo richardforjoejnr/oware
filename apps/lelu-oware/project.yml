@@ -21,6 +21,8 @@ settings:
 packages:
   OwareEngine:
     path: ../../packages/OwareEngine
+  SupportKit:
+    path: ../../packages/SupportKit
 
 targets:
   Oware:
@@ -35,6 +37,8 @@ targets:
         product: OwareEngine
       - package: OwareEngine
         product: OwareAI
+      - package: SupportKit
+        product: SupportKit
     info:
       path: Oware/Info.plist
       properties:
@@ -93,8 +97,10 @@ schemes:
         OwareUITests: [test]
     run:
       config: Debug
+      storeKitConfiguration: Oware/Resources/Tips.storekit
     test:
       config: Debug
+      storeKitConfiguration: Oware/Resources/Tips.storekit
       gatherCoverageData: true
       targets: [OwareTests, OwareUITests]
     archive:
