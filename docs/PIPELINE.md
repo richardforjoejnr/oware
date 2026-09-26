@@ -107,6 +107,12 @@ Branch protection on `main` is configured to require the CI check and a pull req
    Connect attach the build to the version, fill metadata/screenshots, and submit (or set
    `submit_for_review` on a manual run).
 
+## Hosted pages
+GitHub Pages serves the repo's `docs/` folder from `main` (Settings ▸ Pages: *Deploy from a branch*,
+`main`, `/docs`). `docs/index.md` lists the apps; each app has `docs/<app>/privacy.md` and
+`docs/<app>/support.md`. Lelu Oware: https://richardforjoejnr.github.io/oware/lelu-oware/privacy and
+…/support. Fill in the support email in both before submitting.
+
 ## Before the first App Store submission (checklist)
 - [ ] App Store Connect: privacy policy URL, support URL, age rating questionnaire (4+), category **Games › Board**
 - [ ] App Privacy: "Data Not Collected" (true as long as we add no analytics/ads)
