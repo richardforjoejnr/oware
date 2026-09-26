@@ -1,37 +1,34 @@
-# Lelu Oware — Ghana's game, for iPhone and iPad
+# richardforjoe iOS apps — monorepo
 
-A native iOS Oware (Abapa rules) game with authentic Ghanaian art direction.
-Plan and design: **[docs/GAME_PLAN.md](docs/GAME_PLAN.md)**. Build/release pipeline: **[docs/PIPELINE.md](docs/PIPELINE.md)**.
+Native iOS apps, one per folder under `apps/`, sharing Swift packages under `packages/` and one
+set of tooling, CI and release lanes.
+
+| App | Folder | Notes |
+|---|---|---|
+| **Lelu Oware** | [`apps/lelu-oware`](apps/lelu-oware/README.md) | Ghana's game of Oware, Abapa rules. Ships first. |
 
 ## Layout
 ```
-project.yml            XcodeGen spec (source of truth; Oware.xcodeproj is generated, not committed)
-Oware/                 SwiftUI app target
-OwareTests/            App unit tests
-Packages/OwareEngine/  Pure-Swift rules engine + tests (runs with `swift test`, no Xcode needed)
-fastlane/              Build/sign/upload lanes used by CI
-.github/workflows/     CI, TestFlight, App Store release
-docs/                  Plan, pipeline, cultural sources
+apps/<app>/            One iOS app: project.yml (XcodeGen), Sources, tests, e2e, fastlane, docs, art
+packages/<Package>/    Shared Swift packages (OwareEngine: rules + AI; SupportKit: tip jar)
+templates/ios-app/     Starting point for a new app (make new-app NAME=…)
+scripts/               Shared helpers (simulator picker, bootstrap, scaffolding)
+.github/workflows/     CI / E2E / TestFlight / App Store per app
+docs/                  Repo-wide docs: PIPELINE.md (credentials + release), MONOREPO.md (conventions)
+Gemfile                fastlane for every app (BUNDLE_GEMFILE points here)
 ```
 
-## Getting started
+## Everyday commands (run from the repo root)
 ```bash
-./scripts/bootstrap.sh     # installs xcodegen etc. and generates Oware.xcodeproj
-make open                  # open in Xcode
-make engine-test           # rules-engine tests (Command Line Tools are enough)
-make test                  # full app tests on a simulator
+./scripts/bootstrap.sh          # tools + generate every app's .xcodeproj
+make open                       # Xcode for the default app (APP=lelu-oware)
+make test                       # unit + UI tests on a simulator
+make engine-test                # shared package tests
+make new-app NAME=my-app DISPLAY="My App"   # scaffold a second app
 ```
+Each app also has its own Makefile, so `cd apps/lelu-oware && make test` works too.
+`*.xcodeproj` files are generated, never committed: after pulling, run `make project`.
 
-## Building on your own iPhone without the paid developer programme
-A free Apple ID is enough for the simulator and for running on your own device (7-day install,
-no Game Center / IAP). In Xcode → Settings → Accounts, sign in; note the Personal Team ID shown
-there. Because `Oware.xcodeproj` is regenerated, set the team before generating so it sticks:
-```bash
-export DEVELOPMENT_TEAM=YOURTEAMID   # add to ~/.zshrc to make it permanent
-make open
-```
-Then select the Oware target → Signing & Capabilities → your Personal Team, and Run on your phone.
-TestFlight, App Store, In-App Purchase and Game Center need the paid programme (see docs/PIPELINE.md).
-
-## Contributing flow
-Branch → PR (CI runs) → merge to `main` (TestFlight build) → GitHub Release `vX.Y.Z` (App Store).
+## Adding an app
+See [docs/MONOREPO.md](docs/MONOREPO.md): scaffold, bundle id, a copy of `ci.yml` with its own job
+names, and branch-protection checks.
