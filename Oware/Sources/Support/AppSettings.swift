@@ -43,15 +43,24 @@ final class AppSettings {
     }
     var boardTheme: BoardTheme { BoardTheme.named(boardThemeID) }
 
-    /// Honour the system Reduce Motion setting: sowing becomes instant.
+    /// UI-test launches (`--fast-animations`) play instantly and silently *without* touching the
+    /// player's saved preferences. (Assigning the stored properties in `init` used to persist them,
+    /// because `@Observable` routes those assignments through the observed setters.)
+    let testMode: Bool
+
+    /// Honour Reduce Motion and test mode: sowing becomes instant.
     var effectiveSpeed: Double {
-        UIAccessibility.isReduceMotionEnabled ? AnimationSpeed.instant.rawValue : animationSpeed.rawValue
+        (testMode || UIAccessibility.isReduceMotionEnabled) ? AnimationSpeed.instant.rawValue : animationSpeed.rawValue
     }
+    var effectiveSound: Bool { soundEnabled && !testMode }
+    var effectiveHaptics: Bool { hapticsEnabled && !testMode }
 
     private let defaults: UserDefaults
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, testMode: Bool = LaunchOptions.fastAnimations) {
         self.defaults = defaults
+        self.testMode = testMode
+        Self.repairPreferencesIfNeeded(in: defaults, testMode: testMode)
         let speed = defaults.object(forKey: "animationSpeed") as? Double
         animationSpeed = AnimationSpeed(rawValue: speed ?? 1.0) ?? .normal
         hapticsEnabled = defaults.object(forKey: "hapticsEnabled") as? Bool ?? true
@@ -59,11 +68,21 @@ final class AppSettings {
         showSeedCounts = defaults.object(forKey: "showSeedCounts") as? Bool ?? true
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id
-        if LaunchOptions.fastAnimations {
-            // Not persisted: UI-test runs must not change the player's real preferences.
-            animationSpeed = .instant
-            soundEnabled = false
-            hapticsEnabled = false
+    }
+
+    /// Builds before 2026-09-24 leaked the test flags into saved preferences (instant sowing, sound
+    /// and haptics off). Undo that once for anyone who never chose those settings themselves.
+    private static func repairPreferencesIfNeeded(in defaults: UserDefaults, testMode: Bool) {
+        let marker = "preferencesRepaired.2026-09-24"
+        guard !testMode, !defaults.bool(forKey: marker) else { return }
+        defaults.set(true, forKey: marker)
+        let leaked = defaults.object(forKey: "animationSpeed") as? Double == AnimationSpeed.instant.rawValue
+            && defaults.object(forKey: "soundEnabled") as? Bool == false
+            && defaults.object(forKey: "hapticsEnabled") as? Bool == false
+        if leaked {
+            defaults.removeObject(forKey: "animationSpeed")
+            defaults.removeObject(forKey: "soundEnabled")
+            defaults.removeObject(forKey: "hapticsEnabled")
         }
     }
 }

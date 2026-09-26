@@ -58,6 +58,54 @@ Alternatives seen in Ghana: cowries, palm kernels, pebbles.
 | `hero-board.png` (1776×896) | full traditional board, reference | Home/Heritage hero and art reference |
 | `AppIcon.png` (1024²) | one carved hollow with three nickernuts, warm key light | App icon (Canva media `MAHWDmM5VRg`) |
 
+### 3b. Second pass (Canva, 2026-09-24) — "authentic and realistic" look
+
+Text-to-image only (plus Canva background removal on our own output). Originals in `art/canva-exports/`.
+
+| File | Canva media | Use |
+|---|---|---|
+| `bowl-hero.png` (1200×1600) | `MAHWH8Kq8TQ` | Home hero: carved osese bowl with three seeds |
+| `kente-strip.png` (1776×896) | `MAHWH--ISM0` | `kenteLine` (edge bands on Home) and `kenteBand` |
+| `carved-border.png` (1776×896) | `MAHWH5T7BIk` | `rimCarved`: relief band tiled round the board frame |
+| `table.png` (900×1600) | `MAHWHzMvp84` | Table surface behind the board |
+| `pit2.png` (1264²) | `MAHWH99f9tI` | `pit`: hollow with soft alpha edge, surround colour-matched to the wood |
+| `seeds2-black.png` / `seeds2-white.png` | `MAHWH_hePmk` → cut-out `MAHWH-C9Ryo` | `seed1…8`: difference-matted brown and cream seeds |
+| `wood2.png` (1264²) | `MAHWHznPiRw` | `wood`: mahogany slab texture, edges cross-faded to tile |
+
+Processing is plain PIL/numpy (crop, resize, alpha mask, difference matting, per-channel gain);
+the scripts live in the session transcript, not the repo, and are easy to redo from the originals.
+
+### 3c. Third pass (Canva, 2026-09-24 evening) — village board, reference photos from the owner
+
+The owner shared photos of real hand-carved boards (pale hewn wood, fire-blackened edges, scratched
+hatch marks between hollows, iron hinges, grey-green nickernuts) and a village-at-sunset scene.
+The Heritage and Evening looks now use these; the purchase looks keep the carved Kente frame.
+
+| File | Canva media | Use |
+|---|---|---|
+| `wood3.png` (1264²) | `MAHWIFqZCnY` (a first try `MAHWH3B8I1w` came out as a carved lattice, unused) | `wood`: plain hewn slab, warmed ×(1, 0.93, 0.78) |
+| `pit3.png` (1264²) | `MAHWH4JyuEI` | `pit`: gouged hollow, cut at centre (632, 615) r 537, alpha from 0.88 |
+| `seeds3-black.png` / `seeds3-white.png` | `MAHWH_RytSk` → cut-out `MAHWIF57PpA` | `seed1…8`: grey-green nickernuts, difference-matted |
+| `ground.png` (900×1600) | `MAHWH8fMWiU` | `ground`: red laterite earth behind the board |
+| `hero-village.png` (1200×1600) | `MAHWIOr6Y_M` | `village`: Home hero (board on the ground, huts, sunset) |
+
+Drawn in code, not assets: fire-blackened edges (`BoardTexture.make(scorched:)`), two iron hinges on
+the fold and cross-hatch scratches between hollows (`BoardScene.buildRusticDetails`).
+`bowl` and `table` imagesets from §3b were removed (originals still in `art/canva-exports/`).
+
+### 3d. Fourth pass (Canva, 2026-09-24 night) — carved Ahwiaa board, full-screen
+
+The owner asked for quality wood and Ghanaian carving, and for the phone itself to read as the board.
+
+| File | Canva media | Use |
+|---|---|---|
+| `wood4.png` (1264²) | `MAHWIISE5e4` | `wood`: dense amber hardwood for the Heritage look (the hewn slab moved to `woodHewn` for Village) |
+| `adinkra-band.png` (1776×896) | `MAHWIP9WKBk` | `rimAdinkra`: carved Sankofa / Adinkrahene / Nyansapo relief, rows 176–722, framing the Heritage board |
+| `pit4.png` (1264²) | `MAHWINHBCFA` | `pit`: polished hollow with a turned ring (hewn hollow moved to `pitHewn`) |
+
+Board geometry now fills whatever area it is given (`BoardLayout`), with the row pitch stretching to
+fit, so the slab runs to the screen edges under two floating glass bars.
+
 **Licence and rights — what Canva's terms actually say (checked 2026-09-24).**
 
 - *Ownership.* Canva's AI Product Terms: "you own your Output, except for any Output that modifies or

@@ -146,6 +146,39 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
   (pulsing gold ring) and shows step dots. Fixed a double-parent SKNode crash in `BoardScene.highlight`.
   XCUITests 10/10 locally and all four CI checks (incl. the TypeScript suite) green on merge.
   No open PRs. Next: Milestone 5 polish items below, or whatever the owner asks for.
+- **PR #13 merged 2026-09-24** (Adinkra icons). **PR #14 `feat/authentic-look` (open):** the owner shared a
+  mock-up and asked for a more authentic, Ghanaian, realistic look. Home now has a carved-bowl hero
+  (`bowl`), gold title with Kente rules, Kente edge bands (`kenteLine`) and pill buttons (`MenuPill`:
+  green Play, brown Journey / New here? / More). Board: mahogany slab (`wood`, one tile, no repeat),
+  carved Kente relief frame on all four sides (`rimCarved`, tiled by `BoardTexture.band`), new hollow
+  (`pit`), brown-and-cream seed sprites (`seed1…8`, 27 % larger), soft double shadow, table backdrop
+  (`table`) under the theme tint, player cards with a seed glyph, and a labelled Undo / Hint / Settings
+  toolbar under the board. Portrait board is wider (`BoardLayout` 3.7 cells). `--start-game` launch flag
+  opens straight onto a Learner game for screenshots. Assets and Canva ids: `docs/ART_DIRECTION.md` §3b.
+  Kept out on purpose (owner ruled them out earlier): coins, tab bar, friends, tournaments, online.
+  **Evening update (same PR):** the owner shared reference photos of real village boards, so Heritage and
+  Evening now draw a pale hand-hewn slab with fire-blackened edges, gouged hollows, grey-green nickernuts,
+  two iron hinges and scratched hatch marks, on red laterite earth; Home hero is a village at sunset
+  (`village`). Purchase looks (Ebony, Cape Coast, Kente) keep the carved Kente frame via
+  `BoardTheme.carvedFrame` / `rustic`. Play pill lost its green fill (read as "selected" on touch).
+  Assets: `docs/ART_DIRECTION.md` §3c.
+  **Night update (same PR):** owner feedback — "feels like a web app", seeds "just show up", fill the
+  screen with the board, drop the bottom toolbar. Done: `BoardLayout` fills its area (row pitch stretches);
+  `GameView` is board + two floating glass bars (`hudChrome`: Liquid Glass on iOS 26, material before)
+  with Home / opponent chip / Hint / Undo on top and You / turn text below; no bottom toolbar. Sowing is
+  re-animated: seeds lift into a hovering hand (`handNode`), the hand carries them house to house and one
+  seed falls per house with tumble, settle, ring puff, tick and haptic (`BoardScene.animate`). Home menu
+  uses system button styles (`.glass` / `.glassProminent`, bordered before iOS 26) and system type.
+  Heritage = carved amber board with Adinkra frame (`rimAdinkra`); Village = hewn scorched board.
+  Assets: `docs/ART_DIRECTION.md` §3d. Apple guidance followed: immediate feedback on every tap, haptics
+  tied to physical events, Reduce Motion honoured, controls kept to 44 pt, chrome hidden while playing.
+- **Root cause of "seeds just show up" (fixed 2026-09-24 night):** `--fast-animations` was being *saved*
+  into the player's real preferences (sowing speed Instant, sound and haptics off) because `@Observable`
+  routes assignments in `AppSettings.init` through the observed setters. Any UI-test or screenshot run on a
+  device/simulator left the app instant and silent. Now `AppSettings.testMode` overrides at read time
+  (`effectiveSpeed` / `effectiveSound` / `effectiveHaptics`) and a one-time repair clears the leaked values.
+  Covered by `AppSettingsTests` and `BoardSceneTimingTests` (a four-seed sowing must take over a second).
+  Debug aid: `--start-game --demo-move` sows A1 two seconds after launch for screenshot bursts.
 - **Local gotchas learned today:** macOS has no `timeout` command; Appium hangs at session creation
   when several simulators are booted or a stale WebDriverAgent is left — shut extra sims down and
   reboot "iPhone 18 Pro Max". GitHub closes a PR whose base branch was deleted, so base PRs on main.

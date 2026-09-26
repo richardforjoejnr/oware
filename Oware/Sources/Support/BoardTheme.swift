@@ -13,6 +13,12 @@ struct BoardTheme: Identifiable, Hashable, Sendable {
     /// 0 = texture only, 1 = flat tint colour.
     let tintStrength: CGFloat
     let rimOpacity: CGFloat
+    /// Carved Kente relief round the edge (the purchase looks); otherwise plain hand-hewn edges.
+    var carvedFrame: Bool = true
+    /// Image used for the carved frame band when `carvedFrame` is on.
+    var frameTexture: String = "rimCarved"
+    /// Fire-blackened edges, hinges and scratched hatch marks, like a village board.
+    var rustic: Bool = false
     let backgroundTop: Color
     let backgroundBottom: Color
     let requiresPurchase: Bool
@@ -23,14 +29,14 @@ struct BoardTheme: Identifiable, Hashable, Sendable {
     var uiTint: UIColor { UIColor(red: woodTint.r, green: woodTint.g, blue: woodTint.b, alpha: 1) }
 
     static let heritage = BoardTheme(
-        id: "heritage", name: "Heritage", tagline: "Osese, redwood and black dye",
-        woodTint: (1, 1, 1), tintStrength: 0, rimOpacity: 0.85,
+        id: "heritage", name: "Heritage", tagline: "Ahwiaa-carved amber wood, Adinkra border",
+        woodTint: (1, 1, 1), tintStrength: 0, rimOpacity: 1, carvedFrame: true, frameTexture: "rimAdinkra", rustic: false,
         backgroundTop: Color(red: 0.06, green: 0.04, blue: 0.03), backgroundBottom: Color(red: 0.06, green: 0.04, blue: 0.03),
         requiresPurchase: false)
 
-    static let evening = BoardTheme(
-        id: "evening", name: "Evening", tagline: "Lamplight after the market",
-        woodTint: (1.0, 0.86, 0.66), tintStrength: 0.18, rimOpacity: 0.85,
+    static let village = BoardTheme(
+        id: "evening", name: "Village", tagline: "Hewn wood, fire-blackened edges",
+        woodTint: (1, 1, 1), tintStrength: 0, rimOpacity: 0.85, carvedFrame: false, rustic: true,
         backgroundTop: Color(red: 0.10, green: 0.06, blue: 0.04), backgroundBottom: Color(red: 0.04, green: 0.03, blue: 0.02),
         requiresPurchase: false)
 
@@ -52,6 +58,6 @@ struct BoardTheme: Identifiable, Hashable, Sendable {
         backgroundTop: Color(red: 0.05, green: 0.12, blue: 0.08), backgroundBottom: Color(red: 0.03, green: 0.07, blue: 0.05),
         requiresPurchase: true)
 
-    static let all: [BoardTheme] = [.heritage, .evening, .ebony, .coast, .kente]
+    static let all: [BoardTheme] = [.heritage, .village, .ebony, .coast, .kente]
     static func named(_ id: String) -> BoardTheme { all.first { $0.id == id } ?? .heritage }
 }

@@ -2,8 +2,9 @@ import SwiftUI
 import OwareEngine
 import OwareAI
 
-/// One clear action, nothing else competing. Play (or Continue) is the only large control;
-/// Journey sits underneath; everything else lives behind a quiet "More" reveal.
+/// Home: a carved bowl in warm light, the title, then a short column of pill buttons framed by
+/// Kente bands. Play is the one green button; Journey and the lesson sit under it; everything
+/// else lives behind "More".
 struct HomeView: View {
     @Environment(GameSession.self) private var session
     @Environment(PuzzleLibrary.self) private var library
@@ -24,90 +25,104 @@ struct HomeView: View {
 
     var body: some View {
         GeometryReader { geo in
+            let compact = geo.size.height < 700
             ZStack(alignment: .top) {
-                hero(height: min(geo.size.height * 0.46, 460))
+                Theme.night.ignoresSafeArea()
+                hero(height: min(geo.size.height * (compact ? 0.40 : 0.46), 520))
                     .ignoresSafeArea(edges: .top)
-                VStack(alignment: .leading, spacing: 0) {
-                    Spacer(minLength: min(geo.size.height * 0.34, 340))
-                    menu
+                KenteEdges()
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: min(geo.size.height * (compact ? 0.24 : 0.30), 360))
+                        titleBlock
+                            .padding(.bottom, compact ? 18 : 26)
+                        menu
+                        Text("Oware · Abapa rules · a game of Ghana")
+                            .font(Theme.caption())
+                            .foregroundStyle(Theme.ivoryDim)
+                            .padding(.top, 22)
+                            .padding(.bottom, 16)
+                    }
+                    .padding(.horizontal, 36)
+                    .frame(maxWidth: 480)
+                    .frame(maxWidth: .infinity)
+                    .frame(minHeight: geo.size.height)
                 }
-                .padding(.horizontal, 32)
-                .frame(maxWidth: 520, alignment: .leading)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showMore)
         .animation(.easeInOut(duration: 0.2), value: showLevels)
     }
 
-    /// The board in warm light, fading into the dark so the menu sits on it without competing.
+    /// A village at sunset with a board on the ground, fading into the dark so the menu sits on it.
     private func hero(height: CGFloat) -> some View {
-        ZStack(alignment: .bottomLeading) {
-            Image("hero")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity)
-                .frame(height: height)
-                .clipped()
-                .overlay(
-                    LinearGradient(stops: [
-                        .init(color: Theme.night.opacity(0.35), location: 0),
-                        .init(color: Theme.night.opacity(0.0), location: 0.35),
-                        .init(color: Theme.night.opacity(0.85), location: 0.8),
-                        .init(color: Theme.night, location: 1),
-                    ], startPoint: .top, endPoint: .bottom)
+        Image("village")
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(maxWidth: .infinity)
+            .frame(height: height)
+            .clipped()
+            .overlay(
+                LinearGradient(stops: [
+                    .init(color: Theme.night.opacity(0.25), location: 0),
+                    .init(color: Theme.night.opacity(0.0), location: 0.3),
+                    .init(color: Theme.night.opacity(0.55), location: 0.68),
+                    .init(color: Theme.night, location: 1),
+                ], startPoint: .top, endPoint: .bottom)
+            )
+            .accessibilityHidden(true)
+    }
+
+    private var titleBlock: some View {
+        VStack(spacing: 8) {
+            Text("Lelu Oware")
+                .font(Theme.title(46))
+                .foregroundStyle(
+                    LinearGradient(colors: [Theme.goldLight, Theme.gold], startPoint: .top, endPoint: .bottom)
                 )
-                .accessibilityHidden(true)
+                .shadow(color: Theme.night.opacity(0.9), radius: 14, y: 4)
+                .accessibilityIdentifier("home-title")
+            HStack(spacing: 10) {
+                KenteRule()
+                Text("Akwaaba · welcome")
+                    .font(Theme.caption(14))
+                    .tracking(1.6)
+                    .foregroundStyle(Theme.ivoryDim)
+                    .fixedSize()
+                KenteRule()
+            }
         }
-        .frame(height: height)
+        .frame(maxWidth: .infinity)
+        .multilineTextAlignment(.center)
     }
 
     private var menu: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Lelu Oware")
-                    .font(Theme.title(46))
-                    .foregroundStyle(Theme.ivory)
-                    .shadow(color: Theme.night.opacity(0.8), radius: 12)
-                    .accessibilityIdentifier("home-title")
-                Text("Akwaaba · welcome")
-                    .font(Theme.body(17))
-                    .foregroundStyle(Theme.ivoryDim)
-            }
-            .padding(.bottom, 34)
-
+        VStack(spacing: 8) {
             primaryAction
-                .padding(.bottom, 26)
 
-            VStack(alignment: .leading, spacing: 2) {
-                QuietButton(title: "Journey", subtitle: progress.totalStars == 0 ? "across Ghana" : "\(progress.totalStars) stars") {
-                    openJourney()
-                }
+            MenuPill(title: "Journey", subtitle: progress.totalStars == 0 ? "across Ghana" : "\(progress.totalStars) stars",
+                     icon: .symbol("map")) { openJourney() }
                 .accessibilityIdentifier("btn-journey")
 
-                if !tutorialSeen {
-                    QuietButton(title: "New here?", subtitle: "learn in five minutes") {
-                        tutorialSeen = true
-                        session.startTutorial(step: 0)
-                        startGame()
-                    }
-                    .accessibilityIdentifier("btn-learn")
+            if !tutorialSeen {
+                MenuPill(title: "New here?", subtitle: "learn in five minutes", icon: .symbol("book")) {
+                    tutorialSeen = true
+                    session.startTutorial(step: 0)
+                    startGame()
                 }
-
-                moreToggle
-
-                if showMore {
-                    moreItems
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                }
+                .accessibilityIdentifier("btn-learn")
             }
 
-            Spacer(minLength: 0)
+            MenuPill(title: showMore ? "Less" : "More", icon: .symbol(showMore ? "chevron.up" : "ellipsis"), quiet: true) {
+                showMore.toggle()
+            }
+            .accessibilityIdentifier("btn-more")
+            .accessibilityLabel(showMore ? "Fewer options" : "More options")
 
-            Text("Oware · Abapa rules · a game of Ghana")
-                .font(Theme.caption())
-                .foregroundStyle(Theme.ivoryDim)
-                .padding(.bottom, 8)
+            if showMore {
+                moreItems
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
     }
 
@@ -115,69 +130,44 @@ struct HomeView: View {
 
     @ViewBuilder
     private var primaryAction: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if session.hasResumableGame {
-                Button {
-                    startGame()
-                } label: {
-                    primaryLabel("Continue", subtitle: session.mode.title)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("btn-continue")
+        if session.hasResumableGame {
+            MenuPill(title: "Continue", subtitle: session.mode.title, icon: .symbol("play.fill"), prominent: true) {
+                startGame()
+            }
+            .accessibilityIdentifier("btn-continue")
 
-                QuietButton(title: "New game", subtitle: "against \(difficulty.displayName)") {
-                    startNewGame()
-                }
-                .accessibilityIdentifier("btn-play-ai")
-            } else {
-                Button {
-                    startNewGame()
-                } label: {
-                    primaryLabel("Play", subtitle: nil)
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("btn-play-ai")
+            MenuPill(title: "New game", subtitle: "against \(difficulty.displayName)", icon: .symbol("plus")) {
+                startNewGame()
+            }
+            .accessibilityIdentifier("btn-play-ai")
+        } else {
+            MenuPill(title: "Play", subtitle: nil, icon: .symbol("play.fill"), prominent: true) {
+                startNewGame()
+            }
+            .accessibilityIdentifier("btn-play-ai")
 
-                Button {
-                    showLevels.toggle()
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("against \(difficulty.displayName)")
-                        Image(systemName: showLevels ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 10, weight: .medium))
-                    }
-                    .font(Theme.caption(14))
-                    .foregroundStyle(Theme.ivoryDim)
-                    .contentShape(Rectangle())
+            Button {
+                showLevels.toggle()
+            } label: {
+                HStack(spacing: 6) {
+                    Text("against \(difficulty.displayName)")
+                    Image(systemName: showLevels ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10, weight: .medium))
                 }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("btn-level")
-                .accessibilityLabel("Opponent level, \(difficulty.displayName)")
+                .font(.subheadline)
+                .foregroundStyle(Theme.ivoryDim)
+                .padding(.vertical, 2)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("btn-level")
+            .accessibilityLabel("Opponent level, \(difficulty.displayName)")
 
-                if showLevels {
-                    levelPicker
-                        .transition(.opacity)
-                }
+            if showLevels {
+                levelPicker
+                    .transition(.opacity)
             }
         }
-    }
-
-    private func primaryLabel(_ title: String, subtitle: String?) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(Theme.title(40))
-                .foregroundStyle(Theme.gold)
-            if let subtitle {
-                Text(subtitle)
-                    .font(Theme.caption(14))
-                    .foregroundStyle(Theme.ivoryDim)
-            }
-            Rectangle()
-                .fill(Theme.gold.opacity(0.55))
-                .frame(width: 56, height: 1)
-                .padding(.top, 6)
-        }
-        .contentShape(Rectangle())
     }
 
     private func startNewGame() {
@@ -194,9 +184,8 @@ struct HomeView: View {
                         showLevels = false
                     } label: {
                         Text(level.displayName)
-                            .font(Theme.caption(14))
+                            .font(.subheadline.weight(level == difficulty ? .semibold : .regular))
                             .foregroundStyle(level == difficulty ? Theme.gold : Theme.ivoryDim)
-                            .underline(level == difficulty, color: Theme.gold)
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("level-\(level.displayName.lowercased())")
@@ -204,60 +193,148 @@ struct HomeView: View {
                 }
             }
             .padding(.vertical, 4)
+            .padding(.horizontal, 4)
         }
         .accessibilityIdentifier("level-picker")
     }
 
     // MARK: - More
 
-    private var moreToggle: some View {
-        Button {
-            showMore.toggle()
-        } label: {
-            HStack(spacing: 8) {
-                Text(showMore ? "Less" : "More")
-                    .font(Theme.body(18))
-                    .foregroundStyle(Theme.ivoryDim)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Theme.ivoryDim)
-                    .rotationEffect(.degrees(showMore ? 180 : 0))
-            }
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier("btn-more")
-        .accessibilityLabel(showMore ? "Fewer options" : "More options")
-    }
-
     private var moreItems: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            QuietButton(title: "Pass & Play", subtitle: "two players, one board") {
+        VStack(spacing: 10) {
+            MenuPill(title: "Pass & Play", subtitle: "two players, one board", icon: .symbol("person.2")) {
                 session.newGame(.passAndPlay, rules: settings.rules)
                 startGame()
             }
             .accessibilityIdentifier("btn-pass-play")
 
-            QuietButton(title: "Riddles", subtitle: library.dailySolved ? "today's solved · \(library.solvedIDs.count) of \(library.puzzles.count)" : "a new one every day") {
+            MenuPill(title: "Riddles", subtitle: library.dailySolved ? "today's solved · \(library.solvedIDs.count) of \(library.puzzles.count)" : "a new one every day",
+                     icon: .adinkra(AnyShape(Adinkra.Nyansapo()))) {
                 openPuzzles()
             }
             .accessibilityIdentifier("btn-puzzles")
 
             if tutorialSeen {
-                QuietButton(title: "Learn", subtitle: "the five-minute lesson") {
+                MenuPill(title: "Learn", subtitle: "the five-minute lesson", icon: .symbol("book")) {
                     session.startTutorial(step: 0)
                     startGame()
                 }
                 .accessibilityIdentifier("btn-learn")
             }
 
-            QuietButton(title: "Rules & heritage") { openHeritage() }
+            MenuPill(title: "Rules & heritage", icon: .symbol("building.columns")) { openHeritage() }
                 .accessibilityIdentifier("btn-heritage")
 
-            QuietButton(title: "Settings") { openSettings() }
+            MenuPill(title: "Settings", icon: .symbol("gearshape")) { openSettings() }
                 .accessibilityIdentifier("btn-settings")
         }
-        .padding(.leading, 2)
+    }
+}
+
+// MARK: - Pieces
+
+/// A menu button in the system's own style — Liquid Glass on iOS 26, bordered before that —
+/// with a gold symbol, the title and a quiet subtitle. `prominent` marks the main action.
+struct MenuPill: View {
+    enum Icon {
+        case symbol(String)
+        case adinkra(AnyShape)
+    }
+
+    let title: String
+    var subtitle: String? = nil
+    let icon: Icon
+    var prominent = false
+    var quiet = false
+    let action: () -> Void
+
+    var body: some View {
+        if #available(iOS 26, *) {
+            if prominent {
+                button.buttonStyle(.glassProminent).tint(Theme.amber)
+            } else {
+                button.buttonStyle(.glass)
+            }
+        } else {
+            if prominent {
+                button.buttonStyle(.borderedProminent).tint(Theme.amber)
+            } else {
+                button.buttonStyle(.bordered).tint(Theme.ivory)
+            }
+        }
+    }
+
+    private var button: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                iconView
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(prominent ? Theme.night : Theme.gold)
+                Text(title)
+                    .font(.system(prominent ? .title3 : .body, design: .default, weight: prominent ? .semibold : .medium))
+                    .foregroundStyle(prominent ? Theme.night : (quiet ? Theme.ivoryDim : Theme.ivory))
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.footnote)
+                        .foregroundStyle(prominent ? Theme.night.opacity(0.7) : Theme.ivoryDim)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, quiet ? 0 : 3)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .controlSize(.large)
+    }
+
+    @ViewBuilder
+    private var iconView: some View {
+        switch icon {
+        case let .symbol(name):
+            Image(systemName: name)
+                .font(.system(size: 18, weight: .semibold))
+        case let .adinkra(shape):
+            shape.stroke(style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+                .padding(2)
+        }
+    }
+}
+
+/// Thin Kente bands down both edges of the screen.
+struct KenteEdges: View {
+    var width: CGFloat = 14
+    var body: some View {
+        HStack {
+            band
+            Spacer()
+            band
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private var band: some View {
+        GeometryReader { geo in
+            Image("kenteLine")
+                .resizable(resizingMode: .tile)
+                .frame(width: geo.size.height, height: width)
+                .rotationEffect(.degrees(90))
+                .frame(width: width, height: geo.size.height)
+                .opacity(0.9)
+        }
+        .frame(width: width)
+    }
+}
+
+/// A short gold rule used either side of a caption.
+struct KenteRule: View {
+    var body: some View {
+        Rectangle()
+            .fill(LinearGradient(colors: [Theme.kenteRed, Theme.gold, Theme.kenteGreen], startPoint: .leading, endPoint: .trailing))
+            .frame(height: 2)
+            .frame(maxWidth: 70)
+            .opacity(0.85)
     }
 }
