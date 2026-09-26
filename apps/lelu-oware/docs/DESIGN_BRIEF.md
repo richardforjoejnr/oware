@@ -30,7 +30,7 @@ distillation is `../../docs/DESIGN_PRINCIPLES.md`. This file maps the brief to t
 | `oware_score_trough.png` 1536² alpha | superseded the same evening by the board-sheet trough |
 | `home_woodworker.png` 1440×2560 | `heroHome` — kept for the heritage screen; Home no longer has a hero image (dark wood, title, Continue, 2×2 grid) |
 | `oware_board_master_reference.png` | reference only (it shows eight houses); the board is built from parts |
-| `journey_ghana_map.png` | `splashMap`: the carved map (cropped to drop the generated caption blocks) is the **splash screen**; the small generated labels on the map remain and are worth regenerating text-free |
+| `journey_ghana_map.png` → `journey_ghana_map_clean.png` | `splashMap`: the carved map is the **splash screen**. The owner's version carried garbled generated labels, so a text-free copy was regenerated with Canva (media `MAHWVOCkFz8`, image-to-image from the original) and the paper border trimmed |
 | `oware_seed.png` 1024² | superseded by the six stones from the board sheet |
 | `sheet_journey_medallions.png` | `Journey/chapter-<id>` for the eight chapters, `chapter-locked`, `chapter-done`, `star-gold`, `star-empty`, `chapter-link` — shown in `JourneyView` |
 | `sheet_wood_icons.png` | `Icons/wood-*` (back, play, plus, map, book, people, knot, gear, sound, mute, more, info, lock, unlock, star, home, close, restart, trophy, five round buttons) — the Home menu glyphs |

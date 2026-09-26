@@ -22,7 +22,7 @@ public final class TipJar {
 
     private let defaults: UserDefaults
     private let countKey: String
-    nonisolated(unsafe) private var updates: Task<Void, Never>?
+    @ObservationIgnored private var updates: Task<Void, Never>?
 
     public init(productIDs: [String], defaults: UserDefaults = .standard, storageKey: String = "supportkit.tipCount") {
         self.productIDs = productIDs
@@ -36,7 +36,7 @@ public final class TipJar {
         }
     }
 
-    deinit { updates?.cancel() }
+    isolated deinit { updates?.cancel() }
 
     public var hasTipped: Bool { tipCount > 0 }
 

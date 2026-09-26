@@ -8,6 +8,8 @@ import OwareEngine
 final class BoardScene: SKScene, BoardAnimator {
     /// 1 = normal; larger = faster; >= 100 = instant. (SKNode already has `speed`.)
     var animationSpeed: Double = 1
+    /// Reduce Motion: seeds still travel and settle, but without tumble, lift or landing puff.
+    var calmMotion = false
     var showCounts = true { didSet { (countLabels + countShadows).forEach { $0.isHidden = !showCounts } } }
     var sound: SoundPlayer? = .shared
     var haptics: Haptics? = .shared
@@ -251,10 +253,13 @@ final class BoardScene: SKScene, BoardAnimator {
             storeNodes[p.rawValue].position = CGPoint(x: rect.midX, y: rect.midY)
             if theme.rustic {
                 storeNodes[p.rawValue].size = CGSize(width: rect.width * 1.08, height: rect.height * 1.06)
+                storeNodes[p.rawValue].zRotation = 0
             } else {
-                // The trough sprite keeps its own proportions (3.09:1); the layout's store rect is its bowl.
-                let w = rect.width / BoardLayout.troughBowlFraction
-                storeNodes[p.rawValue].size = CGSize(width: w, height: w / 3.09)
+                // The trough sprite keeps its own proportions (3.09:1) and lies along the bowl's long
+                // side: across the board in portrait, up the board's ends in landscape.
+                let long = max(rect.width, rect.height) / BoardLayout.troughBowlFraction
+                storeNodes[p.rawValue].size = CGSize(width: long, height: long / 3.09)
+                storeNodes[p.rawValue].zRotation = layout.orientation == .horizontal ? .pi / 2 : 0
             }
             storeLabels[p.rawValue].fontSize = max(13, layout.cell * 0.3)
             storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
@@ -374,6 +379,7 @@ final class BoardScene: SKScene, BoardAnimator {
 
     /// Lift a seed toward the viewer (bigger, shadow drifts away and softens) or set it down.
     private func lift(_ seed: SKNode, up: Bool, duration: TimeInterval) -> SKAction {
+        guard !calmMotion else { return SKAction.wait(forDuration: 0) }
         let r = layout.seedRadius
         if let shadow = seed.childNode(withName: "shadow") {
             let move = SKAction.move(to: up ? CGPoint(x: r * 0.9, y: -r * 1.1) : CGPoint(x: r * 0.18, y: -r * 0.22), duration: duration)
@@ -387,6 +393,7 @@ final class BoardScene: SKScene, BoardAnimator {
 
     /// A faint ring that spreads where a seed lands.
     private func puff(at point: CGPoint) {
+        guard !calmMotion else { return }
         let ring = SKShapeNode(circleOfRadius: layout.seedRadius * 0.9)
         ring.strokeColor = UIColor(white: 1, alpha: 0.35)
         ring.lineWidth = 1
@@ -540,7 +547,7 @@ final class BoardScene: SKScene, BoardAnimator {
                 let slot = layout.sk(layout.seedSlot(in: house, index: count - 1))
                 let fall = SKAction.move(to: slot, duration: drop / animationSpeed)
                 fall.timingMode = .easeIn
-                let tumble = SKAction.rotate(byAngle: CGFloat.random(in: -1.4 ... 1.4), duration: drop / animationSpeed)
+                let tumble = SKAction.rotate(byAngle: calmMotion ? 0 : CGFloat.random(in: -1.4 ... 1.4), duration: drop / animationSpeed)
                 let settle = SKAction.sequence([
                     SKAction.scale(to: 0.9, duration: 0.05 / animationSpeed),
                     SKAction.scale(to: 1.0, duration: 0.09 / animationSpeed),
@@ -570,7 +577,7 @@ final class BoardScene: SKScene, BoardAnimator {
                     seed.zPosition = 10
                     let delay = SKAction.wait(forDuration: Double(k) * 0.035 / animationSpeed)
                     let flight = self.settle(seed, at: layout.storeSlot(by, index: index), duration: 0.42 / animationSpeed)
-                    let tumble = SKAction.rotate(byAngle: CGFloat.random(in: -2 ... 2), duration: 0.42 / animationSpeed)
+                    let tumble = SKAction.rotate(byAngle: calmMotion ? 0 : CGFloat.random(in: -2 ... 2), duration: 0.42 / animationSpeed)
                     // One flip as it comes to rest in the bowl says "captured" without any glow.
                     let flip = SKAction.sequence([
                         SKAction.scaleY(to: 0.15, duration: 0.09 / animationSpeed),

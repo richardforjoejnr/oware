@@ -28,6 +28,15 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertTrue(settings.effectiveHaptics)
     }
 
+    func testLeakedInstantSpeedIsRepairedEvenWhenSoundWasTurnedBackOn() {
+        let defaults = freshDefaults()
+        defaults.set(100.0, forKey: "animationSpeed")
+        defaults.set(true, forKey: "soundEnabled")      // the player already fixed this one by hand
+        let repaired = AppSettings(defaults: defaults, testMode: false)
+        XCTAssertEqual(repaired.animationSpeed, .normal, "a stored Instant speed can only have come from the leak")
+        XCTAssertTrue(repaired.soundEnabled)
+    }
+
     func testLeakedTestPreferencesAreRepairedOnce() {
         let defaults = freshDefaults()
         defaults.set(100.0, forKey: "animationSpeed")

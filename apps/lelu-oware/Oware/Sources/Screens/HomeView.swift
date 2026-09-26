@@ -37,32 +37,59 @@ struct HomeView: View {
                 .ignoresSafeArea()
                 .accessibilityHidden(true)
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 72)
-                    titleBlock
-                        .padding(.bottom, 36)
-                    primary
-                        .padding(.bottom, 14)
-                    grid
-                    if showMore {
-                        moreList
-                            .padding(.top, 14)
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+            GeometryReader { geo in
+                let landscape = geo.size.width > geo.size.height
+                ScrollView(showsIndicators: false) {
+                    if landscape {
+                        // Wide and short: title on the left, controls on the right.
+                        HStack(alignment: .center, spacing: 40) {
+                            VStack(spacing: 18) {
+                                titleBlock
+                                Text("Oware · Abapa rules · a game of Ghana")
+                                    .font(Theme.caption())
+                                    .foregroundStyle(Theme.ivoryDim)
+                            }
+                            .frame(width: min(geo.size.width * 0.38, 340))
+                            controls
+                                .frame(maxWidth: 480)
+                        }
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 24)
+                        .frame(maxWidth: .infinity)
+                        .frame(minHeight: geo.size.height)
+                    } else {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 72)
+                            titleBlock
+                                .padding(.bottom, 36)
+                            controls
+                            Text("Oware · Abapa rules · a game of Ghana")
+                                .font(Theme.caption())
+                                .foregroundStyle(Theme.ivoryDim)
+                                .padding(.top, 30)
+                                .padding(.bottom, 40)
+                        }
+                        .padding(.horizontal, 24)
+                        .frame(maxWidth: 480)
+                        .frame(maxWidth: .infinity)
                     }
-                    Text("Oware · Abapa rules · a game of Ghana")
-                        .font(Theme.caption())
-                        .foregroundStyle(Theme.ivoryDim)
-                        .padding(.top, 30)
-                        .padding(.bottom, 40)
                 }
-                .padding(.horizontal, 24)
-                .frame(maxWidth: 480)
-                .frame(maxWidth: .infinity)
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showMore)
         .animation(.easeInOut(duration: 0.2), value: showLevels)
+    }
+
+    /// Continue/Play, the 2×2 grid and the More rows — shared by both orientations.
+    private var controls: some View {
+        VStack(spacing: 14) {
+            primary
+            grid
+            if showMore {
+                moreList
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
     }
 
     private var titleBlock: some View {
@@ -310,7 +337,7 @@ struct WoodTile: View {
                 }
             }
             .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 104, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
             .background(WoodSurface())
             .contentShape(Rectangle())
         }

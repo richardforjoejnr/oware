@@ -88,7 +88,7 @@ struct BoardLayout: Equatable {
         case .horizontal:
             let x = player == .south ? boardRect.maxX - storeZone * 0.52 : boardRect.minX + storeZone * 0.52
             let w = cell * 0.62
-            let h = cell * 2.3
+            let h = cell * 2.5
             return CGRect(x: x - w / 2, y: boardRect.midY - h / 2, width: w, height: h)
         case .vertical:
             let y = player == .south ? boardRect.minY + storeZone * 0.52 : boardRect.maxY - storeZone * 0.52

@@ -56,6 +56,7 @@ struct BoardView: View {
         scene.theme = settings.boardTheme
         scene.setHighlight(house: session.highlightedHouse)
         scene.animationSpeed = settings.effectiveSpeed
+        scene.calmMotion = settings.calmMotion
         scene.showCounts = settings.showSeedCounts
         SoundPlayer.shared.enabled = settings.effectiveSound
         Haptics.shared.enabled = settings.effectiveHaptics

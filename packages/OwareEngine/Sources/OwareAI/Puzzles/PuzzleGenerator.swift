@@ -41,7 +41,7 @@ public struct PuzzleGenerator {
                 }
                 let mover = (ply % 2 == 0) == (rng.next() % 2 == 0) ? strong : noisy
                 guard let move = mover.chooseMove(for: state, using: &rng) else { break }
-                try? state.apply(move)
+                _ = try? state.apply(move)
             }
         }
         let all = Puzzle.Kind.allCases.flatMap { found[$0] ?? [] }

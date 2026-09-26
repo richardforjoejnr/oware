@@ -48,10 +48,13 @@ final class AppSettings {
     /// because `@Observable` routes those assignments through the observed setters.)
     let testMode: Bool
 
-    /// Honour Reduce Motion and test mode: sowing becomes instant.
+    /// Test mode plays instantly. Reduce Motion does *not*: seeds must still be seen moving from
+    /// house to house or the game is unreadable; it only calms the motion (see `calmMotion`).
     var effectiveSpeed: Double {
-        (testMode || UIAccessibility.isReduceMotionEnabled) ? AnimationSpeed.instant.rawValue : animationSpeed.rawValue
+        testMode ? AnimationSpeed.instant.rawValue : animationSpeed.rawValue
     }
+    /// Reduce Motion: no tumble, no lift, no landing puff — just the seed travelling and settling.
+    var calmMotion: Bool { UIAccessibility.isReduceMotionEnabled }
     var effectiveSound: Bool { soundEnabled && !testMode }
     var effectiveHaptics: Bool { hapticsEnabled && !testMode }
 
@@ -71,18 +74,17 @@ final class AppSettings {
     }
 
     /// Builds before 2026-09-24 leaked the test flags into saved preferences (instant sowing, sound
-    /// and haptics off). Undo that once for anyone who never chose those settings themselves.
+    /// and haptics off). Nobody has chosen those on purpose before release, so reset each one once.
+    /// The first repair only fired when all three were still in the test state, which missed phones
+    /// where sound had since been switched back on; this second pass resets them independently.
     private static func repairPreferencesIfNeeded(in defaults: UserDefaults, testMode: Bool) {
-        let marker = "preferencesRepaired.2026-09-24"
+        let marker = "preferencesRepaired.2026-09-26"
         guard !testMode, !defaults.bool(forKey: marker) else { return }
         defaults.set(true, forKey: marker)
-        let leaked = defaults.object(forKey: "animationSpeed") as? Double == AnimationSpeed.instant.rawValue
-            && defaults.object(forKey: "soundEnabled") as? Bool == false
-            && defaults.object(forKey: "hapticsEnabled") as? Bool == false
-        if leaked {
+        if defaults.object(forKey: "animationSpeed") as? Double == AnimationSpeed.instant.rawValue {
             defaults.removeObject(forKey: "animationSpeed")
-            defaults.removeObject(forKey: "soundEnabled")
-            defaults.removeObject(forKey: "hapticsEnabled")
         }
+        if defaults.object(forKey: "soundEnabled") as? Bool == false { defaults.removeObject(forKey: "soundEnabled") }
+        if defaults.object(forKey: "hapticsEnabled") as? Bool == false { defaults.removeObject(forKey: "hapticsEnabled") }
     }
 }

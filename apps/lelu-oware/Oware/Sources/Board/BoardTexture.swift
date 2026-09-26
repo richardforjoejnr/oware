@@ -3,6 +3,7 @@ import UIKit
 
 /// Bakes the board slab: tiled osese wood, a rounded silhouette, a warm key light from the
 /// upper left, and a dark vignette so the hollows read as depth. Rebuilt only when the size changes.
+@MainActor
 enum BoardTexture {
     static func make(size: CGSize, cornerRadius: CGFloat, scorched: Bool = false, wood woodName: String = "wood") -> SKTexture {
         let scale = min(UIScreen.main.scale, 3)
