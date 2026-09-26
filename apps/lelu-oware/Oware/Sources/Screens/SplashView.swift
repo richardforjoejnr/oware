@@ -8,7 +8,7 @@ struct SplashView: View {
     @State private var titleShown = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static let duration: Duration = .milliseconds(1500)
+    static let duration: Duration = .milliseconds(2200)
 
     var body: some View {
         ZStack {

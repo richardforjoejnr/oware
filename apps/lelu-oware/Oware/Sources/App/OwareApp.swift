@@ -42,25 +42,33 @@ enum Tips {
     static let productIDs = ["com.richardforjoe.oware.tip.small", "com.richardforjoe.oware.tip.medium", "com.richardforjoe.oware.tip.large"]
 }
 
+/// Launch arguments used by the test suites and for screenshots. They compile only into Debug
+/// builds: the App Store build has no switches that reset state, skip the splash or stage positions.
 enum LaunchOptions {
-    static var resetState: Bool {
-        CommandLine.arguments.contains("--reset-state") || UserDefaults.standard.bool(forKey: "resetState")
+    #if DEBUG
+    private static let enabled = true
+    #else
+    private static let enabled = false
+    #endif
+    private static func flag(_ name: String, defaultsKey: String? = nil) -> Bool {
+        guard enabled else { return false }
+        return CommandLine.arguments.contains(name) || (defaultsKey.map { UserDefaults.standard.bool(forKey: $0) } ?? false)
     }
-    /// `--start-game` / `-startGame YES`: open straight onto a new game against the Learner (screenshots).
-    static var startGame: Bool {
-        CommandLine.arguments.contains("--start-game") || UserDefaults.standard.bool(forKey: "startGame")
+    private static func value(_ prefix: String) -> String? {
+        guard enabled else { return nil }
+        return CommandLine.arguments.first { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) }
     }
-    /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (for animation checks).
-    static var demoMove: Bool { CommandLine.arguments.contains("--demo-move") }
-    /// `--screen=journey|puzzles|heritage`: open on that screen (screenshots).
-    static var startScreen: String? {
-        CommandLine.arguments.first { $0.hasPrefix("--screen=") }.map { String($0.dropFirst("--screen=".count)) }
-    }
-    /// `--demo-stores=N`: with `--start-game`, put N seeds in each store and scatter the rest (screenshots).
-    static var demoStores: Int? {
-        CommandLine.arguments.first { $0.hasPrefix("--demo-stores=") }.flatMap { Int($0.dropFirst("--demo-stores=".count)) }
-    }
-    static var fastAnimations: Bool {
-        CommandLine.arguments.contains("--fast-animations") || UserDefaults.standard.bool(forKey: "fastAnimations")
-    }
+
+    /// `--reset-state` / `-resetState YES`: wipe the saved game and progress.
+    static var resetState: Bool { flag("--reset-state", defaultsKey: "resetState") }
+    /// `--fast-animations` / `-fastAnimations YES`: instant, silent, no splash (UI tests).
+    static var fastAnimations: Bool { flag("--fast-animations", defaultsKey: "fastAnimations") }
+    /// `--start-game` / `-startGame YES`: open straight onto a new game against the Learner.
+    static var startGame: Bool { flag("--start-game", defaultsKey: "startGame") }
+    /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (animation checks).
+    static var demoMove: Bool { flag("--demo-move") }
+    /// `--screen=journey|puzzles|heritage`: open on that screen.
+    static var startScreen: String? { value("--screen=") }
+    /// `--demo-stores=N`: with `--start-game`, put N seeds in each store and scatter the rest.
+    static var demoStores: Int? { value("--demo-stores=").flatMap(Int.init) }
 }
