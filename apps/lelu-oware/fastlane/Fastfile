@@ -4,7 +4,8 @@
 #   bundle exec fastlane ios beta       # signed build -> TestFlight
 #   bundle exec fastlane ios release    # signed build -> App Store (submit for review)
 #
-# Required env (CI secrets): see docs/PIPELINE.md
+# Required env (CI secrets): see docs/PIPELINE.md at the repo root. Run from apps/lelu-oware with
+#   BUNDLE_GEMFILE=../../Gemfile bundle exec fastlane ios <lane>
 
 default_platform(:ios)
 
@@ -23,7 +24,7 @@ platform :ios do
     run_tests(
       project: PROJECT,
       scheme: SCHEME,
-      devices: [sh("../scripts/pick-simulator.sh").strip],
+      devices: [sh("../../../scripts/pick-simulator.sh").strip],
       code_coverage: true,
       xcodebuild_formatter: "xcbeautify",
       result_bundle: true,

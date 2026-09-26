@@ -213,7 +213,7 @@ glass beads), Kente border patterns, Adinkra stamps for your profile.
 - **Repo layout:**
   ```
   Oware.xcodeproj / Oware (app target)
-  Packages/OwareEngine, Packages/OwareAI
+  packages/OwareEngine (products OwareEngine, OwareAI) — shared across apps
   Resources/ (Assets.xcassets, Audio, Localizable.xcstrings)
   docs/ (this plan, rules, cultural sources, privacy policy source)
   ```
@@ -227,7 +227,7 @@ glass beads), Kente border patterns, Adinkra stamps for your profile.
 
 ## 4b. Delivery pipeline (repo → TestFlight → App Store)
 
-Set up in this repo (see `docs/PIPELINE.md` for the one-time credentials you must provide):
+Set up in this repo (see `../../docs/PIPELINE.md` for the one-time credentials you must provide):
 - **PR → CI**: engine tests + unsigned simulator build/test on GitHub's macOS runners. Required to merge.
 - **Merge to main → TestFlight**: fastlane builds a signed Release and uploads it; build number = CI run number.
 - **GitHub Release `vX.Y.Z` → App Store Connect**: upload + optional submit-for-review behind a manual approval gate.
@@ -283,7 +283,7 @@ Resolved 2026-09-23 by the owner:
    (Appium + WebdriverIO suite in `e2e/`), alongside Maestro flows and XCUITest.
 6. **Cultural review** — the owner will review Heritage text, Twi strings and symbol meanings
    personally, so Twi can be used confidently in the UI (always with English alongside).
-7. **Apple Developer account** — owner has one; follow docs/PIPELINE.md to wire credentials.
+7. **Apple Developer account** — owner has one; follow ../../docs/PIPELINE.md to wire credentials.
 
 Still open:
 

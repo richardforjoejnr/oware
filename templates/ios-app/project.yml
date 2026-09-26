@@ -1,0 +1,89 @@
+# XcodeGen spec for __DISPLAY__ — run `make project` here to produce __NAME__.xcodeproj (not committed).
+name: __NAME__
+options:
+  bundleIdPrefix: com.richardforjoe
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "26.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+# Shared packages live in ../../packages, e.g.
+# packages:
+#   OwareEngine:
+#     path: ../../packages/OwareEngine
+
+targets:
+  __NAME__:
+    type: application
+    platform: iOS
+    supportedDestinations: [iOS, iPadOS]
+    sources:
+      - path: __NAME__/Sources
+      - path: __NAME__/Resources
+    info:
+      path: __NAME__/Info.plist
+      properties:
+        CFBundleDisplayName: __DISPLAY__
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: __BUNDLE__
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+
+  __NAME__Tests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [__NAME__Tests]
+    dependencies:
+      - target: __NAME__
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        PROVISIONING_PROFILE_SPECIFIER: ""
+
+  __NAME__UITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [__NAME__UITests]
+    dependencies:
+      - target: __NAME__
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+        PROVISIONING_PROFILE_SPECIFIER: ""
+
+schemes:
+  __NAME__:
+    build:
+      targets:
+        __NAME__: all
+        __NAME__Tests: [test]
+        __NAME__UITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: true
+      targets: [__NAME__Tests, __NAME__UITests]
+    archive:
+      config: Release

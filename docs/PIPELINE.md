@@ -9,7 +9,8 @@ feature branch ──PR──▶ CI (engine tests + unsigned simulator build/tes
                                      optional "submit for review", manual approval gate)
 ```
 
-Workflows live in `.github/workflows/`; build logic lives in `fastlane/Fastfile` so the same
+Workflows live in `.github/workflows/`; build logic lives in each app's `fastlane/Fastfile`
+(`apps/lelu-oware/fastlane/Fastfile`, run with `BUNDLE_GEMFILE=../../Gemfile`) so the same
 lanes run locally and in CI.
 
 | Workflow | Trigger | Needs secrets? | Result |
@@ -81,7 +82,7 @@ Branch protection on `main` is configured to require the CI check and a pull req
 
 ### C. Your Mac
 - **Xcode** (App Store, id 497799835) then `sudo xcode-select -s /Applications/Xcode.app` and open it once to accept the licence.
-- `./scripts/bootstrap.sh` (installs xcodegen, xcbeautify, swiftlint; generates the project).
+- `./scripts/bootstrap.sh` (installs xcodegen, xcbeautify, swiftlint; generates every app's project).
 - Ruby 3.x for fastlane locally (optional; CI has it): `brew install ruby` then `bundle install`.
 - Sign in to Xcode with your Apple ID (Settings → Accounts) to run on your own iPhone.
 
