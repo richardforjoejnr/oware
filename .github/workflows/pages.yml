@@ -1,0 +1,68 @@
+name: Pages
+
+# Publishes the docs/ site (app index, privacy, support) plus a test-report page per app.
+# Runs when docs change on main and after the CI / E2E workflows finish on main.
+# Repository Settings ▸ Pages ▸ Source must be "GitHub Actions" for this workflow to deploy.
+on:
+  push:
+    branches: [main]
+    paths: [docs/**, scripts/build-reports.py, .github/workflows/pages.yml]
+  workflow_run:
+    workflows: [CI, "E2E (Maestro)"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Build the docs site
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./_site
+      - name: Download the latest main-branch test artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts
+          for wf in "CI" "E2E (Maestro)"; do
+            id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+            if [ -n "$id" ] && [ "$id" != "null" ]; then
+              echo "$wf → run $id"
+              gh run download "$id" -R "$GITHUB_REPOSITORY" -D "artifacts/$(echo "$wf" | tr ' ()' '___')" || echo "no artifacts for $wf"
+              echo "$id" >> artifacts/runs.txt
+            fi
+          done
+          find artifacts -maxdepth 3 | head -50
+      - name: Build the report pages
+        run: |
+          run_id=$(tail -1 artifacts/runs.txt 2>/dev/null || echo "")
+          url=""; [ -n "$run_id" ] && url="https://github.com/$GITHUB_REPOSITORY/actions/runs/$run_id"
+          python3 scripts/build-reports.py artifacts _site/reports/lelu-oware --app "Lelu Oware" --run-url "$url" --sha "$GITHUB_SHA"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./_site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

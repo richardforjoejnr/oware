@@ -137,6 +137,13 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
   real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
 
+## Pages and test reports (2026-09-26 night)
+
+Owner asked where the published test reports were; there never were any (results were only Actions
+artifacts). Now `pages.yml` deploys the docs site plus `/reports/lelu-oware/` (built by
+`scripts/build-reports.py` from the latest main CI + E2E artifacts; `ci.yml` exports the xcresult
+summary as JSON). **Owner: switch Settings ▸ Pages ▸ Source to "GitHub Actions".**
+
 ## Rules review (2026-09-26, owner asked "are the rules actually correct?")
 
 Read `GameState` against Abapa and found it faithful: anticlockwise sowing skipping the origin on
