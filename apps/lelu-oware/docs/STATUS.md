@@ -214,7 +214,7 @@ move; read old paths as relative to `apps/lelu-oware/`.
   device/simulator left the app instant and silent. Now `AppSettings.testMode` overrides at read time
   (`effectiveSpeed` / `effectiveSound` / `effectiveHaptics`) and a one-time repair clears the leaked values.
   Covered by `AppSettingsTests` and `BoardSceneTimingTests` (a four-seed sowing must take over a second).
-  Debug aid: `--start-game --demo-move` sows A1 two seconds after launch for screenshot bursts.
+  Debug aids: `--start-game --demo-move` sows A1 two seconds after launch for screenshot bursts; `--start-game --demo-stores=N` loads a position with N seeds in each store (checked at 16 and 24: seeds stay inside the bowls, count clear at the end); `--screen=journey|puzzles|heritage` opens a screen.
 - **Gotcha (2026-09-26):** running `swift test` inside a package leaves `packages/<Pkg>/.swiftpm` and Xcode then
   reports "Couldn't load project … .swiftpm" / "Missing package product". Fix: `rm -rf packages/*/.swiftpm`,
   regenerate the project, reopen. `make engine-test` now cleans up after itself.
