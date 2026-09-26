@@ -1,4 +1,4 @@
-# XcodeGen spec — run `make project` (or `xcodegen generate`) to produce Oware.xcodeproj.
+# XcodeGen spec — run `make project` (or `xcodegen generate`) in apps/lelu-oware to produce Oware.xcodeproj.
 # The .xcodeproj is NOT committed; this file is the source of truth.
 name: Oware
 options:
@@ -20,7 +20,7 @@ settings:
 
 packages:
   OwareEngine:
-    path: Packages/OwareEngine
+    path: ../../packages/OwareEngine
 
 targets:
   Oware:

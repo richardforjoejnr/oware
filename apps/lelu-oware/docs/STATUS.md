@@ -1,7 +1,8 @@
 # Lelu Oware — Project status & handoff
 
-> **For a new Claude Code session:** read this file first, then `docs/GAME_PLAN.md` and
-> `docs/PIPELINE.md`. Resume from "Next steps" below. Last updated: 2026-09-23 (evening).
+> **For a new Claude Code session:** read this file first, then `docs/GAME_PLAN.md` (this folder) and
+> `../../docs/PIPELINE.md` (repo root). Resume from "In flight" below. Paths in this file are relative to
+> `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-26.
 
 ## Where things are
 
@@ -18,7 +19,7 @@
 | Area | What exists |
 |---|---|
 | Project | `project.yml` (XcodeGen) → SwiftUI app `Oware`, iOS 17+, iPhone+iPad, bundle `com.richardforjoe.oware`, display name "Lelu Oware". `Oware.xcodeproj` is generated, not committed (`make project`). |
-| Engine | `Packages/OwareEngine` — stub `GameState` (initial 4×12 = 48 seeds) + Swift Testing test. `swift test` works with Command Line Tools only. |
+| Engine | `../../packages/OwareEngine` — stub `GameState` (initial 4×12 = 48 seeds) + Swift Testing test. `swift test` works with Command Line Tools only. |
 | App | Placeholder home screen with accessibility ids `home-title`, `home-seed-count`. |
 | Tests | `OwareTests` (unit), `OwareUITests` (XCUITest), `.maestro/flows/smoke.yaml` (Maestro), `e2e/` (TypeScript Appium + WebdriverIO v9, spec `specs/home.spec.ts`, helpers `helpers/board.ts`). |
 | CI | `.github/workflows/ci.yml` (engine + app build/test), `e2e.yml` (Maestro job + Appium/TS job), `testflight.yml` (merge to main), `release.yml` (GitHub Release → App Store Connect). Signed workflows skipped until repo variable `SIGNING_READY=true`. |
@@ -56,7 +57,7 @@
 
 ## Milestone 1 — DONE (2026-09-23, PR #2 merged)
 
-- `Packages/OwareEngine` now holds three targets: **OwareEngine** (rules), **OwareAI** (search),
+- `../../packages/OwareEngine` now holds three targets: **OwareEngine** (rules), **OwareAI** (search),
   **oware** CLI (`swift run oware selfplay|play|replay`). 42 tests, all green locally.
 - Engine: `Player`, `RuleSet` (Abapa default; grand-slam variants forfeit/illegal/captureEndsGame;
   mustFeed; winningSeeds; repetitionLimit), `Move` + notation (A1…B6), `GameState.legalMoves()`,
@@ -135,6 +136,17 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - `docs/APP_STORE.md`: listing copy, keywords, IAP metadata, privacy label answer, screenshot plan.
 - Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
   real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
+
+## Monorepo (2026-09-26, branch `chore/monorepo`, stacked on PR #14)
+
+The repo is now a monorepo so more iOS apps can live beside this one. Layout: `apps/lelu-oware/` (this
+app: `project.yml`, `Oware*`, `e2e`, `.maestro`, `fastlane`, `art`, `docs`, `Makefile`),
+`packages/OwareEngine/` (shared rules + AI), `templates/ios-app/` + `scripts/new-app.sh`
+(`make new-app NAME=… DISPLAY="…"` scaffolds a new app), root `Makefile` forwarding to `APP=lelu-oware`,
+repo docs in `docs/` (`PIPELINE.md`, `MONOREPO.md`). Workflows run inside `apps/lelu-oware` via
+`defaults.run.working-directory`; job names (the required checks) are unchanged. `*.xcodeproj` is still
+generated: `make project` at the root or in the app folder. Everything else in this file predates the
+move; read old paths as relative to `apps/lelu-oware/`.
 
 ## In flight on 2026-09-24 (read this first after a restart)
 

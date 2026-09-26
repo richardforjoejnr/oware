@@ -10,5 +10,5 @@ fi
 command -v brew >/dev/null || { echo "Homebrew required: https://brew.sh"; exit 1; }
 brew install xcodegen xcbeautify swiftlint
 command -v bundle >/dev/null && bundle install || echo "Install Ruby 3.x + bundler to use fastlane locally (optional)."
-xcodegen generate
-echo "✅ Done. Open Oware.xcodeproj or run: make open"
+for app in apps/*/; do (cd "$app" && xcodegen generate); done
+echo "✅ Done. Open apps/<app>/*.xcodeproj or run: make open   (APP=lelu-oware by default)"
