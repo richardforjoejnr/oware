@@ -69,7 +69,7 @@ version), Kalah for people who know "Mancala". Core release ships Abapa only to 
    Mechanics stay pure Abapa, which is the tournament game.
 4. **Learn from the Elder** — interactive tutorial + puzzle mode ("Ananse's Riddles": capture-in-1,
    capture-in-2, escape-the-trap, feed-or-lose) + a daily puzzle.
-5. **No forced ads.** Free core game, one-time IAP (details in §7).
+5. **No ads, no purchases.** The whole game is free (the one-time IAP in §7 was dropped on 2026-09-26).
 6. **Small and fast** — target < 60 MB, offline-first, iOS 17+, 120 Hz where available.
 7. **Online play with zero accounts** via Game Center turn-based matches (no servers, no login).
 
@@ -238,9 +238,9 @@ Set up in this repo (see `../../docs/PIPELINE.md` for the one-time credentials y
 | Guideline | What we do |
 |---|---|
 | 2.1 Completeness | No placeholders; all URLs live; crash-free on device matrix before submit. |
-| 2.3 Metadata | Screenshots from the real app; IAP clearly described; age rating 4+. |
+| 2.3 Metadata | Screenshots from the real app; no IAP; age rating 4+. |
 | 2.5.1 APIs | Public APIs only; Game Center/StoreKit used for their intended purpose. |
-| 3.1.1 IAP | All unlocks via StoreKit 2; Restore Purchases button; nothing expires. |
+| 3.1.1 IAP | Not applicable — no purchases (removed 2026-09-26). |
 | 4.1 / 4.3 Copycat & spam | Original name, icon, art, code; clear differentiation (§2.2). |
 | 4.2 Min functionality | Full game + AI + tutorial + puzzles + campaign — well above bar. |
 | 4.5.3 / 4.5.5 Game Center | No spam invites; never display Player IDs. |
@@ -272,7 +272,7 @@ Each milestone ends with a TestFlight build you can play.
 
 Resolved 2026-09-23 by the owner:
 
-1. **Monetisation** — free, no ads, one-time IAP (~£2.99–4.99) unlocking Journey chapters 3–8 and
+1. **Monetisation** — free, no ads, **no IAP** (changed 2026-09-26; the original plan was a one-time IAP unlocking Journey chapters 3–8 and
    cosmetic packs. Everything needed to play (AI, Pass & Play, tutorial, puzzles) is free.
 2. **Online** — not in v1; ships in v1.1 via Game Center turn-based.
 3. **Art production** — concept art generated with the connected Adobe/Canva tools, licence-checked,

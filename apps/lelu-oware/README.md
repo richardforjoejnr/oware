@@ -26,14 +26,14 @@ make test                    # full app tests on a simulator
 
 ## Building on your own iPhone without the paid developer programme
 A free Apple ID is enough for the simulator and for running on your own device (7-day install,
-no Game Center / IAP). In Xcode → Settings → Accounts, sign in; note the Personal Team ID shown
+no Game Center). In Xcode → Settings → Accounts, sign in; note the Personal Team ID shown
 there. Because `Oware.xcodeproj` is regenerated, set the team before generating so it sticks:
 ```bash
 export DEVELOPMENT_TEAM=YOURTEAMID   # add to ~/.zshrc to make it permanent
 make open
 ```
 Then select the Oware target → Signing & Capabilities → your Personal Team, and Run on your phone.
-TestFlight, App Store, In-App Purchase and Game Center need the paid programme (see docs/PIPELINE.md).
+TestFlight, App Store and Game Center need the paid programme (see docs/PIPELINE.md).
 
 ## Contributing flow
 Branch → PR (CI runs) → merge to `main` (TestFlight build) → GitHub Release `vX.Y.Z` (App Store).

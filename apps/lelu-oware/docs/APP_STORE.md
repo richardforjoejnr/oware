@@ -9,7 +9,7 @@ bracketed items.
 - **Bundle ID:** com.richardforjoe.oware · **SKU:** oware-ios
 - **Primary category:** Games › Board · **Secondary:** Games › Strategy
 - **Age rating:** 4+ (no objectionable content; answer "No" to every questionnaire item)
-- **Price:** Free · **In-app purchase:** "The Full Journey" (non-consumable, `com.richardforjoe.oware.fulljourney`, Tier for ~£3.99/US$3.99)
+- **Price:** Free. No in-app purchases, no ads (decided 2026-09-26).
 - **Privacy policy URL:** [host `docs/PRIVACY.md`, e.g. GitHub Pages] · **Support URL:** [owner]
 - **Copyright:** © 2026 Richard Forjoe
 
@@ -32,7 +32,7 @@ Oware is Ghana's game: two rows of six houses, forty-eight seeds, and a rule tha
 
 **Journey**
 - Eight places across Ghana — Kumasi, Bonwire, Lake Bosomtwe, Techiman, Cape Coast, Makola, Ho and Tamale — each with three players who have their own way of playing.
-- Earn stars, open the next chapter. Chapters one and two are free; the rest are a single purchase.
+- Earn stars, open the next chapter. All eight chapters are free.
 
 No ads. No account. No tracking. Nothing leaves your device.
 
@@ -44,10 +44,10 @@ oware,awale,mancala,ayo,warri,ghana,board game,strategy,seeds,african,abapa,puzz
 ## What's new (1.0)
 First release.
 
-## IAP metadata
-- **Display name:** The Full Journey
-- **Description:** Journey chapters 3–8 and every cosmetic pack.
-- **Review note:** Non-consumable. Restore is on the same screen. Chapters 1–2 and all other modes are free.
+## In-app purchases
+
+None. The app was planned with a one-time "Full Journey" purchase; that was removed on
+2026-09-26 and everything (all chapters, all board looks) is free.
 
 ## App Privacy (nutrition label)
 - Data collection: **No, we do not collect data from this app.**
@@ -62,6 +62,6 @@ Required sizes: 6.9" iPhone (1320×2868), 13" iPad (2064×2752). Order:
 6. Heritage — "Ghana's game, told properly"
 
 ## Review notes for Apple
-- No login. Test the purchase with a sandbox account; restore is on the Unlock screen.
+- No login, no purchases.
 - The app works fully offline.
 - Cultural content is traditional (Adinkra symbols, Kente colours); artwork is original.

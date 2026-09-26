@@ -128,29 +128,6 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
-    func testUnlockScreenOpensForPaidChapters() throws {
-        // Chapters 3+ need the purchase, but only once reached by play; a fresh install shows no
-        // Unlock button and no paid opponents.
-        app.terminate()
-        app.launchArguments = ["--reset-state", "--fast-animations"]
-        app.launch()
-        app.buttons["btn-journey"].tap()
-        XCTAssertTrue(app.staticTexts["journey-title"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["btn-unlock-bosomtwe"].exists, "not reached yet, so no unlock button")
-    }
-
-    @MainActor
-    func testUnlockAllLaunchFlagOpensEveryReachedChapter() throws {
-        app.terminate()
-        app.launchArguments = ["--reset-state", "--fast-animations", "--unlock-all"]
-        app.launch()
-        app.buttons["btn-journey"].tap()
-        XCTAssertTrue(app.staticTexts["journey-title"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["opponent-kumasi-1"].exists)
-        XCTAssertFalse(app.buttons["opponent-bosomtwe-1"].exists, "still gated by play, not by purchase")
-    }
-
-    @MainActor
     func testDifficultyCanBeChangedMidGame() throws {
         app.buttons["btn-play-ai"].tap()
         XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))

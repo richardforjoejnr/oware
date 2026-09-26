@@ -2,9 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
-    @Environment(StoreManager.self) private var store
     @Environment(\.dismiss) private var dismiss
-    @State private var showUnlock = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -20,9 +18,8 @@ struct SettingsView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
                         ForEach(BoardTheme.all) { theme in
-                            let locked = theme.requiresPurchase && !store.hasFullJourney
                             Button {
-                                if locked { showUnlock = true } else { settings.boardThemeID = theme.id }
+                                settings.boardThemeID = theme.id
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     RoundedRectangle(cornerRadius: 8)
@@ -37,21 +34,14 @@ struct SettingsView: View {
                                                 .stroke(settings.boardThemeID == theme.id ? Theme.gold : Theme.ivoryDim.opacity(0.25), lineWidth: settings.boardThemeID == theme.id ? 1.5 : 1)
                                         )
                                         .frame(width: 96, height: 60)
-                                    HStack(spacing: 4) {
-                                        Text(theme.name)
-                                            .font(Theme.caption(13))
-                                            .foregroundStyle(settings.boardThemeID == theme.id ? Theme.gold : Theme.ivory)
-                                        if locked {
-                                            Image(systemName: "lock")
-                                                .font(.system(size: 9))
-                                                .foregroundStyle(Theme.ivoryDim)
-                                        }
-                                    }
+                                    Text(theme.name)
+                                        .font(Theme.caption(13))
+                                        .foregroundStyle(settings.boardThemeID == theme.id ? Theme.gold : Theme.ivory)
                                 }
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("theme-\(theme.id)")
-                            .accessibilityLabel("\(theme.name), \(theme.tagline)\(locked ? ", locked" : "")")
+                            .accessibilityLabel("\(theme.name), \(theme.tagline)")
                         }
                     }
                 }
@@ -90,10 +80,5 @@ struct SettingsView: View {
         .tint(Theme.gold)
         .padding(28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .sheet(isPresented: $showUnlock) {
-            UnlockView()
-                .presentationDetents([.large])
-                .presentationBackground(Theme.ember)
-        }
     }
 }

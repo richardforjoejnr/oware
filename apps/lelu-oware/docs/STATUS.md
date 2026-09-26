@@ -10,7 +10,7 @@
   (not yet merged; owner merges). `main` is protected: PR + three required checks.
 - **Plan:** `docs/GAME_PLAN.md` v0.2. Owner decisions recorded in §7. The plan as a whole still
   needs the owner's explicit "approved" before Milestone 1 (rules engine) starts.
-- **Owner decisions so far:** title *Lelu Oware*; free + one-time IAP, no ads; online play deferred
+- **Owner decisions so far:** title *Lelu Oware*; free, no ads, **no IAP** (purchase removed 2026-09-26); online play deferred
   to v1.1; Swift app with TypeScript for tests/tools; concept art via connected Adobe/Canva tools;
   owner has a paid Apple Developer account; owner reviews cultural content himself.
 
@@ -137,6 +137,13 @@ Verified locally: XCUITest 4/4, TypeScript suite 6/6 (incl. opt-in screenshots),
 - Not yet: cosmetic unlocks (boards, seed sets, Kente borders), chapter establishing shots, achievements,
   real drum audio, Nyansapo/Sankofa vector icons, localisation, App Store screenshots at required sizes.
 
+## Purchase removed (2026-09-26, branch `feat/remove-purchase`, stacked on #15)
+
+The owner asked for the payment capability to go. `StoreManager`, `UnlockView`, `Products.storekit`, the
+StoreKit scheme config, `--unlock-all`, `JourneyProgress.requiresPurchase` and `BoardTheme.requiresPurchase`
+are gone; every Journey chapter is gated by play only and every board look is free. Release steps no
+longer include creating an IAP product; the privacy label has no purchase line.
+
 ## Monorepo (2026-09-26, branch `chore/monorepo`, stacked on PR #14)
 
 The repo is now a monorepo so more iOS apps can live beside this one. Layout: `apps/lelu-oware/` (this
@@ -214,14 +221,14 @@ move; read old paths as relative to `apps/lelu-oware/`.
    - ~~Adinkra vector icons for Undo (Sankofa) and Hint (Nyansapo)~~ — done 2026-09-24 in
      `Oware/Sources/Support/AdinkraIcons.swift` (stroked SwiftUI `Shape`s, `AdinkraGlyph` view; 3 unit tests).
      Owner to eyeball them on device; refine the bird if it reads badly.
-   - Cosmetic unlocks that the purchase promises (at least one alternative seed set and board tint).
+   - ~~Cosmetic unlocks that the purchase promises~~ (no purchase any more; extra looks are optional polish).
    - App Store screenshots: iPhone 6.9" set is produced by `e2e/specs/screenshots.spec.ts` at 1320×2868;
      iPad 13" set from `screenshots-ipad13/` (2064×2752). Add captions in Canva if wanted.
    - Accessibility sweep with VoiceOver on device; Dynamic Type check for the Heritage text.
 3. ~~Owner decision on art rights~~ — **decided 2026-09-24: keep the Canva-generated art** (see
    `docs/ART_DIRECTION.md` §3 for the terms, obligations and provenance record).
 4. **Owner-gated release steps** (`docs/PIPELINE.md`): Apple secrets → `SIGNING_READY=true` → first
-   TestFlight build on merge; create IAP product `com.richardforjoe.oware.fulljourney`; host the
+   TestFlight build on merge; ~~create IAP product~~ (none now); host the
    privacy policy and add the support email; fill App Store Connect from `docs/APP_STORE.md`.
 5. **v1.1 — Online** via Game Center turn-based matches (GAME_PLAN §3.1), leaderboards, achievements.
 
