@@ -117,14 +117,14 @@ jobs:
           time xcrun --sdk iphonesimulator --show-sdk-version
           time xcrun --sdk iphonesimulator --show-sdk-path
       - name: Install e2e dependencies
-        working-directory: e2e
+        working-directory: apps/lelu-oware/e2e
         # npm ci is not used: sharp's optional platform binaries are not reconciled in the lock file by npm.
         # The XCUITest driver is a devDependency, so Appium discovers it from package.json.
         run: |
           npm install --no-audit --no-fund
           npx appium driver list --installed
       - name: Run TypeScript e2e suite
-        working-directory: e2e
+        working-directory: apps/lelu-oware/e2e
         env:
           OWARE_SIM_NAME: ${{ steps.sim.outputs.name }}
           OWARE_SIM_UDID: ${{ steps.boot.outputs.udid }}
