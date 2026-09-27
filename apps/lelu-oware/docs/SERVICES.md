@@ -22,6 +22,7 @@ settings. Passwords, API keys and certificates never go in this repo.
 | TelemetryDeck | App ID | `2B02636D-AE8C-4D55-A14A-9FCDE1C25D74` (in `project.yml` as `TELEMETRYDECK_APP_ID`) |
 | TelemetryDeck | Organisation namespace | `lelu.oware`. Not set in the app: TelemetryDeck's Swift guide needs only the App ID, and the SDK advises leaving the namespace unset |
 | TelemetryDeck | Dashboard | https://dashboard.telemetrydeck.com/o/9F5A8F6A-76C1-494D-A0E0-0B00D0C532B2/apps/2B02636D-AE8C-4D55-A14A-9FCDE1C25D74/setup-helper |
+| Support | Email | trendnestorg34@gmail.com (on the support and privacy pages) |
 | GitHub Pages | Site | https://richardforjoejnr.github.io/oware/lelu-oware/ |
 | Kit | Newsletter form | not created yet (see section 6) |
 
