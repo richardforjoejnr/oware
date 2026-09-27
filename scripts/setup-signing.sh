@@ -56,7 +56,7 @@ export ASC_KEY_CONTENT="$(base64 -i "$P8" | tr -d '\n')"
 export MATCH_GIT_URL="https://github.com/$CERTS_REPO"
 export MATCH_GIT_BASIC_AUTHORIZATION="$(printf '%s' "richardforjoejnr:$PAT" | base64 | tr -d '\n')"
 
-echo "Creating and storing the App Store certificate and profile…"
+echo "Creating and storing the App Store certificate and profile, using key $ADMIN_KEY_ID (must have Admin access)…"
 (cd "$ROOT" && bundle config set --local path vendor/bundle >/dev/null && bundle install --quiet)
 (cd "$ROOT/apps/lelu-oware" && ASC_KEY_ID="$ADMIN_KEY_ID" ASC_KEY_CONTENT="$(base64 -i "$ADMIN_P8" | tr -d '\n')" \
   BUNDLE_GEMFILE="$ROOT/Gemfile" bundle exec fastlane ios setup_signing)
