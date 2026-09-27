@@ -1,12 +1,14 @@
 name: Pages
 
-# Publishes the docs/ site (app index, privacy, support) plus a test-report page per app.
-# Runs when docs change on main and after the CI / E2E workflows finish on main.
+# Publishes the docs/ site (app index, privacy, support, what's new) plus a test-report page per app.
+# Runs when docs change on main, when a release is published, and after CI / E2E finish on main.
 # Repository Settings ▸ Pages ▸ Source must be "GitHub Actions" for this workflow to deploy.
 on:
   push:
     branches: [main]
-    paths: [docs/**, scripts/build-reports.py, .github/workflows/pages.yml]
+    paths: [docs/**, scripts/build-reports.py, scripts/build_release_notes.py, .github/workflows/pages.yml]
+  release:
+    types: [published]
   workflow_run:
     workflows: [CI, "E2E (Maestro)"]
     types: [completed]
@@ -29,6 +31,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: What's new page from the GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" > "$RUNNER_TEMP/releases.json"
+          python3 scripts/build_release_notes.py "$RUNNER_TEMP/releases.json" docs/lelu-oware/whats-new.md --app "Lelu Oware" --slug lelu-oware
       - name: Build the docs site
         uses: actions/jekyll-build-pages@v1
         with:
