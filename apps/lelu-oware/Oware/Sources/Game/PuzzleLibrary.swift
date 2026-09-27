@@ -1,12 +1,16 @@
 import Foundation
 import Observation
 import OwareAI
+import OwareEngine
 
-/// Loads the shipped puzzle set and remembers which ones the player has solved.
+/// Loads the shipped puzzle sets (one per rules variant) and remembers which ones the player has solved.
 @MainActor
 @Observable
 final class PuzzleLibrary {
-    private(set) var puzzleSet: PuzzleSet
+    /// Which rules the riddles are shown for; set from Settings.
+    var variant: RuleSet.Variant = .namNam
+    private let sets: [RuleSet.Variant: PuzzleSet]
+    var puzzleSet: PuzzleSet { sets[variant] ?? PuzzleSet(puzzles: []) }
     private(set) var solvedIDs: Set<String>
     private let defaults: UserDefaults
     private static let solvedKey = "solvedPuzzleIDs"
@@ -14,13 +18,13 @@ final class PuzzleLibrary {
     init(defaults: UserDefaults = .standard, bundle: Bundle = .main) {
         self.defaults = defaults
         solvedIDs = Set(defaults.stringArray(forKey: Self.solvedKey) ?? [])
-        if let url = bundle.url(forResource: "puzzles", withExtension: "json"),
-           let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode(PuzzleSet.self, from: data) {
-            puzzleSet = decoded
-        } else {
-            puzzleSet = PuzzleSet(puzzles: [])
+        func load(_ name: String) -> PuzzleSet {
+            guard let url = bundle.url(forResource: name, withExtension: "json"),
+                  let data = try? Data(contentsOf: url),
+                  let decoded = try? JSONDecoder().decode(PuzzleSet.self, from: data) else { return PuzzleSet(puzzles: []) }
+            return decoded
         }
+        sets = [.abapa: load("puzzles"), .namNam: load("puzzles-namnam")]
     }
 
     var puzzles: [Puzzle] { puzzleSet.puzzles }

@@ -1,0 +1,1294 @@
+{
+  "puzzles" : [
+    {
+      "difficulty" : 1,
+      "houses" : [
+        2,
+        0,
+        2,
+        1,
+        0,
+        1,
+        0,
+        11,
+        1,
+        1,
+        1,
+        0
+      ],
+      "id" : "namNam-captureInOne-1",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        12,
+        16
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 1,
+      "houses" : [
+        0,
+        0,
+        1,
+        2,
+        1,
+        2,
+        0,
+        1,
+        1,
+        12,
+        0,
+        0
+      ],
+      "id" : "namNam-captureInOne-12",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        8,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        1,
+        2,
+        0,
+        0,
+        2,
+        2,
+        0,
+        2,
+        11,
+        2,
+        2
+      ],
+      "id" : "namNam-captureInOne-11",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 9,
+        "player" : 1
+      },
+      "stores" : [
+        8,
+        16
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        1,
+        1,
+        0,
+        2,
+        2,
+        1,
+        11,
+        1,
+        0,
+        0,
+        1
+      ],
+      "id" : "namNam-captureInOne-2",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        12,
+        16
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        3,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        2,
+        0,
+        1
+      ],
+      "id" : "namNam-escapeTheTrap-1",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        1,
+        13,
+        0,
+        1,
+        0,
+        1,
+        2,
+        1,
+        0,
+        1
+      ],
+      "id" : "namNam-escapeTheTrap-10",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 8,
+        "player" : 1
+      },
+      "stores" : [
+        12,
+        16
+      ],
+      "target" : 4,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        1,
+        13,
+        0,
+        1,
+        0,
+        1,
+        0,
+        2,
+        1,
+        1
+      ],
+      "id" : "namNam-escapeTheTrap-11",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        12,
+        16
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        2,
+        1,
+        2,
+        0,
+        0,
+        1,
+        2,
+        0,
+        0,
+        1,
+        3,
+        0
+      ],
+      "id" : "namNam-escapeTheTrap-12",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        16,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        3,
+        0,
+        0,
+        1,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        1,
+        1
+      ],
+      "id" : "namNam-escapeTheTrap-2",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        14,
+        1,
+        0,
+        0,
+        2,
+        0,
+        0,
+        2,
+        1
+      ],
+      "id" : "namNam-escapeTheTrap-3",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 10,
+        "player" : 1
+      },
+      "stores" : [
+        8,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        0,
+        0,
+        14,
+        0,
+        1,
+        0,
+        0,
+        1,
+        1,
+        2,
+        0
+      ],
+      "id" : "namNam-escapeTheTrap-4",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        8,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        1,
+        0,
+        1,
+        3,
+        0,
+        0,
+        1,
+        0,
+        0,
+        1,
+        1
+      ],
+      "id" : "namNam-escapeTheTrap-5",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 10,
+        "player" : 1
+      },
+      "stores" : [
+        16,
+        24
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        1,
+        0,
+        1,
+        3,
+        2,
+        1,
+        0,
+        2,
+        0,
+        2
+      ],
+      "id" : "namNam-escapeTheTrap-6",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 9,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        16
+      ],
+      "target" : 4,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        1,
+        1,
+        0,
+        1,
+        2,
+        1,
+        2,
+        0,
+        0,
+        1,
+        3
+      ],
+      "id" : "namNam-escapeTheTrap-7",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        24,
+        12
+      ],
+      "target" : 11,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        0,
+        2,
+        0,
+        1,
+        1,
+        2,
+        1,
+        0,
+        0,
+        3,
+        1
+      ],
+      "id" : "namNam-escapeTheTrap-8",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        20,
+        16
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        0,
+        1,
+        12,
+        1,
+        0,
+        2,
+        0,
+        1,
+        0,
+        2,
+        0
+      ],
+      "id" : "namNam-escapeTheTrap-9",
+      "kind" : "escapeTheTrap",
+      "solution" : {
+        "absoluteIndex" : 8,
+        "player" : 1
+      },
+      "stores" : [
+        12,
+        16
+      ],
+      "target" : 4,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        1,
+        1,
+        13,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "namNam-feedOrLose-1",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "absoluteIndex" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        8,
+        24
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        2,
+        1,
+        1,
+        0,
+        11
+      ],
+      "id" : "namNam-feedOrLose-2",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "absoluteIndex" : 8,
+        "player" : 1
+      },
+      "stores" : [
+        12,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        13,
+        0,
+        0
+      ],
+      "id" : "namNam-feedOrLose-3",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "absoluteIndex" : 6,
+        "player" : 1
+      },
+      "stores" : [
+        12,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        0,
+        1,
+        1,
+        1,
+        12,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "namNam-feedOrLose-4",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "absoluteIndex" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        8,
+        24
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        1,
+        1,
+        1,
+        1,
+        0,
+        12,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "namNam-feedOrLose-5",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "absoluteIndex" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        12,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        0,
+        12
+      ],
+      "id" : "namNam-feedOrLose-6",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "absoluteIndex" : 6,
+        "player" : 1
+      },
+      "stores" : [
+        12,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 3,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        1,
+        1,
+        1,
+        12
+      ],
+      "id" : "namNam-feedOrLose-7",
+      "kind" : "feedOrLose",
+      "solution" : {
+        "absoluteIndex" : 9,
+        "player" : 1
+      },
+      "stores" : [
+        12,
+        20
+      ],
+      "target" : 4,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        2,
+        1,
+        0,
+        11,
+        1,
+        8,
+        3,
+        1,
+        0,
+        9,
+        0,
+        0
+      ],
+      "id" : "namNam-captureInOne-10",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 5,
+        "player" : 0
+      },
+      "stores" : [
+        0,
+        12
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        3
+      ],
+      "id" : "namNam-captureInTwo-1",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 9,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        1
+      ],
+      "id" : "namNam-captureInTwo-10",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 6,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        1,
+        0,
+        0,
+        3,
+        0,
+        2,
+        0,
+        1,
+        0,
+        0,
+        1,
+        0
+      ],
+      "id" : "namNam-captureInTwo-11",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        24,
+        16
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        1,
+        0,
+        3,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        1
+      ],
+      "id" : "namNam-captureInTwo-12",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 2,
+        "player" : 0
+      },
+      "stores" : [
+        16,
+        24
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        1,
+        1,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        2,
+        0,
+        2
+      ],
+      "id" : "namNam-captureInTwo-2",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 6,
+        "player" : 1
+      },
+      "stores" : [
+        16,
+        24
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        2,
+        0,
+        2,
+        1,
+        2,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "id" : "namNam-captureInTwo-3",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        16,
+        24
+      ],
+      "target" : 7,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0,
+        2,
+        1,
+        0,
+        0,
+        3
+      ],
+      "id" : "namNam-captureInTwo-4",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 8,
+        "player" : 1
+      },
+      "stores" : [
+        16,
+        24
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        2,
+        1,
+        0,
+        0,
+        3,
+        1,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0
+      ],
+      "id" : "namNam-captureInTwo-5",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        16,
+        24
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        1,
+        0,
+        0,
+        2,
+        1,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      "id" : "namNam-captureInTwo-6",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        16,
+        24
+      ],
+      "target" : 7,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        1,
+        0,
+        2,
+        2,
+        1,
+        0,
+        1,
+        0,
+        1,
+        3,
+        1
+      ],
+      "id" : "namNam-captureInTwo-7",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 3,
+        "player" : 0
+      },
+      "stores" : [
+        16,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        1,
+        1,
+        0,
+        0,
+        3,
+        0,
+        2,
+        0,
+        1,
+        0,
+        0
+      ],
+      "id" : "namNam-captureInTwo-8",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 1,
+        "player" : 0
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 4,
+      "houses" : [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        3,
+        0,
+        2
+      ],
+      "id" : "namNam-captureInTwo-9",
+      "kind" : "captureInTwo",
+      "solution" : {
+        "absoluteIndex" : 9,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 5,
+      "houses" : [
+        1,
+        3,
+        0,
+        1,
+        0,
+        1,
+        0,
+        0,
+        0,
+        2,
+        0,
+        0
+      ],
+      "id" : "namNam-captureInOne-3",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 0,
+        "player" : 0
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 0,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 5,
+      "houses" : [
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        3,
+        1,
+        1
+      ],
+      "id" : "namNam-captureInOne-4",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 8,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 5,
+      "houses" : [
+        0,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        3,
+        1,
+        0
+      ],
+      "id" : "namNam-captureInOne-5",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 8,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 5,
+      "houses" : [
+        0,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        0,
+        1,
+        3,
+        0,
+        1
+      ],
+      "id" : "namNam-captureInOne-6",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 8,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 5,
+      "houses" : [
+        0,
+        1,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1,
+        3
+      ],
+      "id" : "namNam-captureInOne-7",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 10,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 5,
+      "houses" : [
+        0,
+        0,
+        1,
+        0,
+        1,
+        1,
+        0,
+        1,
+        0,
+        0,
+        1,
+        3
+      ],
+      "id" : "namNam-captureInOne-8",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 10,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    },
+    {
+      "difficulty" : 5,
+      "houses" : [
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        0,
+        0,
+        1,
+        0,
+        1,
+        3
+      ],
+      "id" : "namNam-captureInOne-9",
+      "kind" : "captureInOne",
+      "solution" : {
+        "absoluteIndex" : 10,
+        "player" : 1
+      },
+      "stores" : [
+        20,
+        20
+      ],
+      "target" : 8,
+      "toMove" : 1,
+      "variant" : "namNam"
+    }
+  ]
+}

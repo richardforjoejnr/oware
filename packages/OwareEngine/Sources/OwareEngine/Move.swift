@@ -77,6 +77,14 @@ public struct RoundResult: Sendable, Codable, Hashable {
     public let southHouses: Int
     public let northHouses: Int
 
+    public init(round: Int, southSeeds: Int, northSeeds: Int, southHouses: Int, northHouses: Int) {
+        self.round = round
+        self.southSeeds = southSeeds
+        self.northSeeds = northSeeds
+        self.southHouses = southHouses
+        self.northHouses = northHouses
+    }
+
     public var winner: Player? {
         southSeeds == northSeeds ? nil : (southSeeds > northSeeds ? .south : .north)
     }

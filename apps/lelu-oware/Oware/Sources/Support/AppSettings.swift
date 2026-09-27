@@ -36,8 +36,8 @@ final class AppSettings {
     var grandSlamRule: RuleSet.GrandSlamRule {
         didSet { defaults.set(grandSlamRule.rawValue, forKey: "grandSlamRule") }
     }
-    /// Which game new games use: Nam-Nam (the owner's default) or tournament Abapa. Journey,
-    /// riddles and the lesson always use Abapa. Test launches can pin a variant with `--rules=`.
+    /// Which game new games use: Nam-Nam (the owner's default) or tournament Abapa, for every
+    /// mode (play, Pass & Play, Journey, riddles, the lesson). Test launches can pin a variant with `--rules=`.
     var variant: RuleSet.Variant {
         didSet { defaults.set(variant.rawValue, forKey: "rulesVariant") }
     }

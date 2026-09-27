@@ -66,8 +66,12 @@ final class GameSession {
         if case let .puzzle(p) = mode { return p }
         return nil
     }
+    /// Rules for the lesson now showing (follows Settings when the lesson starts).
+    private(set) var lessonVariant: RuleSet.Variant = .abapa
+    var tutorialSteps: [Tutorial.Step] { Tutorial.steps(for: lessonVariant) }
+
     var currentTutorialStep: Tutorial.Step? {
-        if case let .tutorial(i) = mode, Tutorial.steps.indices.contains(i) { return Tutorial.steps[i] }
+        if case let .tutorial(i) = mode, tutorialSteps.indices.contains(i) { return tutorialSteps[i] }
         return nil
     }
     /// The house the lesson wants tapped next, if any.
@@ -142,8 +146,11 @@ final class GameSession {
 
     // MARK: - Commands
 
-    func newGame(_ mode: GameMode, rules: RuleSet = .abapa) {
+    /// `rules` nil keeps the rules of the game on the board (so Play again and Next opponent
+    /// stay in the same variant).
+    func newGame(_ mode: GameMode, rules: RuleSet? = nil) {
         aiTask?.cancel()
+        let rules = rules ?? state.rules
         self.mode = mode
         state = .initial(rules: rules)
         history = []
@@ -177,11 +184,12 @@ final class GameSession {
     }
 
     /// Jump to a tutorial step.
-    func startTutorial(step index: Int) {
+    func startTutorial(step index: Int, variant: RuleSet.Variant? = nil) {
+        if let variant { lessonVariant = variant }
         aiTask?.cancel()
-        let step = Tutorial.steps[min(max(index, 0), Tutorial.steps.count - 1)]
+        let step = tutorialSteps[min(max(index, 0), tutorialSteps.count - 1)]
         mode = .tutorial(step: index)
-        state = step.position ?? .initial
+        state = step.position ?? .initial(rules: lessonVariant == .namNam ? .namNam : .abapa)
         history = []
         previewMove = nil
         tutorialStepDone = step.requiredMove == nil
@@ -192,7 +200,7 @@ final class GameSession {
 
     func advanceTutorial() {
         guard case let .tutorial(i) = mode else { return }
-        if i + 1 < Tutorial.steps.count { startTutorial(step: i + 1) }
+        if i + 1 < tutorialSteps.count { startTutorial(step: i + 1) }
     }
 
     /// Human taps a house (0–5 relative to the side to move).
