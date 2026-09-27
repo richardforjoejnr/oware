@@ -9,6 +9,7 @@ struct HeritageView: View {
     }
 
     let goBack: () -> Void
+    @Environment(AppSettings.self) private var settings
     @State private var tab: Tab = .rules
 
     var body: some View {
@@ -67,9 +68,49 @@ struct HeritageView: View {
         Text(text).font(Theme.caption()).foregroundStyle(Theme.ivoryDim).lineSpacing(3)
     }
 
+    /// The rules chosen in Settings come first, in full; the other set follows.
     @ViewBuilder private var rules: some View {
-        heading("How to play")
-            .accessibilityIdentifier("rules-title")
+        if settings.rules.variant == .namNam {
+            namNamRules(first: true)
+            abapaRules(first: false)
+        } else {
+            abapaRules(first: true)
+            namNamRules(first: false)
+        }
+    }
+
+    @ViewBuilder private func namNamRules(first: Bool) -> some View {
+        if first {
+            heading("How to play")
+                .accessibilityIdentifier("rules-title")
+            note("Nam-Nam, the rules this app is set to. Change them in Settings.")
+        } else {
+            heading("Nam-Nam")
+        }
+        para("Nam-Nam, \"to roam\" in Twi, is the game most Ghanaian children learn first. It is played on two rows of six houses with 48 seeds, four in each house. You start with the six houses on your side.")
+        sub("Sowing and roaming")
+        para("On your turn, pick up all the seeds in one of your houses and drop them one by one into the following houses, moving anticlockwise. If your last seed lands in a house that already holds seeds, scoop them all up and keep sowing. Your turn ends when the last seed lands in an empty house.")
+        sub("Making four")
+        para("Any house on your side that reaches four seeds is yours at once, whoever's seed made it four. A house on the other player's side is yours only when your last seed makes it four; if a passing seed makes it four, it goes to them.")
+        sub("Feeding")
+        para("If the other player has no seeds, you must give them some if any move can. If they are left empty after your move, you play again to feed them. If nobody can be fed, each player keeps the seeds on their own side and the round ends.")
+        sub("The last four")
+        para("When a capture leaves just four seeds on the board, the player who made it takes those too, and the round ends.")
+        sub("Rounds and houses")
+        para("After each round, every four seeds you won fill one of your houses for the next round. Win more than 24 and you take over houses on the other side; win fewer and you lose some of yours. A spare house goes to whoever won more seeds that round. Rings on the board show houses held across the row.")
+        sub("Winning")
+        para("The game ends when one player holds all twelve houses. If it runs for twenty rounds, whoever holds more houses wins.")
+    }
+
+    @ViewBuilder private func abapaRules(first: Bool) -> some View {
+        if first {
+            heading("How to play")
+                .accessibilityIdentifier("rules-title")
+            note("Abapa, the rules this app is set to. Change them in Settings.")
+        } else {
+            heading("Abapa")
+            note("The tournament rules, used in adult and competition play. Choose them in Settings.")
+        }
         para("Oware is played on two rows of six houses with 48 seeds, four in each house. You own the row nearest you. The aim is to capture more seeds than the other player: 25 wins, 24 each is a draw.")
         sub("Sowing")
         para("On your turn, pick up all the seeds in one of your houses and drop them one by one into the following houses, moving anticlockwise: along your own row away from your store, then back along the other player's row (on a phone held upright the rows stand as columns). Never sow into the stores, and if a house holds 12 or more seeds, skip the house you started from on each lap so it always ends empty.")
@@ -79,12 +120,7 @@ struct HeritageView: View {
         para("A move that would capture every seed on the other side is allowed, but the capture is forfeited: the seeds stay. And if the other row is empty at the start of your turn, you must play a move that gives them seeds if you can. If no move can, you keep the seeds on your side and the game ends.")
         sub("Ending")
         para("The game ends when someone has 25 seeds, when the board is empty, when a player cannot be fed, or when the position keeps repeating, in which case each player keeps the seeds on their own side.")
-
-        heading("Nam-Nam")
-        para("Nam-Nam is the game most Ghanaian children learn first, and the one this app plays unless you choose Abapa in Settings. Sow the same way, but if your last seed lands in a house that already holds seeds, scoop that house up and keep going; your turn ends only when the last seed lands in an empty house.")
-        para("You capture by making four. Any house on your own territory that reaches four seeds is yours, whoever sowed it, at any point in the sowing. A house on the other player's territory is yours only when your own last seed makes it four.")
-        para("When a capture leaves just four seeds on the board, the player who made it takes those too and the round ends. Each player then fills houses with the seeds they won, four to a house: win more than 24 and you take over a house on the other side for the next round. The game ends when one player owns all twelve houses.")
-        note("These are the Abapa rules used in adult and tournament play. The app's settings offer the other common grand-slam conventions.")
+        note("The app's settings also offer the other common grand-slam conventions.")
     }
 
     @ViewBuilder private var heritage: some View {

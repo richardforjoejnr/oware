@@ -196,6 +196,20 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testRulesPageLeadsWithTheChosenRules() throws {
+        app.terminate()
+        app.launchArguments = ["--reset-state", "--fast-animations", "--screen=heritage"]   // shipped default: Nam-Nam
+        app.launch()
+        XCTAssertTrue(app.staticTexts["rules-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Nam-Nam, the rules this app is set to. Change them in Settings."].exists)
+        app.terminate()
+        app.launchArguments = ["--reset-state", "--fast-animations", "--screen=heritage", "--rules=abapa"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["rules-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Abapa, the rules this app is set to. Change them in Settings."].exists)
+    }
+
+    @MainActor
     func testDifficultyCanBeChangedMidGame() throws {
         app.buttons["btn-play-ai"].tap()
         XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))
