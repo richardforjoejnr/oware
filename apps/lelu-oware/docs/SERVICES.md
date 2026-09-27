@@ -56,6 +56,31 @@ Set up in **App Store Connect ▸ your app ▸ Features ▸ Game Center**. Ids m
 
 Game Center does not give a total player count; use App Store Connect analytics for numbers.
 
+### Text to paste (English (U.K.) localisation)
+
+Leaderboards: type **Classic**, score format **Integer**, sort **High to Low**, submission **Best Score**.
+
+| Reference name | Display name | Score suffix |
+|---|---|---|
+| Riddle streak | Daily riddle streak | " days" (singular " day") |
+| Journey stars | Journey stars | " stars" (singular " star") |
+| Grandmaster wins | Wins against the Grandmaster | " wins" (singular " win") |
+
+Achievements: **not hidden**, **not achievable more than once**. Each needs a **512 × 512 or
+1024 × 1024 PNG** image. Points add up to 205 of the 1,000 allowed.
+
+| Reference name | Points | Title | Before earning | After earning |
+|---|---|---|---|---|
+| First win | 10 | First win | Win a game against the computer or in the Journey. | You won your first game. Ayekoo! |
+| Lesson done | 10 | Learned the board | Finish the lesson. | You finished the lesson. |
+| First riddle | 10 | Ananse's pupil | Solve one of Ananse's riddles. | You solved your first riddle. |
+| First chapter | 25 | On the road | Beat every opponent in a Journey chapter. | You completed a Journey chapter. |
+| Beat the Grandmaster | 100 | Grandmaster beaten | Beat the computer at Grandmaster level. | You beat the Grandmaster. |
+| All twelve houses | 50 | Every house | Win a Nam-Nam game by holding all twelve houses. | You held all twelve houses. |
+
+Then, on the app's version page (Distribution ▸ iOS App ▸ the version), tick **Game Center** and
+add these leaderboards and achievements so they go live with the build.
+
 ## 4. Analytics (TelemetryDeck)
 
 - **Switch:** Settings ▸ "Share anonymous usage stats", on by default. Off stops every event.

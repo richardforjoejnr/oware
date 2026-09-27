@@ -80,8 +80,9 @@ the first time. TestFlight needs the paid membership.
       - Tips in TestFlight are free test purchases; nobody is charged.
       - Each build lasts **90 days**. Upload a new one before then.
       - Testers send feedback and screenshots from the TestFlight app; read it under TestFlight ▸ Feedback.
-- [ ] **Optional, automatic builds:** follow PIPELINE.md to add the CI secrets and set
-      `SIGNING_READY=true`. Every merge to `main` then uploads a TestFlight build.
+- [ ] **Optional, automatic builds:** follow PIPELINE.md to add **all** the CI secrets first, and
+      only then set `SIGNING_READY=true`. Every merge to `main` then uploads a TestFlight build.
+      With the flag on and no secrets, the TestFlight workflow fails on every merge.
 
 ## Stage 4: App Store submission
 
