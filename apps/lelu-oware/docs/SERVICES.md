@@ -6,6 +6,25 @@ outside services it uses, and what has to be set up in each. Last updated 27 Sep
 Background research, with sources: [`../../../docs/research/free-vs-paid.md`](../../../docs/research/free-vs-paid.md)
 (kept off the public website).
 
+## Accounts and IDs
+
+None of these are secrets: they are identifiers that ship inside the app or appear in public
+settings. Passwords, API keys and certificates never go in this repo.
+
+| Service | Item | Value |
+|---|---|---|
+| Apple Developer | Team ID | `2H3QQFZLL3` (also `export DEVELOPMENT_TEAM=2H3QQFZLL3` in `~/.zshrc`) |
+| App Store Connect | App name | Lelu Oware |
+| App Store Connect | Bundle ID | `com.richardforjoe.oware` (free-account family builds: `com.richardforjoe.oware.family`) |
+| App Store Connect | SKU | `oware-ios` |
+| App Store Connect | Primary language | English (U.K.) |
+| App Store Connect | Apple ID (numeric) | App Information page; add it here once the app record exists |
+| TelemetryDeck | App ID | `2B02636D-AE8C-4D55-A14A-9FCDE1C25D74` (in `project.yml` as `TELEMETRYDECK_APP_ID`) |
+| TelemetryDeck | Organisation namespace | `lelu.oware`. Not set in the app: TelemetryDeck's Swift guide needs only the App ID, and the SDK advises leaving the namespace unset |
+| TelemetryDeck | Dashboard | https://dashboard.telemetrydeck.com/o/9F5A8F6A-76C1-494D-A0E0-0B00D0C532B2/apps/2B02636D-AE8C-4D55-A14A-9FCDE1C25D74/setup-helper |
+| GitHub Pages | Site | https://richardforjoejnr.github.io/oware/lelu-oware/ |
+| Kit | Newsletter form | not created yet (see section 6) |
+
 ## 1. Decisions
 
 | Topic | Decision (27 Sep 2026) |
