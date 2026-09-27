@@ -4,7 +4,10 @@
 # Run it yourself in Terminal from the repo root:  ./scripts/setup-signing.sh
 # It asks for each value privately, creates the private certificates repo if needed, stores the
 # App Store certificate there with fastlane match, adds every secret to GitHub, and finally turns
-# SIGNING_READY on. Nothing is written to disk in this repo and nothing is printed back.
+# SIGNING_READY on. No secret is written to this repo or printed back.
+#
+# Creating the distribution certificate needs an App Store Connect key with Admin access; GitHub
+# only needs App Manager. Give the Admin key at its own prompt; it is used once and not stored.
 set -euo pipefail
 
 REPO="richardforjoejnr/oware"
@@ -44,7 +47,8 @@ read -rp "Admin Key ID for the certificate step (press Return to use the same ke
 if [ -n "$ADMIN_KEY_ID" ]; then ADMIN_P8="$(find_p8 "$ADMIN_KEY_ID")"; else ADMIN_KEY_ID="$ASC_KEY_ID"; ADMIN_P8="$P8"; fi
 echo "GitHub fine-grained token with Contents: read and write on $CERTS_REPO only."
 read -rsp "Token: " PAT; echo
-read -rsp "Choose a passphrase that encrypts the certificates (keep it in your password manager): " MATCH_PASSWORD; echo
+echo "Passphrase for the certificates. If $CERTS_REPO already has files, it must be the SAME one as before."
+read -rsp "Passphrase (keep it in your password manager): " MATCH_PASSWORD; echo
 
 if ! gh repo view "$CERTS_REPO" >/dev/null 2>&1; then
   echo "Creating the private repo $CERTS_REPO…"
