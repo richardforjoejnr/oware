@@ -19,8 +19,18 @@ echo "Lelu Oware — signing setup. Values you type after a colon are not shown 
 read -rp "Apple Team ID [${DEVELOPMENT_TEAM:-}]: " TEAM; TEAM="${TEAM:-${DEVELOPMENT_TEAM:-}}"
 read -rp "App Store Connect API Key ID: " ASC_KEY_ID
 read -rp "App Store Connect Issuer ID: " ASC_ISSUER_ID
-read -rp "Path to the downloaded AuthKey_….p8 file: " P8
-P8="${P8/#\~/$HOME}"; [ -f "$P8" ] || { echo "No file at $P8"; exit 1; }
+# Find the key by its ID in the usual places; otherwise ask (dragging the file in works).
+P8="$(find "$HOME/Downloads" "$HOME/Desktop" "$HOME/Documents" -maxdepth 3 -name "AuthKey_${ASC_KEY_ID}.p8" 2>/dev/null | head -1)"
+if [ -n "$P8" ]; then
+  read -rp "Found $P8 — use it? [Y/n]: " OK
+  case "$OK" in [nN]*) P8="" ;; esac
+fi
+while [ ! -f "$P8" ]; do
+  read -r -p "Path to the AuthKey_….p8 file (or drag it here): " P8
+  P8="$(printf '%s' "$P8" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e "s/^['\"]//" -e "s/['\"]$//" -e 's/\\\(.\)/\1/g')"
+  P8="${P8/#\~/$HOME}"
+  [ -f "$P8" ] || echo "No file at: '$P8'. Try again."
+done
 echo "GitHub fine-grained token with Contents: read and write on $CERTS_REPO only."
 read -rsp "Token: " PAT; echo
 read -rsp "Choose a passphrase that encrypts the certificates (keep it in your password manager): " MATCH_PASSWORD; echo
