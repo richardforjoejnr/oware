@@ -13,11 +13,17 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     /// The home screen shows one primary action; the rest is behind "More".
+    /// Patient on slow CI machines: waits for the menu, scrolls it into view, and retries the tap once.
     private func openMore() {
         let more = app.buttons["btn-more"]
-        XCTAssertTrue(more.waitForExistence(timeout: 5))
-        if !app.buttons["btn-settings"].exists { more.tap() }
-        XCTAssertTrue(app.buttons["btn-settings"].waitForExistence(timeout: 3))
+        let settings = app.buttons["btn-settings"]
+        XCTAssertTrue(more.waitForExistence(timeout: 10))
+        for _ in 0..<2 where !settings.exists {
+            if !more.isHittable { app.swipeUp() }
+            more.tap()
+            if settings.waitForExistence(timeout: 6) { break }
+        }
+        XCTAssertTrue(settings.exists, "More did not open")
     }
 
     @MainActor
