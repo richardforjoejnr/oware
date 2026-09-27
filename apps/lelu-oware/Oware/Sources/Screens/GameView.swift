@@ -51,9 +51,14 @@ struct GameView: View {
         }
         .animation(.easeInOut(duration: 0.5), value: session.isGameOver)
         .onChange(of: session.isGameOver) { _, over in
-            if over, let opponent = session.mode.journeyOpponent {
+            guard over else { return }
+            if let opponent = session.mode.journeyOpponent, case let .journey(chapter, _) = session.mode {
+                let wasComplete = progress.isComplete(chapterIndex: chapter)
                 progress.record(stars: Journey.stars(for: session.state), for: opponent)
+                let completed = !wasComplete && progress.isComplete(chapterIndex: chapter)
+                PlayerEvents.shared.journeyProgress(totalStars: progress.totalStars, chapterCompleted: completed ? chapter : nil)
             }
+            PlayerEvents.shared.gameFinished(mode: session.mode, state: session.state)
         }
         .onAppear {
             if let opponent = session.mode.journeyOpponent, session.state.moveNumber == 0 {
@@ -64,7 +69,11 @@ struct GameView: View {
             if let message { showHint(message, seconds: 4.5) }
         }
         .onChange(of: session.puzzleAttempt) { _, attempt in
-            if attempt == .solved, let puzzle = session.currentPuzzle { library.markSolved(puzzle) }
+            if attempt == .solved, let puzzle = session.currentPuzzle {
+                let daily = library.isDaily(puzzle)
+                library.markSolved(puzzle)
+                PlayerEvents.shared.riddleSolved(puzzle, daily: daily, streak: library.currentStreak())
+            }
         }
         .sheet(isPresented: $showRiddle) {
             if let puzzle = session.currentPuzzle {
@@ -470,6 +479,16 @@ struct GameOverOverlay: View {
                         .accessibilityIdentifier("btn-play-again")
                     QuietButton(title: "Journey") { goToJourney() }
                         .accessibilityIdentifier("btn-journey-overlay")
+                    if stars > 0, nextJourneyMatch(after: chapter, index) == nil {
+                        // The end of the Journey: point to the newsletter for new chapters.
+                        Link(destination: Links.newsletter) {
+                            Text("Hear about new chapters")
+                                .font(Theme.body(16))
+                                .foregroundStyle(Theme.gold)
+                        }
+                        .padding(.top, 8)
+                        .accessibilityIdentifier("btn-newsletter-journey")
+                    }
                 }
                 .frame(maxWidth: 260)
             } else {

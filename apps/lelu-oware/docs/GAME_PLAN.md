@@ -1,7 +1,10 @@
 # Lelu Oware — iOS Game Plan (v0.2)
 
 Title: **Lelu Oware** (chosen by owner, 2026-09-23).
-Status: decisions in §7 resolved; awaiting final owner approval of the plan as a whole.
+Status: the original plan (approved 2026-09-23), kept for history. Where it differs from what was built,
+the current picture is in [STATUS.md](STATUS.md) and [SERVICES.md](SERVICES.md): the game is free with
+tips (no Journey purchase), Nam-Nam is the default rules, and Game Center and anonymous analytics
+ship in v1 (so the privacy label is no longer "Data Not Collected" once analytics are configured).
 
 ---
 

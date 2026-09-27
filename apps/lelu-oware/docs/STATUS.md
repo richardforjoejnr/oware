@@ -1,10 +1,20 @@
 # Lelu Oware — Project status & handoff
 
 > **For a new Claude Code session:** read this file first, then `docs/GAME_PLAN.md` (this folder) and
-> `../../docs/PIPELINE.md` (repo root). Resume from "In flight" below. Paths in this file are relative to
-> `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-26.
+> `../../docs/PIPELINE.md` (repo root). Start from "Now" below. Paths in this file are relative to
+> `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-27.
 
-## Nam-Nam everywhere (2026-09-27, branch `feat/namnam-everywhere`, stacked on #23)
+## Now (2026-09-27)
+
+- **Merged to main:** PRs #1–#24 (latest: #23 battery, #24 rules in every mode, Support me, rules tests).
+- **Open:** #25 `feat/game-center-analytics` (Game Center, analytics, newsletter, online plumbing, docs,
+  repo clean-up). The owner merges.
+- **Next for the owner:** [ACTION_LIST.md](ACTION_LIST.md) (family testing now; Apple Developer
+  Program next week; then TestFlight and submission). Services reference: [SERVICES.md](SERVICES.md).
+- **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
+  `packages/*/.swiftpm` after `swift test`; run `make project` after pulling.
+
+## Nam-Nam everywhere (2026-09-27, PR #24, merged)
 
 The owner played Journey with Nam-Nam set and got Abapa. Now every way into a game follows Settings ▸ Rules:
 Journey (start, Next opponent, Play again), Riddles, the "New here?" lesson, Pass & Play and quick play.
@@ -21,6 +31,46 @@ the tip row off small screens) and its footer names the chosen rules. Tip jar re
 note, tier lines (A cold Fanta / A plate of waakye / A feast), a "Rate Lelu Oware" button
 (`requestReview`), and a thank-you with the tip count. SupportKit's `TipJarView` gained `details:` and
 `appName:` (both optional, so the template still compiles).
+
+## Game Center, analytics, newsletter, online plumbing (2026-09-27, PR #25)
+
+Full reference: **[SERVICES.md](SERVICES.md)** (decisions, ids, events, privacy label, setup steps).
+
+Decisions (owner): free plus tips, no ads; online play later as a paid one-time unlock where the host
+pays and invited friends play free. The audience is anyone who likes Oware, worldwide.
+
+Built:
+- **Game Center** (`Support/GameCenter.swift`, entitlement in `Oware/Oware.entitlements`): signs in at
+  launch (never in test launches), Settings ▸ "Leaderboards & achievements" opens Apple's dashboard.
+- **Analytics** (`Support/Analytics.swift`): one facade, TelemetryDeck backend, 7 events, Settings ▸
+  "Share anonymous usage stats" (default on). Off when `TELEMETRYDECK_APP_ID` is empty (it is today).
+- **PlayerEvents** (`Game/PlayerEvents.swift`): maps game moments to events and Game Center.
+- **Daily riddle streak** in `PuzzleLibrary` (feeds the streak leaderboard).
+- **Newsletter**: `../../docs/lelu-oware/newsletter.md` (Kit embed via front matter); linked from
+  Settings ▸ "News by email" and from the end of the Journey. No email field in the app.
+- **Online plumbing, hidden** (`FeatureFlags.onlinePlay = false`): `OnlineMatch` in the engine
+  (match data validated by replay, versioned, < 64 KB), SupportKit `Unlock` (non-consumable) and
+  `FoundingPlayer` (AppTransaction original build), app `OnlinePolicy`/`OnlineAccess` ("host pays";
+  founding players can be included with one switch). `Play online` added to Tips.storekit for local tests.
+- Privacy policy rewritten for analytics, Game Center and newsletter. Research doc excluded from Pages.
+
+Owner to do:
+1. **Small Business Program**: free; enrol as Account Holder at developer.apple.com/app-store/small-business-program
+   once the paid Developer Program membership is active (15% commission; applies from the fiscal month after approval).
+2. **App Store Connect ▸ Game Center**: enable it for the app and create these (ids must match exactly):
+   leaderboards `com.richardforjoe.oware.leaderboard.riddleStreak` (best, integer),
+   `…leaderboard.journeyStars` (best, integer), `…leaderboard.grandmasterWins` (best, integer);
+   achievements `com.richardforjoe.oware.achievement.firstWin`, `…lessonDone`, `…firstRiddle`,
+   `…firstChapter`, `…beatGrandmaster`, `…allTwelveHouses`.
+3. **TelemetryDeck**: create a free account and an app; put its App ID in `project.yml`
+   (`TELEMETRYDECK_APP_ID`). It is not a secret.
+4. **App Privacy label** (App Store Connect): Usage Data ▸ Product Interaction, and Identifiers ▸
+   Device ID (TelemetryDeck's own privacy manifest declares a hashed device id); both *not linked to
+   you*, *not used for tracking*, purpose *Analytics*. Game Center data is Apple's and is
+   not declared by the app.
+5. **Kit** (free up to 10,000 subscribers): create a form, paste its `data-uid` and script URL into
+   the newsletter page's front matter.
+6. Keep build numbers plain increasing integers (see project.yml comment).
 
 ## Rules tests and ring fixes (2026-09-27, PR #24)
 
@@ -44,7 +94,7 @@ position repeats (longest chain seen: 60 laps), with the 500-lap backstop kept.
 
 Research: `../../docs/research/free-vs-paid.md` (free vs paid, analytics, sign-ups).
 
-## Battery review (2026-09-27, branch `perf/battery`)
+## Battery review (2026-09-27, PR #23, merged)
 
 Idle board redrew every frame (SpriteKit render loop at up to 120 fps) and the audio engine stayed
 running after the first sound. Now `BoardScene` pauses its SKView ~0.7 s after the last action
@@ -54,7 +104,7 @@ Simulator measurement, app process CPU while the player thinks on the board: ~1.
 (menu ~0 %). AI search is already time-boxed (0.1–3 s) and only runs on the computer's turn.
 On device, check with Xcode ▸ Debug navigator ▸ Energy Impact during play.
 
-## Latest (2026-09-27): Nam-Nam rules, PR #21
+## Nam-Nam rules (2026-09-27, PR #21, merged)
 
 Splash: 2.8 s, tap to skip; Reduce Motion no longer shortens it (the owner has Reduce Motion on and found it too fast).
 

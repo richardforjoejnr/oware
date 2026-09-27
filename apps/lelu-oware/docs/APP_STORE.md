@@ -10,6 +10,8 @@ bracketed items.
 - **Primary category:** Games › Board · **Secondary:** Games › Strategy
 - **Age rating:** 4+ (no objectionable content; answer "No" to every questionnaire item)
 - **Price:** Free, no ads. Three optional **tip** in-app purchases (consumable; they unlock nothing).
+- **Availability:** all countries (for anyone who likes Oware). Online play, later, is planned as a
+  paid one-time unlock; see [SERVICES.md](SERVICES.md).
 - **Privacy policy URL:** https://richardforjoejnr.github.io/oware/lelu-oware/privacy · **Support URL:** https://richardforjoejnr.github.io/oware/lelu-oware/support (GitHub Pages, main branch, /docs folder; source files `docs/lelu-oware/*.md`)
 - **Copyright:** © 2026 Richard Forjoe
 
@@ -59,7 +61,10 @@ Review note: "The in-app purchases are optional tips. They unlock no content; ev
 and board look is available to all users." Local testing uses `Oware/Resources/Tips.storekit`.
 
 ## App Privacy (nutrition label)
-- Data collection: **No, we do not collect data from this app.**
+- With analytics configured (`TELEMETRYDECK_APP_ID` set): Usage Data ▸ Product Interaction and
+  Identifiers ▸ Device ID, both not linked to the user, not used for tracking, purpose Analytics.
+- With `TELEMETRYDECK_APP_ID` empty: **No, we do not collect data from this app.**
+- Details: [SERVICES.md](SERVICES.md) section 5.
 
 ## Screenshots (to produce from the simulator, see `e2e/specs/screenshots.spec.ts`)
 Required sizes: 6.9" iPhone (1320×2868), 13" iPad (2064×2752). Order:

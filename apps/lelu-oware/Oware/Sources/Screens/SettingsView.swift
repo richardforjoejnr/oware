@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(TipJar.self) private var tipJar
     @State private var showTipJar = false
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         @Bindable var settings = settings
@@ -106,7 +107,24 @@ struct SettingsView: View {
             Toggle("Show seed counts", isOn: $settings.showSeedCounts)
                 .accessibilityIdentifier("setting-counts")
 
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Share anonymous usage stats", isOn: $settings.shareUsageStats)
+                    .accessibilityIdentifier("setting-usage-stats")
+                Text("Which modes are played and how games end, never who you are. It helps decide what to make next.")
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             Spacer()
+            QuietButton(title: "Leaderboards & achievements", subtitle: "Game Center") {
+                GameCenter.shared.showDashboard()
+            }
+            .accessibilityIdentifier("btn-game-center")
+            QuietButton(title: "News by email", subtitle: "new chapters and features, from the website") {
+                openURL(Links.newsletter)
+            }
+            .accessibilityIdentifier("btn-newsletter")
             QuietButton(title: "Support me", subtitle: tipJar.hasTipped ? "medaase — thank you for your support" : "tips keep it growing and bring new features") {
                 showTipJar = true
             }
@@ -132,6 +150,8 @@ struct SettingsView: View {
                                           titleFont: Theme.title(30), bodyFont: Theme.body(18)))
                 .presentationDetents([.medium, .large])
                 .presentationBackground(Theme.ember)
+                .onAppear { PlayerEvents.shared.tipJarViewed() }
         }
+        .onChange(of: tipJar.tipCount) { _, _ in PlayerEvents.shared.tipPurchased(productID: tipJar.lastTippedProductID) }
     }
 }
