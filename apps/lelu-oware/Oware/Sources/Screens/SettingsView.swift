@@ -107,7 +107,7 @@ struct SettingsView: View {
                 .accessibilityIdentifier("setting-counts")
 
             Spacer()
-            QuietButton(title: "Support me", subtitle: tipJar.hasTipped ? "medaase — thank you for your support" : "free forever, nothing locked; tips keep it growing") {
+            QuietButton(title: "Support me", subtitle: tipJar.hasTipped ? "medaase — thank you for your support" : "tips keep it growing and bring new features") {
                 showTipJar = true
             }
             .accessibilityIdentifier("btn-tip-jar")
