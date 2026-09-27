@@ -13,11 +13,17 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     /// The home screen shows one primary action; the rest is behind "More".
+    /// Patient on slow CI machines: waits for the menu, scrolls it into view, and retries the tap once.
     private func openMore() {
         let more = app.buttons["btn-more"]
-        XCTAssertTrue(more.waitForExistence(timeout: 5))
-        if !app.buttons["btn-settings"].exists { more.tap() }
-        XCTAssertTrue(app.buttons["btn-settings"].waitForExistence(timeout: 3))
+        let settings = app.buttons["btn-settings"]
+        XCTAssertTrue(more.waitForExistence(timeout: 10))
+        for _ in 0..<2 where !settings.exists {
+            if !more.isHittable { app.swipeUp() }
+            more.tap()
+            if settings.waitForExistence(timeout: 6) { break }
+        }
+        XCTAssertTrue(settings.exists, "More did not open")
     }
 
     @MainActor
@@ -193,6 +199,20 @@ final class HomeScreenUITests: XCTestCase {
             total += Int((app.otherElements[id].value as? String ?? "0").split(separator: " ").first ?? "0") ?? 0
         }
         XCTAssertEqual(total, 48)
+    }
+
+    @MainActor
+    func testRulesPageLeadsWithTheChosenRules() throws {
+        app.terminate()
+        app.launchArguments = ["--reset-state", "--fast-animations", "--screen=heritage"]   // shipped default: Nam-Nam
+        app.launch()
+        XCTAssertTrue(app.staticTexts["rules-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Nam-Nam, the rules this app is set to. Change them in Settings."].exists)
+        app.terminate()
+        app.launchArguments = ["--reset-state", "--fast-animations", "--screen=heritage", "--rules=abapa"]
+        app.launch()
+        XCTAssertTrue(app.staticTexts["rules-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Abapa, the rules this app is set to. Change them in Settings."].exists)
     }
 
     @MainActor
