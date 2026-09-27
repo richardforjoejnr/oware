@@ -47,7 +47,8 @@ platform :ios do
   private_lane :build_signed do
     asc_auth
     match(type: "appstore", readonly: true)
-    build_number = ENV.fetch("BUILD_NUMBER", Time.now.strftime("%Y%m%d%H%M"))
+    # One scheme for every upload (CI and `make archive`): UTC date and time, always increasing.
+    build_number = ENV.fetch("BUILD_NUMBER", Time.now.utc.strftime("%Y%m%d%H%M"))
     increment_build_number(build_number: build_number, xcodeproj: PROJECT)
     build_app(
       project: PROJECT,

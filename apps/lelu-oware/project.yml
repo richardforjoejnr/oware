@@ -16,9 +16,12 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MARKETING_VERSION: "0.1.0"
-    # Keep build numbers plain increasing integers: StoreKit reports the first-installed build,
-    # which decides "founding player" status if anything is ever paid (see OnlineAccess.swift).
+    # The App Store version (must match the version in App Store Connect). The release workflow sets it
+    # from the tag (v1.0 → 1.0); after a release ships, raise it here (e.g. 1.1) for the next TestFlight builds.
+    MARKETING_VERSION: "1.0"
+    # Build number for local runs only. Every upload (CI, or `make archive` on a Mac) stamps the UTC
+    # date and time instead, e.g. 202609271730, so builds are unique and always increasing. StoreKit
+    # reports the first-installed build, which decides "founding player" status (OnlineAccess.swift).
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
     TELEMETRYDECK_APP_ID: ""

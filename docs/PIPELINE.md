@@ -90,13 +90,30 @@ Branch protection on `main` is configured to require the CI check and a pull req
 
 ## Fastest way to a TestFlight build (no CI secrets needed)
 
-1. `export DEVELOPMENT_TEAM=<your 10-character Team ID>` (add it to `~/.zshrc`), then `make open`.
-2. In Xcode choose the **Oware** scheme and destination **Any iOS Device (arm64)**.
-3. Product ▸ Archive. When the Organizer opens: **Distribute App ▸ TestFlight & App Store ▸ Upload**,
-   accept the defaults (automatic signing creates the certificate and profile for you).
+1. `export DEVELOPMENT_TEAM=<your 10-character Team ID>` (add it to `~/.zshrc`).
+2. `make archive APP=lelu-oware`. It builds a Release archive with a fresh build number (see
+   "Versions and build numbers" below) and opens it in Xcode's Organizer. (Product ▸ Archive in
+   Xcode also works, but it reuses build 1, so a second upload is rejected.)
+3. In the Organizer: **Distribute App ▸ App Store Connect ▸ Upload**, accepting the defaults
+   (automatic signing creates the certificate and profile for you).
 4. In App Store Connect ▸ your app ▸ TestFlight the build appears after processing (5–15 min).
    Under Internal Testing add a group with yourself; open the TestFlight app on your iPhone and install.
    Prerequisites: the App ID and app record from section A steps 1–2 must exist first.
+
+## Versions and build numbers
+
+| Number | Where it comes from | When it changes |
+|---|---|---|
+| **Version** (`MARKETING_VERSION`, e.g. 1.0) | `apps/<app>/project.yml`; the release workflow overrides it from the tag (`v1.1` → 1.1) | By hand, once per App Store release. It must match the version open in App Store Connect. After a version ships, raise it (1.0 → 1.1) so new TestFlight builds go to the next version. |
+| **Build** (`CFBundleVersion`, e.g. 202609271730) | Stamped at upload time: UTC date and time (`yyyyMMddHHmm`) | Automatically, on every upload: the TestFlight workflow, the release workflow, and `make archive` on your Mac all use the same scheme, so builds never clash and always increase. |
+
+Merging to `main` does not change the version; it uploads a new **build** of the current version to
+TestFlight (only when `SIGNING_READY` is `true` and the secrets exist). Publishing a GitHub Release
+tagged `vX.Y` uploads a build with version X.Y for the App Store; submitting for review is a manual
+choice (the workflow's `submit_for_review` input, or the button in App Store Connect).
+
+Without CI secrets, upload from your Mac: `make archive APP=lelu-oware`, then in the Organizer that
+opens: **Distribute App ▸ App Store Connect ▸ Upload**.
 
 ## Day-to-day flow
 1. `git checkout -b feature/thing` → edit → `make engine-test` / `make test`.

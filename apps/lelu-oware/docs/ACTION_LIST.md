@@ -67,9 +67,10 @@ the first time. TestFlight needs the paid membership.
 
 ## Stage 3: TestFlight (share with family and friends)
 
-- [ ] **Upload a build:** `make open`, choose **Any iOS Device (arm64)**, Product ▸ **Archive**, then
-      Organizer ▸ **Distribute App ▸ TestFlight & App Store ▸ Upload**. The build appears in
-      App Store Connect ▸ TestFlight after 5–15 minutes.
+- [ ] **Upload a build:** `make archive APP=lelu-oware` in the repo (a fresh build number every
+      time), then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upload**.
+      The build appears in App Store Connect ▸ TestFlight after 5–15 minutes. The app version is
+      1.0, matching App Store Connect; see PIPELINE.md "Versions and build numbers".
 - [ ] **Test it yourself first:** TestFlight ▸ Internal Testing ▸ add yourself. Install the
       **TestFlight** app on your iPhone and open the invite.
 - [ ] **Invite family and friends:** TestFlight ▸ External Testing ▸ new group ("Family") ▸ add
