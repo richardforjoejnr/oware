@@ -4,6 +4,16 @@
 > `../../docs/PIPELINE.md` (repo root). Resume from "In flight" below. Paths in this file are relative to
 > `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-26.
 
+## Battery review (2026-09-27, branch `perf/battery`)
+
+Idle board redrew every frame (SpriteKit render loop at up to 120 fps) and the audio engine stayed
+running after the first sound. Now `BoardScene` pauses its SKView ~0.7 s after the last action
+(`wake()` on render / animate / preview / highlight / press / resize; a lesson's pulsing ring keeps it
+awake), frames are capped at 60 fps, and `SoundPlayer` pauses the engine 4 s after the last sound.
+Simulator measurement, app process CPU while the player thinks on the board: ~1.1 % → ~0.3 %
+(menu ~0 %). AI search is already time-boxed (0.1–3 s) and only runs on the computer's turn.
+On device, check with Xcode ▸ Debug navigator ▸ Energy Impact during play.
+
 ## Latest (2026-09-27): Nam-Nam rules, PR #21
 
 Splash: 2.8 s, tap to skip; Reduce Motion no longer shortens it (the owner has Reduce Motion on and found it too fast).

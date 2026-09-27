@@ -60,13 +60,15 @@ final class BoardScene: SKScene, BoardAnimator {
 
     override func didMove(to view: SKView) {
         view.allowsTransparency = true
-        view.preferredFramesPerSecond = 120
+        // 60 fps is plenty for seeds; 120 would keep ProMotion at full rate for no visible gain.
+        view.preferredFramesPerSecond = 60
         if !built { build() }
         relayout()
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
         guard built else { return }
+        wake()
         relayout()
     }
 
@@ -176,6 +178,7 @@ final class BoardScene: SKScene, BoardAnimator {
 
     /// A slow gold pulse on one house (used by the lesson to say "tap this one").
     func highlight(house: Int?) {
+        wake()
         highlightLayer.removeAllChildren()
         guard built, let house else { return }
         let c = layout.sk(layout.houseCenter(house))
@@ -349,6 +352,7 @@ final class BoardScene: SKScene, BoardAnimator {
     /// The house answers a touch like a real board would: a 3 % lift and back, nothing coloured.
     func press(house: Int) {
         guard built, houseNodes.indices.contains(house) else { return }
+        wake()
         let node = houseNodes[house]
         node.removeAction(forKey: "press")
         node.run(SKAction.sequence([
@@ -434,6 +438,7 @@ final class BoardScene: SKScene, BoardAnimator {
     func render(_ state: GameState) {
         current = state
         guard built else { return }
+        wake()
         drawTerritory(state)
         hand.forEach { $0.removeFromParent() }
         hand = []
@@ -494,6 +499,35 @@ final class BoardScene: SKScene, BoardAnimator {
 
     private var isInstant: Bool { animationSpeed >= 100 || view == nil || isPaused }
 
+    // MARK: - Idle sleep (battery)
+
+    /// The board only changes when something moves, so the view stops rendering once every action
+    /// has finished and wakes on the next change. Without this SpriteKit redraws a still board
+    /// every frame while the player thinks.
+    private var sleepTask: Task<Void, Never>?
+
+    func wake() {
+        sleepTask?.cancel()
+        if let view, view.isPaused { view.isPaused = false }
+        scheduleSleep()
+    }
+
+    private func scheduleSleep() {
+        sleepTask?.cancel()
+        sleepTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard let self, !Task.isCancelled else { return }
+            if self.isBusy { self.scheduleSleep() } else { self.view?.isPaused = true }
+        }
+    }
+
+    /// True while any node is animating or a pulsing lesson highlight is showing.
+    private var isBusy: Bool {
+        if !highlightLayer.children.isEmpty { return true }
+        func busy(_ node: SKNode) -> Bool { node.hasActions() || node.children.contains(where: busy) }
+        return busy(self)
+    }
+
     private func wait(_ seconds: TimeInterval) async {
         guard seconds > 0, !isInstant else { return }
         await run(SKAction.wait(forDuration: seconds / animationSpeed))
@@ -508,8 +542,9 @@ final class BoardScene: SKScene, BoardAnimator {
     func animate(events: [MoveEvent], from before: GameState, to after: GameState) async {
         // A paused view (app just came to the foreground, or SpriteView's own pause) would swallow
         // every action, so make sure it is running before deciding whether to animate at all.
-        if let view, view.isPaused { view.isPaused = false }
+        wake()
         if isPaused { isPaused = false }
+        defer { scheduleSleep() }
         if isInstant {
             render(after)
             playEndSounds(after)
@@ -707,6 +742,7 @@ final class BoardScene: SKScene, BoardAnimator {
 
     /// Ghost the sowing path and landing house for a long-pressed move.
     func showPreview(_ preview: MovePreview?) {
+        wake()
         previewLayer.removeAllChildren()
         guard built, let preview else { return }
         var counts = current.houses
