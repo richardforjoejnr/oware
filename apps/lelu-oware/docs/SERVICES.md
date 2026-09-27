@@ -59,8 +59,8 @@ Game Center does not give a total player count; use App Store Connect analytics 
 ## 4. Analytics (TelemetryDeck)
 
 - **Switch:** Settings ▸ "Share anonymous usage stats", on by default. Off stops every event.
-- **Off until configured:** the build setting `TELEMETRYDECK_APP_ID` in `project.yml` is empty, so
-  nothing is sent. Paste the App ID from the TelemetryDeck dashboard there (it is not a secret).
+- **Configured (27 Sep 2026):** `TELEMETRYDECK_APP_ID` in `project.yml` holds the App ID of the
+  TelemetryDeck app "Lelu Oware". Setting it back to empty turns analytics off entirely.
 - **Free tier:** 100,000 signals a month. Debug builds are marked as test data automatically.
 
 | Event | Parameters | When |
