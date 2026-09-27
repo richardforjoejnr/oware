@@ -9,7 +9,7 @@ people who carve the boards and the players who gather round them.
 
 ## Need help?
 
-Email **[support email — owner to fill in before publishing]** and say which iPhone or iPad you use
+Email **[trendnestorg34@gmail.com](mailto:trendnestorg34@gmail.com?subject=Lelu%20Oware)** and say which iPhone or iPad you use
 and what happened. Screenshots help.
 
 ## Common questions

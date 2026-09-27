@@ -61,7 +61,7 @@ statistics above contain nothing that identifies a person and can be switched of
 
 ## Contact
 
-Questions about this policy: [support email — owner to fill in before publishing]
+Questions about this policy: [trendnestorg34@gmail.com](mailto:trendnestorg34@gmail.com)
 
 ## Changes
 
