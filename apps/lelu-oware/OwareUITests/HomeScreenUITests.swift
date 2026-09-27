@@ -216,6 +216,19 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testResigningFromTheFlagEndsTheGame() throws {
+        app.buttons["btn-play-ai"].tap()
+        let flag = app.buttons["btn-end-game"]
+        XCTAssertTrue(flag.waitForExistence(timeout: 5))
+        flag.tap()
+        let resign = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Resign'")).firstMatch
+        XCTAssertTrue(resign.waitForExistence(timeout: 3))
+        resign.tap()
+        XCTAssertTrue(app.staticTexts["game-over-title"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["btn-end-game"].exists, "nothing left to end")
+    }
+
+    @MainActor
     func testDifficultyCanBeChangedMidGame() throws {
         app.buttons["btn-play-ai"].tap()
         XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))
