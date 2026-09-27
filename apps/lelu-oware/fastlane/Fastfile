@@ -50,16 +50,24 @@ platform :ios do
     # One scheme for every upload (CI and `make archive`): UTC date and time, always increasing.
     build_number = ENV.fetch("BUILD_NUMBER", Time.now.utc.strftime("%Y%m%d%H%M"))
     increment_build_number(build_number: build_number, xcodeproj: PROJECT)
+    # The project defaults to automatic signing (for Xcode archives); CI signs manually with match.
+    # Only the app target gets the profile: passing it as xcargs applied it to every target,
+    # including Swift packages' resource bundles (TelemetryDeck), which cannot take a profile.
+    update_code_signing_settings(
+      path: PROJECT,
+      targets: [SCHEME],
+      build_configurations: ["Release"],
+      use_automatic_signing: false,
+      team_id: ENV.fetch("DEVELOPMENT_TEAM"),
+      code_sign_identity: "Apple Distribution",
+      profile_name: "match AppStore #{BUNDLE_ID}"
+    )
     build_app(
       project: PROJECT,
       scheme: SCHEME,
       configuration: "Release",
       export_method: "app-store",
       xcodebuild_formatter: "xcbeautify",
-      # The project defaults to automatic signing (for Xcode archives); CI signs manually with match.
-      xcargs: "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=#{ENV.fetch('DEVELOPMENT_TEAM')} " \
-              "CODE_SIGN_IDENTITY='Apple Distribution' " \
-              "PROVISIONING_PROFILE_SPECIFIER='match AppStore #{BUNDLE_ID}'",
       export_options: {
         provisioningProfiles: { BUNDLE_ID => "match AppStore #{BUNDLE_ID}" }
       }
