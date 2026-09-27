@@ -55,21 +55,30 @@ struct TelemetryDeckBackend: AnalyticsBackend {
 }
 
 /// The one door analytics go through, so the vendor can be swapped or everything switched off here.
+///
+/// The SDK is started only when analytics are on: test launches and players who switch the setting
+/// off never start it, so it never runs background work (it flushes signals when the app leaves the
+/// screen, which also slowed UI tests on CI).
 @MainActor
 final class Analytics {
     static let shared = Analytics()
 
+    /// Set directly by tests; otherwise created on first use from the App ID.
     var backend: AnalyticsBackend?
     /// Follows Settings ▸ Share anonymous usage stats.
     var isEnabled = true
+    /// Builds the real backend the first time it is needed (nil when no App ID is configured).
+    private var makeBackend: () -> AnalyticsBackend? = { nil }
 
     func configure(enabled: Bool, bundle: Bundle = .main) {
         isEnabled = enabled
-        backend = TelemetryDeckBackend(appID: bundle.object(forInfoDictionaryKey: "TelemetryDeckAppID") as? String)
+        let appID = bundle.object(forInfoDictionaryKey: "TelemetryDeckAppID") as? String
+        makeBackend = { TelemetryDeckBackend(appID: appID) }
     }
 
     func track(_ event: AnalyticsEvent) {
-        guard isEnabled, let backend else { return }
-        backend.send(event.name, parameters: event.parameters)
+        guard isEnabled else { return }
+        if backend == nil { backend = makeBackend() }
+        backend?.send(event.name, parameters: event.parameters)
     }
 }

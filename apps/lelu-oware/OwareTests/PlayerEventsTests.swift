@@ -123,6 +123,18 @@ final class PlayerEventsTests: XCTestCase {
         XCTAssertEqual(sent, ["app.launched"])
     }
 
+    func testTheSDKIsNotStartedWhileAnalyticsAreOff() {
+        let analytics = Analytics()
+        var built = 0
+        analytics.configure(enabled: false, bundle: Bundle(for: PlayerEventsTests.self))
+        analytics.track(.appLaunched)
+        XCTAssertNil(analytics.backend, "off (as in every test launch): nothing is started")
+        analytics.isEnabled = true
+        analytics.backend = SpyBackend { _, _ in built += 1 }
+        analytics.track(.appLaunched)
+        XCTAssertEqual(built, 1)
+    }
+
     func testNoAppIDMeansNoAnalytics() {
         XCTAssertNil(TelemetryDeckBackend(appID: nil))
         XCTAssertNil(TelemetryDeckBackend(appID: ""))
