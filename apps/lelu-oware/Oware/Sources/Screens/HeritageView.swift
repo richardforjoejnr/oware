@@ -97,7 +97,7 @@ struct HeritageView: View {
         sub("The last four")
         para("When a capture leaves just four seeds on the board, the player who made it takes those too, and the round ends.")
         sub("Rounds and houses")
-        para("After each round, every four seeds you won fill one of your houses for the next round. Win more than 24 and you take over houses on the other side; win fewer and you lose some of yours. A spare house goes to whoever won more seeds that round. Rings on the board show houses held across the row.")
+        para("After each round, every four seeds you won fill one of your houses for the next round, so your houses depend only on that round's seeds. To gain a house you must win more seeds than your houses already hold: with 10 houses (40 seeds) you need 41 or more, and winning 40 keeps you at 10. Winning the round by less can still cost you houses. A spare house goes to whoever won more seeds that round. Rings on the board show houses held across the row.")
         sub("Winning")
         para("The game ends when one player holds all twelve houses. If it runs for twenty rounds, whoever holds more houses wins.")
     }

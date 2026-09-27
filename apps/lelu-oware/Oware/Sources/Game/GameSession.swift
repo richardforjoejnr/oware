@@ -300,14 +300,36 @@ final class GameSession {
         scheduleAIIfNeeded()
     }
 
-    func resign() {
-        guard !state.isOver else { return }
+    /// A game in progress that a player may end (resign or agree to stop).
+    var canEndGame: Bool { mode.isResumable && !state.isOver }
+
+    /// `player` resigns (default: you against the computer, or whoever is to move in Pass & Play).
+    /// Resigning ends the whole game (in Nam-Nam, not just the round): the other side wins.
+    func resign(_ player: Player? = nil) {
+        guard canEndGame else { return }
         aiTask?.cancel()
-        // Resigning ends the whole game (in Nam-Nam, not just the round): the other side wins.
-        let loser = mode.aiSide?.opponent ?? state.sideToMove
+        isThinking = false
+        let loser = player ?? mode.aiSide?.opponent ?? state.sideToMove
         state.outcome = .win(loser.opponent, .agreement)
         persist()
         animator?.render(state)
+    }
+
+    /// Both sides stop here and each keeps the seeds on their own side. Abapa: the game ends and the
+    /// scores decide it. Nam-Nam: the round ends and houses are shared out as usual.
+    func agreeToStop() {
+        guard canEndGame else { return }
+        aiTask?.cancel()
+        isThinking = false
+        history.append(state)
+        let events = state.endByAgreement()
+        if let round = events.compactMap({ if case let .roundOver(r) = $0 { return r } else { return nil } }).last {
+            roundMessage = Self.describe(round, previous: state.roundHistory.dropLast().last, in: mode)
+        }
+        previewMove = nil
+        persist()
+        animator?.render(state)
+        scheduleAIIfNeeded()
     }
 
     /// Re-render after the board view (re)appears.

@@ -44,6 +44,13 @@ struct NamNamRoundTests {
         #expect((s.roundHistory.last?.southHouses ?? 0) + (s.roundHistory.last?.northHouses ?? 0) == 12)
     }
 
+    @Test("From ten houses you need 41 seeds to gain one; 40 keeps ten; a smaller win loses houses",
+          arguments: [(40, 10), (41, 11), (44, 11), (45, 12), (36, 9), (30, 8)])
+    func fromTenHouses(southSeeds: Int, expected: Int) {
+        let s = afterRound(south: southSeeds, north: 48 - southSeeds, southHouses: 10)
+        #expect(s.roundHistory.last?.southHouses == expected, "\(southSeeds)–\(48 - southSeeds) from ten houses")
+    }
+
     @Test("Winning a round never leaves the winner with fewer houses than the loser")
     func roundWinnerNeverBehind() {
         for south in 0...48 {

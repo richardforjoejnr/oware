@@ -17,6 +17,7 @@ struct GameView: View {
     @State private var showLevels = false
     @State private var showRiddle = false
     @State private var showLesson = false
+    @State private var showEndGame = false
     private var hasFullText: Bool { session.currentPuzzle != nil || session.currentTutorialStep != nil }
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
 
@@ -82,6 +83,11 @@ struct GameView: View {
                     .presentationBackground(Theme.ember)
             }
         }
+        .confirmationDialog(endGameTitle, isPresented: $showEndGame, titleVisibility: .visible) {
+            endGameButtons
+        } message: {
+            Text(endGameMessage)
+        }
         .sheet(isPresented: $showLesson) {
             if let step = session.currentTutorialStep, case let .tutorial(index) = session.mode {
                 LessonCard(step: step, number: index + 1, count: session.tutorialSteps.count, done: session.tutorialStepDone)
@@ -140,6 +146,28 @@ struct GameView: View {
         }
         .padding(.horizontal, 10)
         .frame(height: 50)
+    }
+
+    // MARK: Ending a game
+
+    private var isNamNam: Bool { session.state.rules.variant == .namNam }
+    private var endGameTitle: String { isNamNam ? "End the game or the round?" : "End the game?" }
+    private var endGameMessage: String {
+        let stop = isNamNam
+            ? "Ending the round: each player keeps the seeds on their own side and houses are shared out."
+            : "Stopping here: each player keeps the seeds on their own side and the scores decide."
+        return "Resigning gives the game to the other side. " + stop
+    }
+
+    @ViewBuilder private var endGameButtons: some View {
+        if case .passAndPlay = session.mode {
+            Button("A resigns (B wins)", role: .destructive) { session.resign(.south) }
+            Button("B resigns (A wins)", role: .destructive) { session.resign(.north) }
+        } else {
+            Button("Resign (\(session.opponentName) wins)", role: .destructive) { session.resign() }
+        }
+        Button(isNamNam ? "End this round" : "Stop here and count") { session.agreeToStop() }
+        Button("Keep playing", role: .cancel) {}
     }
 
     private func roundButton(systemName: String, id: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
@@ -268,6 +296,10 @@ struct GameView: View {
             HStack(spacing: 10) {
                 if session.mode.isResumable {
                     youStrip
+                }
+                // End the game or the round: beside your name, where the top bar has no room left.
+                if session.canEndGame {
+                    roundButton(systemName: "flag", id: "btn-end-game", label: "End game", enabled: true) { showEndGame = true }
                 }
                 Spacer(minLength: 0)
                 HStack(spacing: 8) {
