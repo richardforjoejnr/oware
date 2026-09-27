@@ -39,6 +39,9 @@ struct HomeView: View {
 
             GeometryReader { geo in
                 let landscape = geo.size.width > geo.size.height
+                if !landscape {
+                    portrait(geo)
+                } else {
                 ScrollView(showsIndicators: false) {
                     if landscape {
                         // Wide and short: title on the left, controls on the right.
@@ -74,10 +77,54 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity)
                     }
                 }
+                }
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showMore)
         .animation(.easeInOut(duration: 0.2), value: showLevels)
+    }
+
+    /// Portrait: a pinned photograph of a board on a table fills the top ~30 % of the screen, running
+    /// under the status bar and fading into the dark wood, with the title set over its lower edge.
+    /// The menu scrolls beneath it. Landscape keeps the side-by-side layout without the photograph.
+    private func portrait(_ geo: GeometryProxy) -> some View {
+        let heroHeight = geo.size.height * 0.30 + geo.safeAreaInsets.top
+        return VStack(spacing: 0) {
+            ZStack(alignment: .bottom) {
+                Image("heroTable")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geo.size.width, height: heroHeight, alignment: .trailing)
+                    .clipped()
+                    .overlay(
+                        LinearGradient(stops: [
+                            .init(color: Theme.night.opacity(0.35), location: 0),
+                            .init(color: .clear, location: 0.3),
+                            .init(color: Theme.night.opacity(0.55), location: 0.72),
+                            .init(color: Theme.night.opacity(0.96), location: 1),
+                        ], startPoint: .top, endPoint: .bottom)
+                    )
+                    .accessibilityHidden(true)
+                titleBlock
+                    .padding(.bottom, 14)
+            }
+            .frame(height: heroHeight)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    controls
+                        .padding(.top, 22)
+                    Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
+                        .font(Theme.caption())
+                        .foregroundStyle(Theme.ivoryDim)
+                        .padding(.top, 30)
+                        .padding(.bottom, 40)
+                }
+                .padding(.horizontal, 24)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .ignoresSafeArea(edges: .top)
     }
 
     /// Continue/Play, the 2×2 grid and the More rows — shared by both orientations.
