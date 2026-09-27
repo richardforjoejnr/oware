@@ -5,7 +5,7 @@ bracketed items.
 
 ## Identity
 - **Name:** Lelu Oware
-- **Subtitle (30):** Ghana's seed game, beautifully made
+- **Subtitle (30):** The seed game of Ghana
 - **Bundle ID:** com.richardforjoe.oware · **SKU:** oware-ios
 - **Primary category:** Games › Board · **Secondary:** Games › Strategy
 - **Age rating:** 4+ (no objectionable content; answer "No" to every questionnaire item)
@@ -13,35 +13,53 @@ bracketed items.
 - **Availability:** all countries (for anyone who likes Oware). Online play, later, is planned as a
   paid one-time unlock; see [SERVICES.md](SERVICES.md).
 - **Privacy policy URL:** https://richardforjoejnr.github.io/oware/lelu-oware/privacy · **Support URL:** https://richardforjoejnr.github.io/oware/lelu-oware/support (GitHub Pages, main branch, /docs folder; source files `docs/lelu-oware/*.md`)
-- **Copyright:** © 2026 Richard Forjoe
 
 ## Promotional text (170)
-A hand-carved board, real nickernut seeds, and the tournament rules of Ghana's oldest game. Learn with Nana, solve Ananse's riddles, travel from Kumasi to Tamale.
+Oware as it is played in Ghana, on a hand-finished board. Nam-Nam or tournament Abapa, four computer levels, daily riddles and a Journey across Ghana. Free, no ads.
 
 ## Description
-Oware is Ghana's game: two rows of six houses, forty-eight seeds, and a rule that you must always leave your opponent something to play. Lelu Oware brings it to your phone the way it deserves — a board carved from osese wood, grey nickernut seeds that arc and click as you sow, and the calm of an evening game in the shade.
+Oware is one of the world's oldest board games: two rows of six houses, forty-eight seeds, and the rule that you always leave your opponent something to play. Lelu Oware brings it to your phone with the feel of a Ghanaian board: carved wood, stone-grey seeds that drop into each house as you sow, and the calm of an evening game in the shade.
 
-**Play**
-- Six computer opponents, from a beginner who blunders to a grandmaster who does not.
-- Pass & Play on one device.
-- Long-press any house to see where your last seed lands and what it captures.
-- Undo, hints, and the full Abapa tournament rules (grand slam, feeding, 25 to win).
+PLAY
+- Nam-Nam, the game Ghanaian children learn first: seeds roam from house to house, you capture by making four, and every round wins or loses you houses until one player holds all twelve.
+- Or switch to Abapa, the tournament rules: captures on twos and threes, first to 25 seeds.
+- Four computer levels, from Novice to Grandmaster.
+- Pass & Play with a friend on one device.
+- Long-press any house to see where your last seed will land. Undo and hints when you want them.
 
-**Learn**
-- A five-minute lesson with Nana that shows instead of tells.
-- Ananse's riddles: sixty positions with one right answer, plus a new riddle every day.
-- Rules and heritage: where the game comes from, what the name means, how the boards are carved.
+LEARN
+- A short lesson with Nana that shows instead of tells.
+- Ananse's riddles: dozens of positions with one right answer, and a new riddle every day. Keep your streak going.
+- Rules and heritage: where the game comes from, its many names across West Africa and the Caribbean, and what Nam-Nam means.
 
-**Journey**
-- Eight places across Ghana — Kumasi, Bonwire, Lake Bosomtwe, Techiman, Cape Coast, Makola, Ho and Tamale — each with three players who have their own way of playing.
-- Earn stars, open the next chapter. All eight chapters are free.
+JOURNEY
+- Eight places across Ghana, from Kumasi to Tamale, each with three opponents who play in their own way.
+- Earn stars to open the next chapter. Every chapter is free.
 
-No ads. No account. No tracking. Nothing leaves your device.
+Leaderboards and achievements with Game Center.
 
-Ɔware · Akwaaba.
+Free, with no ads and no account. Optional tips support the maker and unlock nothing. Anonymous usage statistics help decide what to make next, and you can switch them off in Settings.
+
+Akwaaba.
 
 ## Keywords (100)
-oware,awale,mancala,ayo,warri,ghana,board game,strategy,seeds,african,abapa,puzzle,offline
+awale,mancala,ayo,warri,nam-nam,abapa,board game,strategy,seeds,african,ghana,riddles,family,offline
+
+(The app name is already searched, so "Lelu" and "Oware" are not repeated here.)
+
+## URLs, version and copyright
+- **Support URL:** https://richardforjoejnr.github.io/oware/lelu-oware/support
+- **Marketing URL:** leave empty for now (optional).
+- **Version:** 1.0 · **Copyright:** 2026 Richard Forjoe
+- **Routing App Coverage File:** leave empty (only for navigation apps).
+
+## App Review Information
+- **Sign-in required:** untick. The app has no accounts.
+- **Contact:** your name, phone and email (seen only by Apple's reviewers).
+- **Notes:** "No login is needed. The three in-app purchases are optional tips; they unlock nothing,
+  and every level, chapter and board look is available to all users. Game Center is optional. The
+  game works fully offline. Anonymous usage statistics (TelemetryDeck) can be switched off in
+  Settings. Cultural content is traditional (Adinkra symbols, Kente colours); artwork is original."
 
 ## What's new (1.0)
 First release.
@@ -76,6 +94,5 @@ Required sizes: 6.9" iPhone (1320×2868), 13" iPad (2064×2752). Order:
 6. Heritage — "Ghana's game, told properly"
 
 ## Review notes for Apple
-- No login. Tips can be tested with the local StoreKit configuration or a sandbox account.
-- The app works fully offline.
-- Cultural content is traditional (Adinkra symbols, Kente colours); artwork is original.
+See "App Review Information" above. Tips can be tested with the local StoreKit configuration or a
+sandbox account.
