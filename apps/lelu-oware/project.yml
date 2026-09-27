@@ -46,6 +46,8 @@ targets:
     sources:
       - path: Oware/Sources
       - path: Oware/Resources
+        # The StoreKit test file is only for Xcode runs and tests; it does not ship in the app.
+        excludes: ["Tips.storekit"]
     dependencies:
       - package: OwareEngine
         product: OwareEngine

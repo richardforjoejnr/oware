@@ -110,6 +110,21 @@ Branch protection on `main` is configured to require the CI check and a pull req
    Under Internal Testing add a group with yourself; open the TestFlight app on your iPhone and install.
    Prerequisites: the App ID and app record from section A steps 1–2 must exist first.
 
+## App Store readiness checks
+
+`python3 scripts/release_readiness.py apps/<app>` runs on every PR (CI job "App Store readiness") and
+again before every App Store upload. It fails on the things that get uploads rejected or pulled: a
+missing or incomplete privacy manifest (every required-reason API needs a declared reason), test
+switches in release builds, an icon with transparency, unexpected entitlements, plain-http links, and
+placeholder text or a missing contact email on the public privacy and support pages.
+
+## Deploying to the App Store by hand
+
+Actions ▸ **App Store Release** ▸ **Run workflow**: give the version (e.g. `1.0`, matching the version
+open in App Store Connect) and tick **submit for review** if the text, screenshots, privacy answers and
+age rating are already filled in there. Publishing a GitHub Release tagged `vX.Y` does the same with
+X.Y as the version. The `production` environment can require your approval before it runs.
+
 ## Versions and build numbers
 
 | Number | Where it comes from | When it changes |
