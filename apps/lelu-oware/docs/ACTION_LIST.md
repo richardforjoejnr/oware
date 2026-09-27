@@ -11,7 +11,7 @@ Nothing here needs the US$99 Apple Developer Program.
 - [ ] **Merge the open PRs in order:** #23, then #24, then #25. After each: `git checkout main && git pull && make project`.
 - [ ] **Play it with family on your own iPhones** (see "Testing with family before you pay" below).
 - [ ] **Write down what testers find.** A simple note per device: what they tapped, what felt wrong.
-- [ ] **Support email:** choose the address and put it in `docs/lelu-oware/privacy.md` and `support.md`.
+- [x] **Support email:** trendnestorg34@gmail.com, on the privacy and support pages.
 - [ ] **Cultural review:** read Heritage, the Journey names and the Twi wording in the app.
 - [ ] **"Lelu":** confirm what the name means, for the store description.
 - [ ] **Accounts that are free:** create the Kit (newsletter) and TelemetryDeck (analytics) accounts
