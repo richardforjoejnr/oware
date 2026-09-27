@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "App version, e.g. 1.0 (must match the version open in App Store Connect; empty = project.yml)"
+        description: "App version, e.g. 1.2.0. Leave empty to use the next version from the PR titles since the last release"
         type: string
         required: false
       submit_for_review:
@@ -20,6 +20,9 @@ on:
         default: false
 
 run-name: ${{ github.event_name == 'release' && format('App Store {0}', github.ref_name) || format('App Store {0}{1}', inputs.version || 'project version', inputs.submit_for_review && ' + submit' || '') }}
+
+permissions:
+  contents: write   # to tag the release after a manual run
 
 concurrency:
   group: release
@@ -49,12 +52,13 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "release" ]; then VERSION="${GITHUB_REF_NAME#v}"; else VERSION="$INPUT_VERSION"; fi
-          if [ -n "$VERSION" ]; then
-            echo "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}$' || { echo "Version must look like 1.0 or 1.0.1, got '$VERSION'"; exit 1; }
-            sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
-          fi
-          echo "App version: $(grep MARKETING_VERSION project.yml | head -1)"
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then VERSION="${GITHUB_REF_NAME#v}"
+          elif [ -n "$INPUT_VERSION" ]; then VERSION="$INPUT_VERSION"
+          else VERSION="$(python3 ../../scripts/next_version.py)"; fi
+          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Version must look like 1.2.0, got '$VERSION'"; exit 1; }
+          sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "App version: $VERSION"
       - name: App Store readiness checks
         run: python3 ../../scripts/release_readiness.py apps/lelu-oware
       - name: Upload to App Store Connect
@@ -68,3 +72,11 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review || 'false' }}
         run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios release
+      - name: Tag the release and publish its notes
+        # A run from the Actions tab has no tag yet; a published GitHub Release already has one.
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 ../../scripts/next_version.py --notes > "$RUNNER_TEMP/notes.md"
+          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "Lelu Oware $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
