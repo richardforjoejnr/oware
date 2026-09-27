@@ -344,7 +344,8 @@ final class GameSession {
         state = result.state
         previewMove = nil
         if let round = result.events.compactMap({ if case let .roundOver(r) = $0 { return r } else { return nil } }).last {
-            roundMessage = Self.describe(round, in: mode)
+            let previous = result.state.roundHistory.dropLast().last
+            roundMessage = Self.describe(round, previous: previous, in: mode)
         }
         persist()
         isAnimating = true
@@ -356,21 +357,29 @@ final class GameSession {
     }
 
     /// "Round 1: you 28, Nana 20 — you gain a house"
-    static func describe(_ round: RoundResult, in mode: GameMode) -> String {
+    /// The round's seeds and what they did to the houses, measured against the round before:
+    /// houses are refilled from each round's seeds, so winning a round can still cost a house.
+    static func describe(_ round: RoundResult, previous: RoundResult?, in mode: GameMode) -> String {
+        func houses(_ r: RoundResult?, _ p: Player) -> Int {
+            guard let r else { return 6 }
+            return p == .south ? r.southHouses : r.northHouses
+        }
+        func change(_ n: Int) -> String { "\(abs(n)) house\(abs(n) == 1 ? "" : "s")" }
+        if case .passAndPlay = mode {
+            let before = houses(previous, .south), after = houses(round, .south)
+            let moved = after - before
+            let what = moved == 0 ? "houses stay as they were" : (moved > 0 ? "A takes \(change(moved))" : "B takes \(change(moved))")
+            return "Round \(round.round): A \(round.southSeeds), B \(round.northSeeds) — \(what). A \(after), B \(12 - after)"
+        }
         let you = mode.aiSide?.opponent ?? .south
         let mine = you == .south ? round.southSeeds : round.northSeeds
         let theirs = you == .south ? round.northSeeds : round.southSeeds
-        let myHouses = you == .south ? round.southHouses : round.northHouses
-        let gained = myHouses - 6
-        let change: String
-        if case .passAndPlay = mode {
-            let ahead = round.southHouses - 6
-            change = ahead == 0 ? "houses stay as they were" : (ahead > 0 ? "A gains \(ahead) house\(ahead == 1 ? "" : "s")" : "B gains \(-ahead) house\(ahead == -1 ? "" : "s")")
-            return "Round \(round.round): A \(round.southSeeds), B \(round.northSeeds) — \(change)"
-        }
-        change = gained == 0 ? "no houses change hands" : (gained > 0 ? "you now hold \(myHouses) houses" : "you hold \(myHouses) houses")
-        return "Round \(round.round): you \(mine), them \(theirs) — \(change)"
+        let before = houses(previous, you), after = houses(round, you)
+        let moved = after - before
+        let what = moved == 0 ? "you keep \(after) houses" : (moved > 0 ? "you gain \(change(moved)), now \(after)" : "you lose \(change(moved)), now \(after)")
+        return "Round \(round.round): you \(mine), them \(theirs) — \(what)"
     }
+
 
     private func scheduleAIIfNeeded() {
         guard let ai = mode.aiPlayer, let aiSide = mode.aiSide,

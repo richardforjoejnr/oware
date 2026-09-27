@@ -22,6 +22,28 @@ note, tier lines (A cold Fanta / A plate of waakye / A feast), a "Rate Lelu Owar
 (`requestReview`), and a thank-you with the tip count. SupportKit's `TipJarView` gained `details:` and
 `appName:` (both optional, so the template still compiles).
 
+## Rules tests and ring fixes (2026-09-27, PR #24)
+
+Test pyramid: the rules are guarded by fast engine unit tests (91 in `OwareEngineTests`, ~30 s).
+- `NamNamReferenceTests`: an independent plain Nam-Nam; thousands of random games (from the opening,
+  from shifted territory, with a round cap, and by agreement) must match the engine move for move.
+- `NamNamRoundTests`: hand-checked seeds → houses, spare house, ring scenarios, territory across the row,
+  feeding, last four with seeds in hand, round starter, round cap, saves.
+- `RuleInvariantTests` (Abapa ×3 grand-slam options + Nam-Nam): seed conservation, events account for
+  every seed, exact legality with the right error, previews match play, determinism, saves resume, results
+  match scores, Nam-Nam round invariants, Abapa capture shape.
+- App unit tests: `RoundMessageTests`, `RulesFollowSettingsTests`. UI tests stay few.
+
+The owner saw rings not added after a win, extra rings, and a ring taken after a win. Rings were drawn
+correctly; the causes were (1) one colour for both players, (2) the spare house going to the larger
+remainder (so 25–23 gave nothing), (3) houses are refilled from each round's seeds, so winning 26–22
+from 8 houses drops to 7, which the banner never said. Now: spare house to whoever won more seeds;
+rings gold for South, terracotta for North; strips show "· N houses"; the banner says gain/lose/keep.
+Relay sowing can loop for ever (~1 random game in 160); the engine now ends the turn when a relay
+position repeats (longest chain seen: 60 laps), with the 500-lap backstop kept.
+
+Research: `../../docs/research/free-vs-paid.md` (free vs paid, analytics, sign-ups).
+
 ## Battery review (2026-09-27, branch `perf/battery`)
 
 Idle board redrew every frame (SpriteKit render loop at up to 120 fps) and the audio engine stayed
@@ -43,7 +65,7 @@ follow it too). Nam-Nam in `GameState`: relay sowing (last seed in a non-empty h
 lap skipping its own origin); a house reaching four is captured by its owner at any point, or by the
 sower on the opponent's side only with the last seed; when a capture leaves four seeds (board + hand)
 the capturer takes them and the round ends; seeds won become houses next round (contiguous from A1;
-spare house to larger remainder, then last capturer, then more seeds); one player holding all twelve
+spare house to whoever won more seeds that round, changed 2026-09-27 after the owner saw round winners gain nothing); one player holding all twelve
 wins (cap 20 rounds). Ownership is per-house `territory`; `Move` carries an absolute house. Board rings
 houses held across the row; a banner reports each round; Heritage has the rules and Twi etymology.
 Tests: `NamNamTests` (13) plus the Abapa suites; count-asserting e2e/XCUI/Maestro pin `--rules=abapa`.

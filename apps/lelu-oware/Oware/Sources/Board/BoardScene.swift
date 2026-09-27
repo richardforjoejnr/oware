@@ -467,7 +467,9 @@ final class BoardScene: SKScene, BoardAnimator {
         updateLabels(state)
     }
 
-    /// A thin bone ring around every house whose owner this round is not the row's usual owner.
+    /// A ring around every house held across the row, in its holder's colour: gold for South (A,
+    /// you against the computer), terracotta for North (B). The count of rings on a row is how many
+    /// houses have changed hands.
     private func drawTerritory(_ state: GameState) {
         territoryLayer.removeAllChildren()
         guard state.rules.variant == .namNam else { return }
@@ -477,8 +479,10 @@ final class BoardScene: SKScene, BoardAnimator {
             let ring = SKShapeNode(circleOfRadius: r)
             ring.position = c
             ring.fillColor = .clear
-            ring.strokeColor = UIColor(red: 0.93, green: 0.89, blue: 0.82, alpha: 0.55)
-            ring.lineWidth = 1.5
+            ring.strokeColor = state.owner(of: house) == .south
+                ? UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.9)
+                : UIColor(red: 0.78, green: 0.32, blue: 0.2, alpha: 0.9)
+            ring.lineWidth = 2
             territoryLayer.addChild(ring)
         }
     }

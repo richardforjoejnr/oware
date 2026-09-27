@@ -168,7 +168,7 @@ struct GameView: View {
                             .rotationEffect(.degrees(showLevels ? 180 : 0))
                     }
                 }
-                seedLine(session.mode.isResumable ? "\(seeds)" + (session.opponentRole.map { " · \($0)" } ?? "") : session.mode.title,
+                seedLine(session.mode.isResumable ? "\(seeds)" + housesNote(opponentSide) + (session.opponentRole.map { " · \($0)" } ?? "") : session.mode.title,
                          showSeed: session.mode.isResumable)
             }
         }
@@ -312,6 +312,17 @@ struct GameView: View {
         .animation(.easeInOut(duration: 0.3), value: session.tutorialStepDone)
     }
 
+    private var passAndPlaySide: Player? {
+        if case .passAndPlay = session.mode { return session.state.sideToMove }
+        return nil
+    }
+
+    /// Nam-Nam: how many houses this player holds this round.
+    private func housesNote(_ player: Player) -> String {
+        guard session.state.rules.variant == .namNam else { return "" }
+        return " · \(session.state.houses(of: player).count) houses"
+    }
+
     private var youStrip: some View {
         let mine = session.state.store(of: .south)
         let active = !session.isGameOver && session.state.sideToMove == .south && session.mode.aiSide != .south
@@ -332,7 +343,7 @@ struct GameView: View {
                         .foregroundStyle(Theme.ivory)
                     kenteMark(active: active)
                 }
-                seedLine("\(seeds) seeds", showSeed: true)
+                seedLine("\(seeds) seeds" + housesNote(passAndPlaySide ?? .south), showSeed: true)
             }
         }
         .padding(.leading, 6)
