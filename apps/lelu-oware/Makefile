@@ -3,7 +3,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
 SIM  = $$($(ROOT)/scripts/pick-simulator.sh)
 
-.PHONY: project test open clean e2e e2e-build e2e-studio e2e-ts
+.PHONY: project family test open clean e2e e2e-build e2e-studio e2e-ts
 
 project:              ## Generate Oware.xcodeproj from project.yml
 	xcodegen generate
@@ -13,6 +13,16 @@ test: project         ## Run app + engine tests on the simulator
 	  -destination "platform=iOS Simulator,name=$(SIM)" CODE_SIGNING_ALLOWED=NO | xcbeautify
 
 open: project         ## Generate and open in Xcode
+	open Oware.xcodeproj
+
+# Free Apple IDs ("Personal Team") cannot sign Game Center, and should not claim the real bundle id.
+# This project drops the Game Center entitlement and uses com.richardforjoe.oware.family, so the app
+# installs on your own and family iPhones from Xcode before the paid membership exists.
+family:               ## Xcode project for family iPhones with a free Apple ID (no Game Center)
+	xcodegen generate
+	sed -i '' -e '/CODE_SIGN_ENTITLEMENTS = /d' \
+	  -e 's/PRODUCT_BUNDLE_IDENTIFIER = com.richardforjoe.oware;/PRODUCT_BUNDLE_IDENTIFIER = com.richardforjoe.oware.family;/' \
+	  Oware.xcodeproj/project.pbxproj
 	open Oware.xcodeproj
 
 clean:

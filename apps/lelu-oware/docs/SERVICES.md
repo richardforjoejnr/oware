@@ -138,6 +138,8 @@ integer, and record the last build before anything becomes paid. The sandbox and
 
 ## 10. Owner checklist
 
+The full ordered list, including TestFlight and submission, is [ACTION_LIST.md](ACTION_LIST.md).
+
 - [ ] Enrol in the Small Business Program.
 - [ ] Game Center: enable it for the app; create the 3 leaderboards and 6 achievements above.
 - [ ] TelemetryDeck: create an account and app; put the App ID in `project.yml`.

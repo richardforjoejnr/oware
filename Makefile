@@ -3,7 +3,7 @@
 APP ?= lelu-oware
 APP_DIR := apps/$(APP)
 
-.PHONY: help bootstrap apps project test open clean e2e e2e-build e2e-studio e2e-ts engine-test new-app
+.PHONY: help bootstrap apps project family test open clean e2e e2e-build e2e-studio e2e-ts engine-test new-app
 
 help:                 ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -19,7 +19,7 @@ engine-test:          ## Shared package tests (Command Line Tools are enough)
 	cd packages/SupportKit && swift test
 	@rm -rf packages/*/.swiftpm   # swift test leaves a workspace here that confuses Xcode's package graph
 
-project test open clean e2e e2e-build e2e-studio e2e-ts:   ## Forwarded to apps/$(APP)
+project family test open clean e2e e2e-build e2e-studio e2e-ts:   ## Forwarded to apps/$(APP)
 	$(MAKE) -C $(APP_DIR) $@
 
 new-app:              ## Scaffold apps/$(NAME) from templates/ios-app (NAME=my-app DISPLAY="My App")
