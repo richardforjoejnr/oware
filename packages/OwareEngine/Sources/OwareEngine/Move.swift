@@ -43,13 +43,21 @@ public struct Move: Sendable, Hashable, CustomStringConvertible {
 extension Move: Codable {
     private enum CodingKeys: String, CodingKey { case player, house, absoluteIndex }
 
+    /// Throws `DecodingError.dataCorrupted` for a house off the board rather than trapping.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let player = try c.decode(Player.self, forKey: .player)
         if let absolute = try c.decodeIfPresent(Int.self, forKey: .absoluteIndex) {
+            guard (0..<GameState.houseCount).contains(absolute) else {
+                throw DecodingError.dataCorruptedError(forKey: .absoluteIndex, in: c, debugDescription: "house must be 0...11")
+            }
             self.init(player: player, absoluteHouse: absolute)
         } else {
-            self.init(player: player, house: try c.decode(Int.self, forKey: .house))   // pre-Nam-Nam saves
+            let house = try c.decode(Int.self, forKey: .house)   // pre-Nam-Nam saves
+            guard (0..<6).contains(house) else {
+                throw DecodingError.dataCorruptedError(forKey: .house, in: c, debugDescription: "house must be 0...5")
+            }
+            self.init(player: player, house: house)
         }
     }
 

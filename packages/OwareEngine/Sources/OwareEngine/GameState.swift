@@ -23,8 +23,6 @@ public struct GameState: Sendable, Hashable, Codable {
     public var territory: [Player]
     /// 1-based round number (always 1 under Abapa).
     public var round: Int
-    /// Nam-Nam: who made the most recent capture this round (takes the last four, breaks ties).
-    public var lastCapturer: Player?
     /// Nam-Nam: the rounds completed so far.
     public var roundHistory: [RoundResult]
 
@@ -51,7 +49,6 @@ public struct GameState: Sendable, Hashable, Codable {
         self.lastMove = nil
         self.territory = rules.variant == .namNam ? territory : Self.defaultTerritory
         self.round = 1
-        self.lastCapturer = nil
         self.roundHistory = []
         self.positionCounts[positionKey] = 1
     }
@@ -65,10 +62,13 @@ public struct GameState: Sendable, Hashable, Codable {
 
     // MARK: - Codable (older saves lack the Nam-Nam fields)
 
+    // Older saves may also hold a `lastCapturer` key; it was never used and is ignored.
     private enum CodingKeys: String, CodingKey {
-        case houses, stores, sideToMove, rules, moveNumber, outcome, positionCounts, lastMove, territory, round, lastCapturer, roundHistory
+        case houses, stores, sideToMove, rules, moveNumber, outcome, positionCounts, lastMove, territory, round, roundHistory
     }
 
+    /// Throws `DecodingError.dataCorrupted` for a damaged save instead of loading a position the
+    /// rules would crash on.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         houses = try c.decode([Int].self, forKey: .houses)
@@ -81,8 +81,19 @@ public struct GameState: Sendable, Hashable, Codable {
         lastMove = try c.decodeIfPresent(Move.self, forKey: .lastMove)
         territory = try c.decodeIfPresent([Player].self, forKey: .territory) ?? Self.defaultTerritory
         round = try c.decodeIfPresent(Int.self, forKey: .round) ?? 1
-        lastCapturer = try c.decodeIfPresent(Player.self, forKey: .lastCapturer)
         roundHistory = try c.decodeIfPresent([RoundResult].self, forKey: .roundHistory) ?? []
+
+        func check(_ ok: Bool, _ key: CodingKeys, _ what: String) throws {
+            guard ok else { throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: what) }
+        }
+        try check(houses.count == Self.houseCount && houses.allSatisfy { (0...Self.totalSeeds).contains($0) },
+                  .houses, "expected 12 houses of 0–48 seeds")
+        try check(stores.count == 2 && stores.allSatisfy { (0...Self.totalSeeds).contains($0) },
+                  .stores, "expected 2 stores of 0–48 seeds")
+        try check(territory.count == Self.houseCount, .territory, "expected an owner for each of 12 houses")
+        try check(rules.variant == .namNam || territory == Self.defaultTerritory, .territory, "Abapa rows never change hands")
+        try check(moveNumber >= 0, .moveNumber, "negative move number")
+        try check(round >= 1, .round, "round numbers start at 1")
     }
 
     // MARK: - Queries
@@ -251,10 +262,9 @@ public struct GameState: Sendable, Hashable, Codable {
             finish(reason: .reachedWinningSeeds, events: &events)
             return events
         }
-        if seedsOnBoard == 0 {
-            finish(reason: .boardEmpty, events: &events)
-            return events
-        }
+        // No `.boardEmpty` check: a capture can only empty the board by taking every seed on the
+        // opponent's side while the mover's side is empty — a grand slam, which is forfeited,
+        // refused, or has already ended the game above.
         if legalMoves().isEmpty {
             // The new side to move is stuck. If they have no seeds at all, the last mover takes
             // what is left; otherwise (illegal-grand-slam edge case) each keeps their own side.
@@ -300,7 +310,6 @@ public struct GameState: Sendable, Hashable, Codable {
                 lapOrigin = house
             case let .captured(house, seeds, by):
                 events.append(.capture(house: house, seeds: seeds, by: by))
-                lastCapturer = by
             }
         }
 
@@ -361,7 +370,6 @@ public struct GameState: Sendable, Hashable, Codable {
         houses = Array(repeating: Self.seedsPerHouse, count: Self.houseCount)
         stores = [0, 0]
         round += 1
-        lastCapturer = nil
         sideToMove = round % 2 == 1 ? .south : .north
         positionCounts = [positionKey: 1]
     }
@@ -429,7 +437,6 @@ public struct GameState: Sendable, Hashable, Codable {
         board[origin] = 0
         var index = origin
         var laps = 0
-        var roundSettled = false
         // Relay positions already seen (board + the house about to be lifted). Seeing one again
         // means the sowing would go round for ever, so the turn ends there instead.
         var relayPositions: Set<[Int]> = []
@@ -462,7 +469,6 @@ public struct GameState: Sendable, Hashable, Codable {
                         }
                         stores[by.rawValue] += seeds
                         seeds = 0
-                        roundSettled = true
                         break sowing
                     }
                 }
@@ -476,7 +482,6 @@ public struct GameState: Sendable, Hashable, Codable {
             origin = index
             steps.append(.relayed(house: index, seeds: seeds))
         }
-        _ = roundSettled
         return Sowing(houses: board, stores: stores, steps: steps, lastHouse: index, captured: [], mover: mover)
     }
 

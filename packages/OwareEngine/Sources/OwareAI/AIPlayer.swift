@@ -25,25 +25,32 @@ public struct AIPlayer: Sendable, Hashable, Codable {
 
     /// Pick a move for the side to move. Returns nil if the game is over.
     /// Heavy: call from a background task. Honours the difficulty's time budget and depth.
+    /// `seed` should differ from game to game (the app draws one per game); the move number is
+    /// mixed in so each move of a game rolls afresh. The same seed and position give the same slips.
     public func chooseMove(for state: GameState, seed: UInt64 = 0) -> Move? {
-        var rng = SeededGenerator(seed: seed ^ UInt64(state.moveNumber &* 0x9E37_79B9))
+        var rng = SeededGenerator(seed: seed ^ (UInt64(truncatingIfNeeded: state.moveNumber) &* 0x9E37_79B9))
         return chooseMove(for: state, using: &rng)
     }
 
     public func chooseMove<G: RandomNumberGenerator>(for state: GameState, using rng: inout G) -> Move? {
+        chooseMove(for: state, using: &rng, timeBudget: difficulty.timeBudget)
+    }
+
+    /// `timeBudget` nil searches to the full depth whatever the machine speed, so the result
+    /// depends only on the position and the random numbers (used by the puzzle generator).
+    func chooseMove<G: RandomNumberGenerator>(for state: GameState, using rng: inout G, timeBudget: Duration?) -> Move? {
         let moves = state.legalMoves()
         guard !moves.isEmpty else { return nil }
         if moves.count == 1 { return moves[0] }
         if difficulty.blunderRate > 0, Double.random(in: 0..<1, using: &rng) < difficulty.blunderRate {
             return moves.randomElement(using: &rng)
         }
-        return analyse(state)?.move ?? moves[0]
+        return Self.analyse(state, depth: difficulty.maxDepth, timeBudget: timeBudget, weights: personality.weights)?.move ?? moves[0]
     }
 
     /// Full analysis of the position (used for hints and the CLI).
     public func analyse(_ state: GameState) -> MoveAnalysis? {
-        var searcher = Searcher(weights: personality.weights, deadline: ContinuousClock.now + difficulty.timeBudget)
-        return searcher.search(state, maxDepth: difficulty.maxDepth)
+        Self.analyse(state, depth: difficulty.maxDepth, timeBudget: difficulty.timeBudget, weights: personality.weights)
     }
 
     /// Analysis with explicit limits, independent of difficulty (used by tests and the hint system).

@@ -40,7 +40,9 @@ public struct PuzzleGenerator {
                     }
                 }
                 let mover = (ply % 2 == 0) == (rng.next() % 2 == 0) ? strong : noisy
-                guard let move = mover.chooseMove(for: state, using: &rng) else { break }
+                // No time limit: a deadline would make the games (and so the puzzles) depend on
+                // how fast the machine is.
+                guard let move = mover.chooseMove(for: state, using: &rng, timeBudget: nil) else { break }
                 _ = try? state.apply(move)
             }
         }
@@ -103,12 +105,12 @@ public struct PuzzleGenerator {
             let risks = moves.map { ($0, opponentBestCapture(after: $0, in: state)) }
             let safe = risks.filter { $0.1 == 0 }
             guard safe.count == 1 else { return nil }
-            let worst = risks.filter { $0.1 > 0 }.map(\.1)
-            guard worst.count == risks.count - 1, (worst.min() ?? 0) >= 3 else { return nil }
+            let worst = risks.filter { $0.1 > 0 }.map(\.1)   // every other move
+            guard (worst.min() ?? 0) >= 3 else { return nil }
             return make(safe[0].0, target: worst.max() ?? 0, difficulty: 3)
 
         case .feedOrLose:
-            guard state.sideIsEmpty(player.opponent), moves.count >= 2 else { return nil }
+            guard state.sideIsEmpty(player.opponent) else { return nil }
             let risks = moves.map { ($0, opponentBestCapture(after: $0, in: state)) }
             let safe = risks.filter { $0.1 == 0 }
             guard safe.count == 1, risks.contains(where: { $0.1 >= 2 }) else { return nil }

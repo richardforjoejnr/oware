@@ -6,6 +6,8 @@ struct SavedGame: Codable, Sendable, Hashable {
     var state: GameState
     var mode: GameMode
     var history: [GameState]
+    /// Seed for the computer's choices this game (absent in older saves).
+    var aiSeed: UInt64? = nil
 }
 
 /// JSON persistence in Application Support. Kept tiny on purpose; SwiftData is overkill here.

@@ -185,14 +185,24 @@ struct RuleInvariantTests {
 
     @Test("Results match the scores", arguments: ruleSets)
     func resultsMatchScores(rules: RuleSet) throws {
-        try forEachMove(rules, seed: 9, games: 80) { _, _, events, after in
+        try forEachMove(rules, seed: 9, games: 80) { before, _, events, after in
             guard let outcome = after.outcome else { return }
             #expect(events.last == .gameOver(outcome), "the last event announces the result")
             if rules.variant == .abapa {
                 let (a, b) = (after.stores[0], after.stores[1])
                 #expect(outcome.winner == (a == b ? nil : (a > b ? .south : .north)))
-                if outcome.reason == .reachedWinningSeeds { #expect(max(a, b) >= 25) }
-                if outcome.reason != .reachedWinningSeeds { #expect(max(a, b) <= 25 || outcome.reason == .grandSlam || outcome.reason == .noLegalMoves || outcome.reason == .opponentCouldNotBeFed || outcome.reason == .repetition || outcome.reason == .boardEmpty) }
+                #expect(max(before.stores[0], before.stores[1]) < rules.winningSeeds, "the game would already have been over")
+                switch outcome.reason {
+                case .reachedWinningSeeds:
+                    #expect(max(a, b) >= rules.winningSeeds)
+                case .grandSlam:
+                    #expect(rules.grandSlam == .captureEndsGame)
+                    #expect(after.seedsOnBoard == 0, "the mover keeps their own side")
+                case .repetition, .opponentCouldNotBeFed, .noLegalMoves:
+                    #expect(after.seedsOnBoard == 0, "every seed left is swept into a store")
+                default:
+                    Issue.record("unexpected Abapa ending \(outcome)")
+                }
             } else {
                 let last = try #require(after.roundHistory.last)
                 #expect(last.southHouses + last.northHouses == 12)
