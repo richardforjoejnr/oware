@@ -65,6 +65,12 @@ platform :ios do
     )
   end
 
+  desc "One-time, on your Mac: create the App Store certificate and profile and store them (encrypted) with match"
+  lane :setup_signing do
+    asc_auth
+    match(type: "appstore", readonly: false)
+  end
+
   desc "Build and upload to TestFlight (runs on every merge to main)"
   lane :beta do
     build_signed
