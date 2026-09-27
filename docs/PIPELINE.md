@@ -55,6 +55,16 @@ merging is safe before Apple credentials are configured.
 7. **TestFlight testers** — App Store Connect → TestFlight → Internal Testing → add yourself.
    Install the TestFlight app on your iPhone.
 
+### Shortcut: one script for steps A3–A5 and B
+
+After creating the API key (A3) and a fine-grained token (A4), run `./scripts/setup-signing.sh` in
+Terminal from the repo root. It asks for each value privately, creates the private certificates
+repo if needed, runs `fastlane match` once (`fastlane ios setup_signing`), adds every secret below to
+GitHub, and turns `SIGNING_READY` on last. Name the API key `github-actions`, access **App Manager**.
+Apple only lets **Admin** keys create a distribution certificate, so also create a second key
+(`match-setup`, access Admin) and give it at the script's "Admin Key ID" prompt. It is used once and
+not stored; revoke it afterwards. Done for Lelu Oware on 27 September 2026.
+
 ### B. GitHub side (Settings → Secrets and variables → Actions)
 
 Secrets:

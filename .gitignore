@@ -28,6 +28,8 @@ apps/*/build*/
 # Ruby
 vendor/bundle/
 .bundle/
+# Created by local fastlane runs (Ruby versions differ between Macs and CI)
+Gemfile.lock
 
 # macOS
 .DS_Store
