@@ -120,25 +120,36 @@ placeholder text or a missing contact email on the public privacy and support pa
 
 ## Deploying to the App Store by hand
 
-Actions ▸ **App Store Release** ▸ **Run workflow**: give the version (e.g. `1.0`, matching the version
-open in App Store Connect) and tick **submit for review** if the text, screenshots, privacy answers and
-age rating are already filled in there. Publishing a GitHub Release tagged `vX.Y` does the same with
-X.Y as the version. The `production` environment can require your approval before it runs.
+Actions ▸ **App Store Release** ▸ **Run workflow**: leave the version empty (the next version from
+PR titles) or type one, and tick **submit for review** if the text, screenshots, privacy answers and
+age rating are already filled in App Store Connect. After uploading it tags the release. Publishing a
+GitHub Release tagged `vX.Y.Z` does the same with that version. The `production` environment can require your approval before it runs.
 
 ## Versions and build numbers
 
-| Number | Where it comes from | When it changes |
-|---|---|---|
-| **Version** (`MARKETING_VERSION`, e.g. 1.0) | `apps/<app>/project.yml`; the release workflow overrides it from the tag (`v1.1` → 1.1) | By hand, once per App Store release. It must match the version open in App Store Connect. After a version ships, raise it (1.0 → 1.1) so new TestFlight builds go to the next version. |
-| **Build** (`CFBundleVersion`, e.g. 202609271730) | Stamped at upload time: UTC date and time (`yyyyMMddHHmm`) | Automatically, on every upload: the TestFlight workflow, the release workflow, and `make archive` on your Mac all use the same scheme, so builds never clash and always increase. |
+Automatic, from **Conventional Commit PR titles** (checked on every PR by the "PR title" workflow):
 
-Merging to `main` does not change the version; it uploads a new **build** of the current version to
-TestFlight (only when `SIGNING_READY` is `true` and the secrets exist). Publishing a GitHub Release
-tagged `vX.Y` uploads a build with version X.Y for the App Store; submitting for review is a manual
-choice (the workflow's `submit_for_review` input, or the button in App Store Connect).
+| PR title starts with | Next version after 1.2.3 |
+|---|---|
+| `feat!:` (or a `BREAKING CHANGE` note) | 2.0.0 |
+| `feat:` | 1.3.0 |
+| `fix:`, `perf:`, `docs:`, `chore:`, anything else | 1.2.4 |
 
-Without CI secrets, upload from your Mac: `make archive APP=lelu-oware`, then in the Organizer that
-opens: **Distribute App ▸ App Store Connect ▸ Upload**.
+- **Release** = a git tag `vX.Y.Z`. `scripts/next_version.py` reads the PR titles merged since the last
+  tag and prints the next version (1.0.0 before the first release); `--notes` prints release notes.
+- **TestFlight** (every merge to `main`): the build gets the *next* version, and its "What to Test"
+  notes list the PRs since the last release. In the app, Settings shows "Version 1.3.0 (build) · Beta".
+- **App Store** (Actions ▸ App Store Release ▸ Run workflow, version left empty): builds that same next
+  version, uploads it, then tags `vX.Y.Z` and publishes a GitHub Release with the notes. The next
+  TestFlight builds then move on to the version after. Settings shows no "Beta" in App Store builds.
+  (Publishing a GitHub Release tagged `vX.Y.Z` by hand works too.)
+- **Build number** (`CFBundleVersion`): the UTC date and time of the upload, e.g. 202609271730, for
+  every upload (TestFlight, App Store, `make archive`), so builds never clash.
+- Apple only accepts plain numbers as versions ("1.3.0", never "1.3.0-beta"); TestFlight itself marks
+  builds as beta. The version open in App Store Connect must match (e.g. 1.0.0 for the first release).
+
+Without CI secrets, upload from your Mac: `make archive APP=lelu-oware` (same version and build scheme),
+then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upload**.
 
 ## Day-to-day flow
 1. `git checkout -b feature/thing` → edit → `make engine-test` / `make test`.

@@ -1,0 +1,35 @@
+name: PR title
+
+# PR titles become the merge commit's message and decide the next version (scripts/next_version.py):
+#   feat: …  → new minor version     fix: … / perf: … / docs: … / chore: …  → patch
+#   feat!: … or a "BREAKING CHANGE" note → new major version
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  conventional:
+    name: Conventional PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            test
+            chore
+            ci
+            build
+            style
+            revert
+          requireScope: false
+          subjectPattern: ^\S.*$

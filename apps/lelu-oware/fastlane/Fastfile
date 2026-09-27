@@ -83,7 +83,8 @@ platform :ios do
   desc "Build and upload to TestFlight (runs on every merge to main)"
   lane :beta do
     build_signed
-    changelog = sh("git log -1 --pretty=%B").strip
+    # "What to Test" in TestFlight: release notes from PR titles (set by CI), else the last commit.
+    changelog = ENV["CHANGELOG"].to_s.strip.empty? ? sh("git log -1 --pretty=%B").strip : ENV["CHANGELOG"]
     upload_to_testflight(
       skip_waiting_for_build_processing: true,
       changelog: changelog,
