@@ -1,6 +1,7 @@
-# Lelu Oware — Ghana's game, for iPhone and iPad
+# Lelu Oware — Oware for iPhone and iPad
 
-A native iOS Oware (Abapa rules) game with authentic Ghanaian art direction.
+A native iOS Oware game (Nam-Nam by default, tournament Abapa in Settings) with authentic Ghanaian
+art direction, for anyone who loves the game.
 Part of the richardforjoe iOS monorepo (see the [root README](../../README.md)).
 Plan and design: **[docs/GAME_PLAN.md](docs/GAME_PLAN.md)**. Money, analytics, Game Center and launch setup: **[docs/SERVICES.md](docs/SERVICES.md)**. Your to-do list to TestFlight and the App Store: **[docs/ACTION_LIST.md](docs/ACTION_LIST.md)**. Build/release pipeline: **[../../docs/PIPELINE.md](../../docs/PIPELINE.md)**.
 

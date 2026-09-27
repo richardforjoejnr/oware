@@ -1,10 +1,20 @@
 # Lelu Oware — Project status & handoff
 
 > **For a new Claude Code session:** read this file first, then `docs/GAME_PLAN.md` (this folder) and
-> `../../docs/PIPELINE.md` (repo root). Resume from "In flight" below. Paths in this file are relative to
-> `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-26.
+> `../../docs/PIPELINE.md` (repo root). Start from "Now" below. Paths in this file are relative to
+> `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-27.
 
-## Nam-Nam everywhere (2026-09-27, branch `feat/namnam-everywhere`, stacked on #23)
+## Now (2026-09-27)
+
+- **Merged to main:** PRs #1–#24 (latest: #23 battery, #24 rules in every mode, Support me, rules tests).
+- **Open:** #25 `feat/game-center-analytics` (Game Center, analytics, newsletter, online plumbing, docs,
+  repo clean-up). The owner merges.
+- **Next for the owner:** [ACTION_LIST.md](ACTION_LIST.md) (family testing now; Apple Developer
+  Program next week; then TestFlight and submission). Services reference: [SERVICES.md](SERVICES.md).
+- **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
+  `packages/*/.swiftpm` after `swift test`; run `make project` after pulling.
+
+## Nam-Nam everywhere (2026-09-27, PR #24, merged)
 
 The owner played Journey with Nam-Nam set and got Abapa. Now every way into a game follows Settings ▸ Rules:
 Journey (start, Next opponent, Play again), Riddles, the "New here?" lesson, Pass & Play and quick play.
@@ -84,7 +94,7 @@ position repeats (longest chain seen: 60 laps), with the 500-lap backstop kept.
 
 Research: `../../docs/research/free-vs-paid.md` (free vs paid, analytics, sign-ups).
 
-## Battery review (2026-09-27, branch `perf/battery`)
+## Battery review (2026-09-27, PR #23, merged)
 
 Idle board redrew every frame (SpriteKit render loop at up to 120 fps) and the audio engine stayed
 running after the first sound. Now `BoardScene` pauses its SKView ~0.7 s after the last action
@@ -94,7 +104,7 @@ Simulator measurement, app process CPU while the player thinks on the board: ~1.
 (menu ~0 %). AI search is already time-boxed (0.1–3 s) and only runs on the computer's turn.
 On device, check with Xcode ▸ Debug navigator ▸ Energy Impact during play.
 
-## Latest (2026-09-27): Nam-Nam rules, PR #21
+## Nam-Nam rules (2026-09-27, PR #21, merged)
 
 Splash: 2.8 s, tap to skip; Reduce Motion no longer shortens it (the owner has Reduce Motion on and found it too fast).
 

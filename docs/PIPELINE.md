@@ -30,7 +30,7 @@ merging is safe before Apple credentials are configured.
 1. **Apple Developer Program membership** (US$99/year) — https://developer.apple.com/programs/enroll/
    Enrol as an individual (your name shows as the seller) or as an organisation (needs a D-U-N-S number).
 2. **App record in App Store Connect** — https://appstoreconnect.apple.com → My Apps → "+" → New App
-   - Platform iOS, name (e.g. "Oware: Seeds of Ghana"), primary language English (UK),
+   - Platform iOS, name **Lelu Oware**, primary language English (UK),
      Bundle ID `com.richardforjoe.oware` (register it first under Certificates, IDs & Profiles → Identifiers,
      enable **In-App Purchase** and **Game Center**), SKU `oware-ios`. Name: **Lelu Oware**.
 3. **App Store Connect API key** — Users and Access → Integrations → App Store Connect API → "+"
