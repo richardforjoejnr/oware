@@ -19,18 +19,29 @@ echo "Lelu Oware — signing setup. Values you type after a colon are not shown 
 read -rp "Apple Team ID [${DEVELOPMENT_TEAM:-}]: " TEAM; TEAM="${TEAM:-${DEVELOPMENT_TEAM:-}}"
 read -rp "App Store Connect API Key ID: " ASC_KEY_ID
 read -rp "App Store Connect Issuer ID: " ASC_ISSUER_ID
-# Find the key by its ID in the usual places; otherwise ask (dragging the file in works).
-P8="$(find "$HOME/Downloads" "$HOME/Desktop" "$HOME/Documents" -maxdepth 3 -name "AuthKey_${ASC_KEY_ID}.p8" 2>/dev/null | head -1)"
-if [ -n "$P8" ]; then
-  read -rp "Found $P8 — use it? [Y/n]: " OK
-  case "$OK" in [nN]*) P8="" ;; esac
-fi
-while [ ! -f "$P8" ]; do
-  read -r -p "Path to the AuthKey_….p8 file (or drag it here): " P8
-  P8="$(printf '%s' "$P8" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e "s/^['\"]//" -e "s/['\"]$//" -e 's/\\\(.\)/\1/g')"
-  P8="${P8/#\~/$HOME}"
-  [ -f "$P8" ] || echo "No file at: '$P8'. Try again."
-done
+# Finds AuthKey_<id>.p8 in the usual places, or asks (dragging the file in works). Prints the path.
+find_p8() {
+  local id="$1" path=""
+  path="$(find "$HOME/Downloads" "$HOME/Desktop" "$HOME/Documents" -maxdepth 3 -name "AuthKey_${id}.p8" 2>/dev/null | head -1)"
+  if [ -n "$path" ]; then
+    read -rp "Found $path — use it? [Y/n]: " OK </dev/tty
+    case "$OK" in [nN]*) path="" ;; esac
+  fi
+  while [ ! -f "$path" ]; do
+    read -r -p "Path to AuthKey_${id}.p8 (or drag it here): " path </dev/tty
+    path="$(printf '%s' "$path" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e "s/^['\"]//" -e "s/['\"]$//" -e 's/\\\(.\)/\1/g')"
+    path="${path/#\~/$HOME}"
+    [ -f "$path" ] || echo "No file at: '$path'. Try again." >&2
+  done
+  printf '%s' "$path"
+}
+P8="$(find_p8 "$ASC_KEY_ID")"
+
+echo "Creating the distribution certificate needs a key with Admin access. If the key above is"
+echo "App Manager (recommended for GitHub), create a second key with Admin access for this one step."
+echo "It is used once here and never saved; you can revoke it afterwards."
+read -rp "Admin Key ID for the certificate step (press Return to use the same key): " ADMIN_KEY_ID
+if [ -n "$ADMIN_KEY_ID" ]; then ADMIN_P8="$(find_p8 "$ADMIN_KEY_ID")"; else ADMIN_KEY_ID="$ASC_KEY_ID"; ADMIN_P8="$P8"; fi
 echo "GitHub fine-grained token with Contents: read and write on $CERTS_REPO only."
 read -rsp "Token: " PAT; echo
 read -rsp "Choose a passphrase that encrypts the certificates (keep it in your password manager): " MATCH_PASSWORD; echo
@@ -47,7 +58,8 @@ export MATCH_GIT_BASIC_AUTHORIZATION="$(printf '%s' "richardforjoejnr:$PAT" | ba
 
 echo "Creating and storing the App Store certificate and profile…"
 (cd "$ROOT" && bundle config set --local path vendor/bundle >/dev/null && bundle install --quiet)
-(cd "$ROOT/apps/lelu-oware" && BUNDLE_GEMFILE="$ROOT/Gemfile" bundle exec fastlane ios setup_signing)
+(cd "$ROOT/apps/lelu-oware" && ASC_KEY_ID="$ADMIN_KEY_ID" ASC_KEY_CONTENT="$(base64 -i "$ADMIN_P8" | tr -d '\n')" \
+  BUNDLE_GEMFILE="$ROOT/Gemfile" bundle exec fastlane ios setup_signing)
 
 echo "Adding the secrets to GitHub…"
 gh secret set DEVELOPMENT_TEAM -R "$REPO" --body "$DEVELOPMENT_TEAM"
@@ -59,4 +71,5 @@ gh secret set MATCH_GIT_BASIC_AUTHORIZATION -R "$REPO" --body "$MATCH_GIT_BASIC_
 gh secret set MATCH_PASSWORD -R "$REPO" --body "$MATCH_PASSWORD"
 
 gh variable set SIGNING_READY -R "$REPO" --body true
+[ "$ADMIN_KEY_ID" != "$ASC_KEY_ID" ] && echo "You can now revoke the Admin key $ADMIN_KEY_ID in App Store Connect (GitHub uses $ASC_KEY_ID)."
 echo "Done. Every merge to main now uploads a TestFlight build; a GitHub Release (tag vX.Y) uploads for the App Store."
