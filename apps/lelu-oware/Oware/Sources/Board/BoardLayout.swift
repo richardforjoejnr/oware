@@ -9,7 +9,9 @@ import OwareEngine
 /// - **Horizontal** (landscape / iPad): north's store, six columns of two houses, south's store.
 ///   A1…A6 run left to right on the bottom row, B1…B6 right to left on the top row.
 /// - **Vertical** (portrait phones): two columns — A1…A6 run bottom to top on the right,
-///   B1…B6 top to bottom on the left; south's store sits at the top, north's at the bottom.
+///   B1…B6 top to bottom on the left. Each store sits by its player: south's (you) at the bottom
+///   next to your name, north's (the opponent) at the top next to theirs. Stores are not part of
+///   the sowing path, so this only changes where the captured seeds are shown.
 struct BoardLayout: Equatable {
     enum Orientation { case horizontal, vertical }
 
@@ -91,7 +93,7 @@ struct BoardLayout: Equatable {
             let h = cell * 2.5
             return CGRect(x: x - w / 2, y: boardRect.midY - h / 2, width: w, height: h)
         case .vertical:
-            let y = player == .south ? boardRect.minY + storeZone * 0.52 : boardRect.maxY - storeZone * 0.52
+            let y = player == .south ? boardRect.maxY - storeZone * 0.52 : boardRect.minY + storeZone * 0.52
             let w = cell * 2.5
             let h = cell * 0.62
             return CGRect(x: boardRect.midX - w / 2, y: y - h / 2, width: w, height: h)
