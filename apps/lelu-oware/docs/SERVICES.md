@@ -129,6 +129,7 @@ Replaces the earlier "Data Not Collected" answer once analytics ship.
 |---|---|---|---|
 | Usage Data ▸ Product Interaction | No | No | Analytics |
 | Identifiers ▸ Device ID | No | No | Analytics |
+| Purchases (tip events: which size) | No | No | Analytics |
 
 The Device ID row is there because TelemetryDeck's own privacy manifest declares a hashed device
 id. Game Center data is handled by Apple under its own policy and is not declared by the app. If
