@@ -94,5 +94,11 @@ struct BoardView: View {
             .accessibilityLabel(owner == (index < 6 ? .south : .north) ? "House \(notation)" : "House \(notation), \(owner == .south ? "yours" : "theirs") this round")
             .accessibilityValue("\(seeds) seeds")
             .accessibilityHint(isTurn ? "Sow these seeds" : "")
+            // VoiceOver's version of the long-press preview: where the last seed lands, what it takes.
+            .accessibilityAction(named: "Preview this move") {
+                guard isTurn, session.humanToMove,
+                      let preview = session.state.preview(Move(player: owner, absoluteHouse: index)) else { return }
+                GameSession.speak(GameSession.previewDescription(preview))
+            }
     }
 }

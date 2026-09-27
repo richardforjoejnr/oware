@@ -476,7 +476,10 @@ final class BoardScene: SKScene, BoardAnimator {
         for house in 0..<GameState.houseCount where state.owner(of: house) != (house < 6 ? .south : .north) {
             let c = layout.sk(layout.houseCenter(house))
             let r = layout.pitSpriteDiameter / 2 * 1.04
-            let ring = SKShapeNode(circleOfRadius: r)
+            // South's rings are solid, North's dashed, so ownership never rests on colour alone.
+            let circle = CGPath(ellipseIn: CGRect(x: -r, y: -r, width: r * 2, height: r * 2), transform: nil)
+            let path = state.owner(of: house) == .south ? circle : circle.copy(dashingWithPhase: 0, lengths: [7, 5])
+            let ring = SKShapeNode(path: path)
             ring.position = c
             ring.fillColor = .clear
             ring.strokeColor = state.owner(of: house) == .south

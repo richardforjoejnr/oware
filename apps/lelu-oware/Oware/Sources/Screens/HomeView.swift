@@ -18,6 +18,7 @@ struct HomeView: View {
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
     @AppStorage("tutorialSeen") private var tutorialSeen = false
     @State private var showMore = false
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showLevels = false
 
     private var difficulty: Difficulty { (Difficulty(rawValue: preferredDifficulty) ?? .beginner).menuLevel }
@@ -50,7 +51,7 @@ struct HomeView: View {
                                 titleBlock
                                 Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
                                     .font(Theme.caption())
-                                    .foregroundStyle(Theme.ivoryDim)
+                                    .foregroundStyle(Theme.onPhoto)
                             }
                             .frame(width: min(geo.size.width * 0.38, 340))
                             controls
@@ -68,7 +69,7 @@ struct HomeView: View {
                             controls
                             Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
                                 .font(Theme.caption())
-                                .foregroundStyle(Theme.ivoryDim)
+                                .foregroundStyle(Theme.onPhoto)
                                 .padding(.top, 30)
                                 .padding(.bottom, 40)
                         }
@@ -118,7 +119,7 @@ struct HomeView: View {
                     controls
                     Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
                         .font(Theme.caption())
-                        .foregroundStyle(Theme.ivoryDim)
+                        .foregroundStyle(Theme.onPhoto)
                         .padding(.top, 30)
                         .padding(.bottom, 40)
                 }
@@ -153,12 +154,17 @@ struct HomeView: View {
                 Text("Akwaaba · welcome")
                     .font(Theme.caption(14))
                     .tracking(1.6)
-                    .foregroundStyle(Theme.ivoryDim)
+                    .foregroundStyle(Theme.onPhoto)
                     .fixedSize()
                 KenteRule()
             }
         }
         .multilineTextAlignment(.center)
+        // A soft shade behind the title so it stays readable over the bright parts of the photo.
+        .background {
+            Ellipse().fill(Theme.night.opacity(0.5)).blur(radius: 28).padding(-24)
+                .accessibilityHidden(true)
+        }
     }
 
     // MARK: - Primary
@@ -188,7 +194,7 @@ struct HomeView: View {
                         .font(.system(size: 10, weight: .medium))
                 }
                 .font(.subheadline)
-                .foregroundStyle(Theme.ivoryDim)
+                .foregroundStyle(Theme.onPhoto)
                 .frame(minHeight: 32)
                 .contentShape(Rectangle())
             }
@@ -231,7 +237,10 @@ struct HomeView: View {
     // MARK: - Grid
 
     private var grid: some View {
-        let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+        // Two tiles a row, or one when the reader uses the largest text sizes (so words are not split).
+        let columns = typeSize.isAccessibilitySize
+            ? [GridItem(.flexible())]
+            : [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
         return LazyVGrid(columns: columns, spacing: 14) {
             if session.hasResumableGame {
                 WoodTile(title: "New game", subtitle: "against \(difficulty.displayName)", glyph: "plus") { startNewGame() }
@@ -273,7 +282,7 @@ struct HomeView: View {
                 WoodPlank(title: "Riddles", subtitle: library.dailySolved ? "today's solved · \(library.solvedIDs.count) of \(library.puzzles.count)" : "a new one every day", glyph: "knot", height: 56) { openPuzzles() }
                     .accessibilityIdentifier("btn-puzzles")
             }
-            WoodPlank(title: "Rules & heritage", subtitle: "how it is played, where it comes from", glyph: "info", height: 56) { openHeritage() }
+            WoodPlank(title: "Rules & heritage", subtitle: "how it is played", glyph: "info", height: 56) { openHeritage() }
                 .accessibilityIdentifier("btn-heritage")
             WoodPlank(title: "Settings", subtitle: "sound, speed, board", glyph: "gear", height: 56) { openSettings() }
                 .accessibilityIdentifier("btn-settings")
@@ -296,7 +305,8 @@ private struct WoodSurface: View {
                     .frame(width: geo.size.width, height: geo.size.height)
                     .clipped()
             }
-            LinearGradient(colors: [Theme.night.opacity(0.10), Theme.night.opacity(0.34)], startPoint: .top, endPoint: .bottom)
+            // Deep enough that the lettering keeps 4.5:1 contrast on the lightest grain.
+            LinearGradient(colors: [Theme.night.opacity(0.38), Theme.night.opacity(0.58)], startPoint: .top, endPoint: .bottom)
         }
         .clipShape(shape)
         .overlay(shape.strokeBorder(Theme.night.opacity(0.7), lineWidth: 1))
@@ -335,27 +345,39 @@ struct WoodPlank: View {
                     .scaledToFit()
                     .frame(width: 30, height: 30)
                     .accessibilityHidden(true)
-                Text(title)
-                    .font(.system(size: height >= 64 ? 22 : 18, weight: .semibold))
-                    .foregroundStyle(Theme.bone)
-                    .lineLimit(1)
-                    .fixedSize()
-                if let subtitle, !subtitle.isEmpty {
-                    Text(subtitle)
-                        .font(.footnote)
-                        .foregroundStyle(Theme.ivoryDim)
-                        .lineLimit(1)
+                // Title and subtitle stack when text is large, instead of being cut off.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 14) { plankTitle; plankSubtitle }
+                    VStack(alignment: .leading, spacing: 2) { plankTitle; plankSubtitle }
                 }
                 Spacer(minLength: 8)
                 Inlay()
             }
             .padding(.horizontal, 18)
-            .frame(height: height)
+            .padding(.vertical, 8)
+            .frame(minHeight: height)
             .frame(maxWidth: .infinity)
             .background(WoodSurface())
             .contentShape(Rectangle())
         }
         .buttonStyle(PressLift())
+    }
+}
+
+extension WoodPlank {
+    fileprivate var plankTitle: some View {
+        Text(title)
+            .font(Theme.sans(height >= 64 ? 22 : 18, weight: .semibold, relativeTo: height >= 64 ? .title2 : .headline))
+            .foregroundStyle(Theme.bone)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+    @ViewBuilder fileprivate var plankSubtitle: some View {
+        if let subtitle, !subtitle.isEmpty {
+            Text(subtitle)
+                .font(.footnote)
+                .foregroundStyle(Theme.onPhoto)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 
@@ -380,13 +402,15 @@ struct WoodTile: View {
                 }
                 Spacer(minLength: 0)
                 Text(title)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(Theme.sans(18, weight: .semibold, relativeTo: .headline))
                     .foregroundStyle(Theme.bone)
+                    .fixedSize(horizontal: false, vertical: true)
                 if !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.footnote)
-                        .foregroundStyle(Theme.ivoryDim)
-                        .lineLimit(1)
+                        .foregroundStyle(Theme.onPhoto)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(16)

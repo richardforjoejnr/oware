@@ -70,12 +70,18 @@ struct JourneyView: View {
                                 ForEach(Array(chapter.opponents.enumerated()), id: \.element.id) { oIndex, opponent in
                                     Button { startMatch(index, oIndex) } label: {
                                         HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                            Text(opponent.name)
-                                                .font(Theme.body(18))
-                                                .foregroundStyle(Theme.ivory)
-                                            Text(opponent.role)
-                                                .font(Theme.caption())
-                                                .foregroundStyle(Theme.ivoryDim)
+                                            // Name and role side by side, or stacked when the text is large.
+                                            ViewThatFits(in: .horizontal) {
+                                                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                                    Text(opponent.name).font(Theme.body(18)).foregroundStyle(Theme.ivory)
+                                                    Text(opponent.role).font(Theme.caption()).foregroundStyle(Theme.ivoryDim)
+                                                        .fixedSize()
+                                                }
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(opponent.name).font(Theme.body(18)).foregroundStyle(Theme.ivory)
+                                                    Text(opponent.role).font(Theme.caption()).foregroundStyle(Theme.ivoryDim)
+                                                }
+                                            }
                                             Spacer()
                                             Text(String(repeating: "★", count: progress.stars(for: opponent)) + String(repeating: "☆", count: 3 - progress.stars(for: opponent)))
                                                 .font(Theme.caption(14))

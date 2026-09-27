@@ -147,7 +147,7 @@ struct SettingsView: View {
                        details: ["a small thank-you", "lunch is on you", "for the true Oware lovers"],
                        appName: "Lelu Oware",
                        style: TipJarStyle(accent: Theme.gold, text: Theme.ivory, secondaryText: Theme.ivoryDim, background: Theme.ember,
-                                          titleFont: Theme.title(30), bodyFont: Theme.body(18)))
+                                          titleFont: Theme.title(30).fixed, bodyFont: Theme.body(18).fixed))
                 .presentationDetents([.medium, .large])
                 .presentationBackground(Theme.ember)
                 .onAppear { PlayerEvents.shared.tipJarViewed() }
