@@ -1,9 +1,18 @@
 name: TestFlight
 
-# Every merge to main produces a signed build on TestFlight.
+# A merge to main that changes the app produces a signed build on TestFlight. Merges that only touch
+# docs, the website, CI or scripts do not (run it by hand from the Actions tab if needed).
 on:
   push:
     branches: [main]
+    paths:
+      - apps/lelu-oware/Oware/**
+      - apps/lelu-oware/project.yml
+      - apps/lelu-oware/fastlane/**
+      - packages/*/Sources/**
+      - packages/*/Package.swift
+      - Gemfile
+      - .github/workflows/testflight.yml
   workflow_dispatch:
 
 concurrency:
@@ -33,7 +42,7 @@ jobs:
         run: brew install xcodegen xcbeautify
       - name: Version for this beta (next release, from PR titles since the last one)
         run: |
-          VERSION="$(python3 ../../scripts/next_version.py)"
+          VERSION="$(python3 ../../scripts/next_version.py --build)"
           sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
           { echo "CHANGELOG<<EOF_NOTES"; python3 ../../scripts/next_version.py --notes; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
           echo "Beta of version $VERSION"

@@ -53,6 +53,9 @@ def main(app_dir: str) -> int:
         if uses_analytics:
             check("NSPrivacyCollectedDataTypeProductInteraction" in collected,
                   "Privacy manifest declares the analytics data collected")
+            if re.search(r"tipPurchased|tipJar\.purchased", code):
+                check("NSPrivacyCollectedDataTypePurchaseHistory" in collected,
+                      "Privacy manifest declares purchase history (tip events are sent to analytics)")
     check('excludes: ["Tips.storekit"]' in project or ".storekit" not in project,
           "StoreKit test configuration is not shipped in the app")
 

@@ -13,6 +13,18 @@ class NextVersionTests(unittest.TestCase):
     def test_fix_is_a_patch(self):
         self.assertEqual(bump("1.2.3", [("fix: seeds stay in the store", ""), ("docs: tidy", "")]), "1.2.4")
 
+    def test_docs_and_chores_alone_make_no_release(self):
+        quiet = [("docs: what's new page", ""), ("chore: tidy", ""), ("ci: faster runs", ""), ("test: more cases", "")]
+        self.assertEqual(bump("1.2.3", quiet), "1.2.3")
+        self.assertEqual(notes(quiet), "")
+
+    def test_a_beta_never_reuses_the_released_version(self):
+        self.assertEqual(bump("1.2.3", [("chore: bump a package", "")], for_build=True), "1.2.4")
+        self.assertEqual(bump("1.2.3", [], for_build=True), "1.2.3", "nothing new: nothing to build")
+
+    def test_breaking_change_in_a_chore_still_counts(self):
+        self.assertEqual(bump("1.2.3", [("chore!: drop iOS 17", "")]), "2.0.0")
+
     def test_feature_is_a_minor(self):
         self.assertEqual(bump("1.2.3", [("fix: x", ""), ("feat(journey): new chapter", "")]), "1.3.0")
 
@@ -24,10 +36,11 @@ class NextVersionTests(unittest.TestCase):
         self.assertEqual(bump("1.2.3", [("Accessibility: VoiceOver", "")]), "1.2.4")
 
     def test_notes_group_by_kind(self):
-        text = notes([("feat: riddle streak", ""), ("fix(board): rings", ""), ("chore: tidy", "")])
+        text = notes([("feat: riddle streak", ""), ("fix(board): rings", ""), ("refactor: saves", ""), ("chore: tidy", "")])
         self.assertIn("New:\n- Riddle streak", text)
         self.assertIn("Fixed:\n- Rings", text)
-        self.assertIn("Also:\n- Tidy", text)
+        self.assertIn("Also:\n- Saves", text)
+        self.assertNotIn("Tidy", text, "chores are not release notes")
 
 
     def test_notes_fit_testflight(self):

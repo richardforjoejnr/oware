@@ -133,12 +133,15 @@ Automatic, from **Conventional Commit PR titles** (checked on every PR by the "P
 |---|---|
 | `feat!:` (or a `BREAKING CHANGE` note) | 2.0.0 |
 | `feat:` | 1.3.0 |
-| `fix:`, `perf:`, `docs:`, `chore:`, anything else | 1.2.4 |
+| `fix:`, `perf:`, `refactor:`, `build:`, `revert:` | 1.2.4 |
+| `docs:`, `chore:`, `ci:`, `test:`, `style:` only | no new version, not in the release notes |
 
 - **Release** = a git tag `vX.Y.Z`. `scripts/next_version.py` reads the PR titles merged since the last
   tag and prints the next version (1.0.0 before the first release); `--notes` prints release notes.
-- **TestFlight** (every merge to `main`): the build gets the *next* version, and its "What to Test"
-  notes list the PRs since the last release. In the app, Settings shows "Version 1.3.0 (build) · Beta".
+- **TestFlight** (a merge to `main` that changes the app: app code and resources, `project.yml`,
+  fastlane, package sources; not docs, website, CI or scripts): the build gets the *next* version, and its "What to Test"
+  notes list the player-facing PRs since the last release. A beta always moves past the released
+  version, even if only a `chore:` touched the app. In the app, Settings shows "Version 1.3.0 (build) · Beta".
 - **App Store** (Actions ▸ App Store Release ▸ Run workflow, version left empty): builds that same next
   version, uploads it, then tags `vX.Y.Z` and publishes a GitHub Release with the notes. The next
   TestFlight builds then move on to the version after. Settings shows no "Beta" in App Store builds.

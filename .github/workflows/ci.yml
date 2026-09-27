@@ -24,7 +24,7 @@ jobs:
         run: python3 scripts/release_readiness.py "$APP_DIR"
       - name: Test the version calculator
         working-directory: scripts
-        run: python3 -m unittest test_next_version
+        run: python3 -m unittest test_next_version test_build_release_notes
 
   engine:
     name: Engine (swift test)

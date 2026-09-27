@@ -3,8 +3,9 @@
 <!--
   Lelu Oware privacy manifest (required by Apple for App Store uploads).
   - No tracking, no tracking domains.
-  - Collected: anonymous product interaction and a hashed device id, via TelemetryDeck, for
-    analytics only, not linked to the user (see docs/lelu-oware/privacy.md). Players can switch it off.
+  - Collected: anonymous product interaction, tip purchases (which size) and a hashed device id, via
+    TelemetryDeck, for analytics only, not linked to the user (see docs/lelu-oware/privacy.md).
+    Players can switch it off.
   - Required-reason API: UserDefaults, to keep the player's own settings, progress and saved game
     inside this app (reason CA92.1).
 -->
@@ -31,6 +32,18 @@
 		<dict>
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<false/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>

@@ -20,7 +20,7 @@ open: project         ## Generate and open in Xcode
 archive: project      ## Archive for TestFlight/App Store with a fresh build number, open in Organizer
 	set -o pipefail; xcodebuild archive -project Oware.xcodeproj -scheme Oware -configuration Release \
 	  -destination 'generic/platform=iOS' -archivePath build/Oware.xcarchive -allowProvisioningUpdates \
-	  CURRENT_PROJECT_VERSION=$$(date -u +%Y%m%d%H%M) MARKETING_VERSION=$$(python3 ../../scripts/next_version.py) | xcbeautify
+	  CURRENT_PROJECT_VERSION=$$(date -u +%Y%m%d%H%M) MARKETING_VERSION=$$(python3 ../../scripts/next_version.py --build) | xcbeautify
 	open build/Oware.xcarchive
 
 # Free Apple IDs ("Personal Team") cannot sign Game Center, and should not claim the real bundle id.
