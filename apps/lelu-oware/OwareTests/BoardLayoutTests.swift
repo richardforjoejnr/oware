@@ -52,4 +52,15 @@ final class BoardLayoutTests: XCTestCase {
             }
         }
     }
+
+    /// Portrait: your store is at the bottom beside "You", the opponent's at the top beside their name.
+    func testPortraitStoresSitBesideTheirPlayers() {
+        let layout = BoardLayout(size: CGSize(width: 440, height: 956))
+        XCTAssertEqual(layout.orientation, .vertical)
+        XCTAssertGreaterThan(layout.storeRect(.south).midY, layout.storeRect(.north).midY, "south (you) below north")
+        for house in 0..<12 {
+            let y = layout.houseCenter(house).y
+            XCTAssertTrue(layout.storeRect(.north).maxY < y && y < layout.storeRect(.south).minY, "houses sit between the stores")
+        }
+    }
 }
