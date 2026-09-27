@@ -47,8 +47,10 @@ public struct Puzzle: Sendable, Codable, Hashable, Identifiable {
     public let target: Int
     /// Difficulty 1 (easy) … 5 (hard); used for ordering.
     public let difficulty: Int
+    /// The rules the riddle was generated under (absent in older files: Abapa).
+    public let variant: RuleSet.Variant?
 
-    public init(id: String, kind: Kind, houses: [Int], stores: [Int], toMove: Player, solution: Move, target: Int, difficulty: Int) {
+    public init(id: String, kind: Kind, houses: [Int], stores: [Int], toMove: Player, solution: Move, target: Int, difficulty: Int, variant: RuleSet.Variant? = nil) {
         self.id = id
         self.kind = kind
         self.houses = houses
@@ -57,10 +59,11 @@ public struct Puzzle: Sendable, Codable, Hashable, Identifiable {
         self.solution = solution
         self.target = target
         self.difficulty = difficulty
+        self.variant = variant
     }
 
     public var state: GameState {
-        GameState(houses: houses, stores: stores, sideToMove: toMove)
+        GameState(houses: houses, stores: stores, sideToMove: toMove, rules: variant == .namNam ? .namNam : .abapa)
     }
 
     /// Whether `move` solves the puzzle.

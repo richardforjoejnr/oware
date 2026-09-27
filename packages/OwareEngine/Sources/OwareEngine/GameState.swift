@@ -336,13 +336,11 @@ public struct GameState: Sendable, Hashable, Codable {
         let south = stores[Player.south.rawValue], north = stores[Player.north.rawValue]
         var southHouses = south / Self.seedsPerHouse
         var northHouses = north / Self.seedsPerHouse
-        let spare = Self.houseCount - southHouses - northHouses   // 0 or 1 (remainders sum to 0 or 4)
-        if spare == 1 {
-            let winner: Player
-            if south % 4 != north % 4 { winner = south % 4 > north % 4 ? .south : .north }
-            else if let last = lastCapturer { winner = last }
-            else { winner = south >= north ? .south : .north }
-            if winner == .south { southHouses += 1 } else { northHouses += 1 }
+        // Remainders sum to 0 or 4, so at most one house is left over. It goes to the player who
+        // won more seeds this round (they can never be level when a house is spare: 24–24 splits
+        // evenly), so winning a round never leaves you behind on houses.
+        if Self.houseCount - southHouses - northHouses == 1 {
+            if south > north { southHouses += 1 } else { northHouses += 1 }
         }
         let result = RoundResult(round: round, southSeeds: south, northSeeds: north, southHouses: southHouses, northHouses: northHouses)
         roundHistory.append(result)
@@ -387,7 +385,8 @@ public struct GameState: Sendable, Hashable, Codable {
         var mover: Player
     }
 
-    /// Relay sowing cannot cycle for ever on a real board, but guard against it anyway.
+    /// Backstop for relay chains. The real guard is cycle detection in `simulateNamNam`: relay
+    /// sowing can loop for ever (about one random game in 160 reaches such a loop).
     static let maxRelayLaps = 500
 
     /// Abapa: one lap, captures computed but not applied (grand-slam handling happens in apply).
@@ -431,6 +430,9 @@ public struct GameState: Sendable, Hashable, Codable {
         var index = origin
         var laps = 0
         var roundSettled = false
+        // Relay positions already seen (board + the house about to be lifted). Seeing one again
+        // means the sowing would go round for ever, so the turn ends there instead.
+        var relayPositions: Set<[Int]> = []
 
         sowing: while true {
             while seeds > 0 {
@@ -467,6 +469,7 @@ public struct GameState: Sendable, Hashable, Codable {
             }
             // An empty landing (a house that was empty, or one just captured) ends the turn.
             guard board[index] > 1, laps < Self.maxRelayLaps else { break }
+            guard relayPositions.insert(board + [index]).inserted else { break }
             laps += 1
             seeds = board[index]
             board[index] = 0

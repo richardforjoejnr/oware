@@ -92,6 +92,13 @@ enum Journey {
     /// Stars for a finished match from the human's (south) point of view.
     static func stars(for state: GameState) -> Int {
         guard state.outcome?.winner == .south else { return 0 }
+        if state.rules.variant == .namNam {
+            // Nam-Nam is won by taking all twelve houses; the fewer rounds it takes, the more stars.
+            let rounds = max(state.roundHistory.count, 1)
+            if rounds <= 3 { return 3 }
+            if rounds <= 5 { return 2 }
+            return 1
+        }
         let seeds = state.store(of: .south)
         if seeds >= 32 { return 3 }
         if seeds >= 28 { return 2 }

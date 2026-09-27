@@ -88,10 +88,11 @@ case "replay":
     } catch { print("Illegal move in record: \(error)"); exit(1) }
 
 case "puzzles":
-    // swift run -c release oware puzzles --per-kind 12 --seed 2026 --out ../../Oware/Resources/Puzzles/puzzles.json
+    // swift run -c release oware puzzles --per-kind 12 --seed 2026 [--rules namnam] --out ../../apps/lelu-oware/Oware/Resources/Puzzles/puzzles.json
     let perKind = Int(option("--per-kind", in: args) ?? "12") ?? 12
     let seed = UInt64(option("--seed", in: args) ?? "2026") ?? 2026
-    let set = PuzzleGenerator(seed: seed).generate(perKind: perKind)
+    let rules: RuleSet = (option("--rules", in: args) ?? "abapa").lowercased().hasPrefix("nam") ? .namNam : .abapa
+    let set = PuzzleGenerator(seed: seed, rules: rules).generate(perKind: perKind)
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     let data = try! encoder.encode(set)

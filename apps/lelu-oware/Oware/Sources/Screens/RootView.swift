@@ -12,6 +12,8 @@ enum Screen: Hashable {
 struct RootView: View {
     @Environment(GameSession.self) private var session
     @Environment(JourneyProgress.self) private var progress
+    @Environment(AppSettings.self) private var settings
+    @Environment(PuzzleLibrary.self) private var library
     @State private var screen: Screen = .home
     @State private var showSettings = false
     /// The carved-map opening; skipped for test launches so suites are not slowed.
@@ -41,7 +43,7 @@ struct RootView: View {
                     .transition(.opacity)
             case .journey:
                 JourneyView(goBack: { screen = .home }, startMatch: { chapter, opponent in
-                    session.newGame(.journey(chapter: chapter, opponent: opponent))
+                    session.newGame(.journey(chapter: chapter, opponent: opponent), rules: settings.rules)
                     screen = .game
                 })
                 .transition(.opacity)
@@ -63,7 +65,10 @@ struct RootView: View {
                 .presentationBackground(Theme.ember)
         }
         .statusBarHidden(true)
+        // Riddles follow the rules chosen in Settings.
+        .onChange(of: settings.variant) { library.variant = settings.rules.variant }
         .onAppear {
+            library.variant = settings.rules.variant
             switch LaunchOptions.startScreen {
             case "journey": screen = .journey
             case "puzzles": screen = .puzzles
@@ -71,7 +76,7 @@ struct RootView: View {
             default: break
             }
             if LaunchOptions.startGame, screen == .home {
-                session.newGame(.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south))
+                session.newGame(.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south), rules: settings.rules)
                 screen = .game
                 #if DEBUG
                 if let n = LaunchOptions.demoStores {

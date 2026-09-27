@@ -244,14 +244,14 @@ struct HomeView: View {
                 .accessibilityIdentifier("btn-journey")
             if tutorialSeen {
                 WoodTile(title: "Learn", subtitle: "the five-minute lesson", glyph: "book") {
-                    session.startTutorial(step: 0)
+                    session.startTutorial(step: 0, variant: settings.rules.variant)
                     startGame()
                 }
                 .accessibilityIdentifier("btn-learn")
             } else {
                 WoodTile(title: "New here?", subtitle: "learn in five minutes", glyph: "book") {
                     tutorialSeen = true
-                    session.startTutorial(step: 0)
+                    session.startTutorial(step: 0, variant: settings.rules.variant)
                     startGame()
                 }
                 .accessibilityIdentifier("btn-learn")

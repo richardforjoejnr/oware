@@ -15,6 +15,9 @@ struct GameView: View {
     @State private var hint: String?
     @State private var hintTask: Task<Void, Never>?
     @State private var showLevels = false
+    @State private var showRiddle = false
+    @State private var showLesson = false
+    private var hasFullText: Bool { session.currentPuzzle != nil || session.currentTutorialStep != nil }
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
 
     var body: some View {
@@ -62,6 +65,20 @@ struct GameView: View {
         }
         .onChange(of: session.puzzleAttempt) { _, attempt in
             if attempt == .solved, let puzzle = session.currentPuzzle { library.markSolved(puzzle) }
+        }
+        .sheet(isPresented: $showRiddle) {
+            if let puzzle = session.currentPuzzle {
+                RiddleCard(puzzle: puzzle, number: library.puzzles(of: puzzle.kind).firstIndex(of: puzzle).map { $0 + 1 })
+                    .presentationDetents([.medium, .large])
+                    .presentationBackground(Theme.ember)
+            }
+        }
+        .sheet(isPresented: $showLesson) {
+            if let step = session.currentTutorialStep, case let .tutorial(index) = session.mode {
+                LessonCard(step: step, number: index + 1, count: session.tutorialSteps.count, done: session.tutorialStepDone)
+                    .presentationDetents([.medium, .large])
+                    .presentationBackground(Theme.ember)
+            }
         }
     }
 
@@ -151,7 +168,7 @@ struct GameView: View {
                             .rotationEffect(.degrees(showLevels ? 180 : 0))
                     }
                 }
-                seedLine(session.mode.isResumable ? "\(seeds)" + (session.opponentRole.map { " · \($0)" } ?? "") : session.mode.title,
+                seedLine(session.mode.isResumable ? "\(seeds)" + housesNote(opponentSide) + (session.opponentRole.map { " · \($0)" } ?? "") : session.mode.title,
                          showSeed: session.mode.isResumable)
             }
         }
@@ -244,6 +261,13 @@ struct GameView: View {
                     youStrip
                 }
                 Spacer(minLength: 0)
+                HStack(spacing: 8) {
+                if hasFullText {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Theme.gold)
+                        .accessibilityHidden(true)
+                }
                 ZStack(alignment: .trailing) {
                     Text(session.turnDescription)
                         .font(.system(size: 16, weight: .medium, design: .serif))
@@ -260,10 +284,23 @@ struct GameView: View {
                             .accessibilityIdentifier("hint")
                     }
                 }
+                }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
                 .hudChrome(Capsule())
                 .lineLimit(1)
+                // In a riddle or a lesson, tap the line to read all of it.
+                .overlay {
+                    if session.currentPuzzle != nil {
+                        Button { showRiddle = true } label: { Color.clear.contentShape(Capsule()) }
+                            .accessibilityLabel("Read the full riddle")
+                            .accessibilityIdentifier("btn-riddle-info")
+                    } else if session.currentTutorialStep != nil {
+                        Button { showLesson = true } label: { Color.clear.contentShape(Capsule()) }
+                            .accessibilityLabel("Read the whole lesson step")
+                            .accessibilityIdentifier("btn-lesson-info")
+                    }
+                }
             }
             .frame(height: 44)
         }
@@ -273,6 +310,17 @@ struct GameView: View {
         .animation(.easeInOut(duration: 0.25), value: hint)
         .animation(.easeInOut(duration: 0.3), value: session.puzzleAttempt)
         .animation(.easeInOut(duration: 0.3), value: session.tutorialStepDone)
+    }
+
+    private var passAndPlaySide: Player? {
+        if case .passAndPlay = session.mode { return session.state.sideToMove }
+        return nil
+    }
+
+    /// Nam-Nam: how many houses this player holds this round.
+    private func housesNote(_ player: Player) -> String {
+        guard session.state.rules.variant == .namNam else { return "" }
+        return " · \(session.state.houses(of: player).count) houses"
     }
 
     private var youStrip: some View {
@@ -295,7 +343,7 @@ struct GameView: View {
                         .foregroundStyle(Theme.ivory)
                     kenteMark(active: active)
                 }
-                seedLine("\(seeds) seeds", showSeed: true)
+                seedLine("\(seeds) seeds" + housesNote(passAndPlaySide ?? .south), showSeed: true)
             }
         }
         .padding(.leading, 6)
@@ -339,21 +387,21 @@ struct GameView: View {
                 }
                 HStack(spacing: 28) {
                     HStack(spacing: 6) {
-                        ForEach(0..<Tutorial.steps.count, id: \.self) { i in
+                        ForEach(0..<session.tutorialSteps.count, id: \.self) { i in
                             Circle()
                                 .fill(i <= index ? Theme.gold : Theme.ivoryDim.opacity(0.3))
                                 .frame(width: 6, height: 6)
                         }
                     }
                     .accessibilityElement()
-                    .accessibilityLabel("Step \(index + 1) of \(Tutorial.steps.count)")
+                    .accessibilityLabel("Step \(index + 1) of \(session.tutorialSteps.count)")
                     .accessibilityIdentifier("tutorial-progress")
                     if session.tutorialStepDone {
-                        if index + 1 < Tutorial.steps.count {
+                        if index + 1 < session.tutorialSteps.count {
                             smallButton("Next", id: "btn-next-step", prominent: true) { session.advanceTutorial() }
                         } else {
                             smallButton("Play", id: "btn-tutorial-play", prominent: true) {
-                                session.newGame(.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south))
+                                session.newGame(.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south), rules: settings.rules)
                             }
                         }
                     }

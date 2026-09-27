@@ -30,7 +30,7 @@ public struct PuzzleGenerator {
             while !state.isOver && ply < 120 {
                 ply += 1
                 // Examine this position for every kind still needed.
-                if ply > 6, !seenKeys.contains(state.positionKey) {
+                if ply > 6, !seenKeys.contains(state.positionKey), state.round == 1 {
                     for kind in Puzzle.Kind.allCases where (found[kind]?.count ?? 0) < count {
                         if let puzzle = Self.classify(state, as: kind, index: (found[kind]?.count ?? 0) + 1) {
                             found[kind, default: []].append(puzzle)
@@ -51,10 +51,16 @@ public struct PuzzleGenerator {
     // MARK: - Classification
 
     /// Immediate capture value of each legal move.
+    /// Seeds the mover captures with each legal move, counted from the move's events so it stays
+    /// right when a Nam-Nam round ends (and stores reset) during the move.
     static func captureValues(_ state: GameState) -> [(Move, Int)] {
         state.legalMoves().map { move in
-            let after = (try? state.applying(move).state) ?? state
-            return (move, after.store(of: move.player) - state.store(of: move.player))
+            guard let result = try? state.applying(move) else { return (move, 0) }
+            let gained = result.events.reduce(0) { total, event in
+                if case let .capture(_, seeds, by) = event, by == move.player { return total + seeds }
+                return total
+            }
+            return (move, gained)
         }
     }
 
@@ -73,8 +79,9 @@ public struct PuzzleGenerator {
         let secondBest = values.filter { $0.0 != best.0 }.map(\.1).max() ?? 0
 
         func make(_ solution: Move, target: Int, difficulty: Int) -> Puzzle {
-            Puzzle(id: "\(kind.rawValue)-\(index)", kind: kind, houses: state.houses, stores: state.stores,
-                   toMove: player, solution: solution, target: target, difficulty: difficulty)
+            Puzzle(id: (state.rules.variant == .namNam ? "namNam-" : "") + "\(kind.rawValue)-\(index)", kind: kind,
+                   houses: state.houses, stores: state.stores, toMove: player, solution: solution,
+                   target: target, difficulty: difficulty, variant: state.rules.variant == .namNam ? .namNam : nil)
         }
 
         switch kind {
@@ -85,6 +92,7 @@ public struct PuzzleGenerator {
             return make(best.0, target: best.1, difficulty: min(5, 1 + (chain - 1) + (best.1 >= 8 ? 1 : 0)))
 
         case .winInOne:
+            guard state.rules.variant == .abapa else { return nil }
             let winning = moves.filter { (try? state.applying($0).state.outcome?.winner) == player }
             guard winning.count == 1, best.1 < 10 else { return nil }
             return make(winning[0], target: state.rules.winningSeeds - state.store(of: player), difficulty: 2)
@@ -111,11 +119,11 @@ public struct PuzzleGenerator {
             // and no other first move guarantees more than 2. Depth-3 exact minimax on captures.
             guard best.1 <= 1 else { return nil }
             func guaranteed(after first: Move) -> Int {
-                guard let s1 = try? state.applying(first).state, !s1.isOver else { return 0 }
+                guard let s1 = try? state.applying(first).state, !s1.isOver, s1.round == state.round else { return 0 }
                 let gainedNow = s1.store(of: player) - state.store(of: player)
                 var worst = Int.max
                 for reply in s1.legalMoves() {
-                    guard let s2 = try? s1.applying(reply).state else { continue }
+                    guard let s2 = try? s1.applying(reply).state, s2.round == state.round else { worst = min(worst, 0); continue }
                     if s2.isOver { worst = min(worst, s2.store(of: player) - state.store(of: player)); continue }
                     let ours = captureValues(s2).map(\.1).max() ?? 0
                     worst = min(worst, gainedNow + ours)
