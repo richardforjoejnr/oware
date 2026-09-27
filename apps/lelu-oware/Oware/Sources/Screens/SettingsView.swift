@@ -10,6 +10,8 @@ struct SettingsView: View {
 
     var body: some View {
         @Bindable var settings = settings
+        // Scrolls so nothing is cut off on smaller phones or with larger text.
+        ScrollView {
         VStack(alignment: .leading, spacing: 22) {
             Text("Settings")
                 .font(Theme.title(30))
@@ -64,9 +66,10 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.segmented)
                 .accessibilityIdentifier("setting-rules")
-                Text(settings.variant == .namNam
-                     ? "Nam-Nam, \"to roam\": keep sowing while your last seed lands among other seeds; capture by making four; seeds you win become your houses next round, until one player holds all twelve. Journey, riddles and the lesson stay Abapa."
+                Text((settings.variant == .namNam
+                     ? "Nam-Nam, \"to roam\": keep sowing while your last seed lands among other seeds; capture by making four; seeds you win become your houses next round, until one player holds all twelve."
                      : "Tournament Abapa: your turn ends where your last seed lands; capture houses you bring to two or three; first to 25 wins.")
+                     + " Every game follows this: play, Pass & Play, Journey, riddles and the lesson.")
                     .font(Theme.caption(12))
                     .foregroundStyle(Theme.ivoryDim)
                     .fixedSize(horizontal: false, vertical: true)
@@ -104,11 +107,11 @@ struct SettingsView: View {
                 .accessibilityIdentifier("setting-counts")
 
             Spacer()
-            QuietButton(title: "Support the maker", subtitle: tipJar.hasTipped ? "medaase — thank you" : "the game stays free; tips are optional") {
+            QuietButton(title: "Support me", subtitle: tipJar.hasTipped ? "medaase — thank you for your support" : "free forever, nothing locked; tips keep it growing") {
                 showTipJar = true
             }
             .accessibilityIdentifier("btn-tip-jar")
-            Text("Lelu Oware · Abapa rules")
+            Text("Lelu Oware · \(settings.rules.variant == .namNam ? "Nam-Nam" : "Abapa") rules")
                 .font(Theme.caption())
                 .foregroundStyle(Theme.ivoryDim)
         }
@@ -116,11 +119,15 @@ struct SettingsView: View {
         .foregroundStyle(Theme.ivory)
         .tint(Theme.gold)
         .padding(28)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .scrollBounceBehavior(.basedOnSize)
         .sheet(isPresented: $showTipJar) {
-            TipJarView(title: "Support the maker",
-                       message: "Lelu Oware is free and always will be. If it has given you a good hour, a tip says medaase to the maker.",
-                       labels: ["A Fanta", "A meal", "A feast"],
+            TipJarView(title: "Support me",
+                       message: "I make Lelu Oware on my own. It is free, with no adverts and nothing locked. If it has given you a good game, buy me a drink or a meal. It helps me keep making it better.",
+                       labels: ["A cold Fanta", "A plate of waakye", "A feast"],
+                       details: ["a small thank-you", "lunch is on you", "for the true Oware lovers"],
+                       appName: "Lelu Oware",
                        style: TipJarStyle(accent: Theme.gold, text: Theme.ivory, secondaryText: Theme.ivoryDim, background: Theme.ember,
                                           titleFont: Theme.title(30), bodyFont: Theme.body(18)))
                 .presentationDetents([.medium, .large])

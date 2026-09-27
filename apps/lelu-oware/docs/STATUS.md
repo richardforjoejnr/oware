@@ -4,6 +4,24 @@
 > `../../docs/PIPELINE.md` (repo root). Resume from "In flight" below. Paths in this file are relative to
 > `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-26.
 
+## Nam-Nam everywhere (2026-09-27, branch `feat/namnam-everywhere`, stacked on #23)
+
+The owner played Journey with Nam-Nam set and got Abapa. Now every way into a game follows Settings ▸ Rules:
+Journey (start, Next opponent, Play again), Riddles, the "New here?" lesson, Pass & Play and quick play.
+`GameSession.newGame(_:rules:)` with `rules: nil` keeps the rules on the board (so replays never fall back
+to Abapa). Riddles: `PuzzleLibrary` loads `puzzles.json` (Abapa) and `puzzles-namnam.json` (43 Nam-Nam
+riddles, `oware puzzles --rules namnam`; ids prefixed `namNam-`) and shows the set for `library.variant`,
+kept in sync from Settings in `RootView`. Lesson: `Tutorial.namNamSteps` (9 steps: sowing, roaming, making
+four, four on their side, careful, feeding, the last four, winning), chosen by `startTutorial(step:variant:)`;
+`RulesFollowSettingsTests` plays each lesson move through the engine. Journey stars in Nam-Nam: win in
+≤3 rounds ★★★, ≤5 ★★, otherwise ★ (Abapa unchanged: win ★, 28+ ★★, 32+ ★★★).
+Also: tap the riddle or lesson line under the board (gold ⓘ) for the whole text (`RiddleCard`,
+`LessonCard`, `btn-riddle-info` / `btn-lesson-info`). Settings now scrolls (the longer rules note had pushed
+the tip row off small screens) and its footer names the chosen rules. Tip jar renamed "Support me": personal
+note, tier lines (A cold Fanta / A plate of waakye / A feast), a "Rate Lelu Oware" button
+(`requestReview`), and a thank-you with the tip count. SupportKit's `TipJarView` gained `details:` and
+`appName:` (both optional, so the template still compiles).
+
 ## Battery review (2026-09-27, branch `perf/battery`)
 
 Idle board redrew every frame (SpriteKit render loop at up to 120 fps) and the audio engine stayed
@@ -20,8 +38,8 @@ Splash: 2.8 s, tap to skip; Reduce Motion no longer shortens it (the owner has R
 
 
 The owner plays Nam-Nam and asked for it as the **default**. `RuleSet.Variant` = `.namNam` (default for
-new AI and Pass & Play games) or `.abapa` (Settings ▸ Rules; Journey, riddles and the lesson always use
-Abapa). Nam-Nam in `GameState`: relay sowing (last seed in a non-empty house → scoop and carry on, each
+new AI and Pass & Play games) or `.abapa` (Settings ▸ Rules; since `feat/namnam-everywhere` Journey, riddles and the lesson
+follow it too). Nam-Nam in `GameState`: relay sowing (last seed in a non-empty house → scoop and carry on, each
 lap skipping its own origin); a house reaching four is captured by its owner at any point, or by the
 sower on the opponent's side only with the last seed; when a capture leaves four seeds (board + hand)
 the capturer takes them and the round ends; seeds won become houses next round (contiguous from A1;

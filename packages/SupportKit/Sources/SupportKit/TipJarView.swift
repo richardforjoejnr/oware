@@ -28,21 +28,36 @@ public struct TipJarView: View {
     let title: String
     let message: String
     let labels: [String]
+    let details: [String]
+    let appName: String?
     let style: TipJarStyle
+    @Environment(\.requestReview) private var requestReview
 
     /// - Parameters:
     ///   - labels: one per product, in the jar's order (e.g. "Small", "Medium", "Generous").
+    ///   - details: an optional short line under each label.
+    ///   - appName: when set, the sheet also offers the free way to help: rating the app.
     public init(title: String = "Support the maker",
                 message: String = "This game is free and always will be. If it has given you a good hour, a tip helps keep it going.",
                 labels: [String] = ["Small tip", "Medium tip", "Generous tip"],
+                details: [String] = [],
+                appName: String? = nil,
                 style: TipJarStyle) {
         self.title = title
         self.message = message
         self.labels = labels
+        self.details = details
+        self.appName = appName
         self.style = style
     }
 
+    private var thanks: String {
+        if jar.justTipped { return "Medaase — thank you!" }
+        return jar.tipCount == 1 ? "You have supported this once. Medaase." : "You have supported this \(jar.tipCount) times. Medaase."
+    }
+
     public var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 18) {
             Text(title)
                 .font(style.titleFont)
@@ -54,7 +69,7 @@ public struct TipJarView: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if jar.justTipped || jar.hasTipped {
-                Text(jar.justTipped ? "Medaase — thank you!" : "You have tipped before. Medaase.")
+                Text(thanks)
                     .font(style.bodyFont.weight(.semibold))
                     .foregroundStyle(style.accent)
                     .accessibilityIdentifier("tip-jar-thanks")
@@ -76,7 +91,14 @@ public struct TipJarView: View {
                             Task { await jar.tip(product) }
                         } label: {
                             HStack {
-                                Text(index < labels.count ? labels[index] : product.displayName)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(index < labels.count ? labels[index] : product.displayName)
+                                    if index < details.count {
+                                        Text(details[index])
+                                            .font(.footnote)
+                                            .foregroundStyle(style.secondaryText)
+                                    }
+                                }
                                 Spacer()
                                 Text(product.displayPrice)
                                     .monospacedDigit()
@@ -97,14 +119,28 @@ public struct TipJarView: View {
                 }
             }
 
+            if let appName {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Not today? A rating helps just as much: it is how other players find \(appName).")
+                        .font(style.bodyFont)
+                        .foregroundStyle(style.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Rate \(appName)") { requestReview() }
+                        .font(style.bodyFont)
+                        .tint(style.accent)
+                        .accessibilityIdentifier("tip-jar-rate")
+                }
+            }
+
             Text("Tips are handled by Apple and unlock nothing. Every level, chapter and look is free for everyone.")
                 .font(.footnote)
                 .foregroundStyle(style.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
         }
         .padding(28)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .scrollBounceBehavior(.basedOnSize)
         .background(style.background.ignoresSafeArea())
         .task { await jar.load() }
     }

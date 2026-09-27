@@ -86,6 +86,18 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testTappingTheLessonLineShowsTheWholeStep() throws {
+        app.buttons["btn-learn"].tap()
+        let info = app.buttons["btn-lesson-info"]
+        XCTAssertTrue(info.waitForExistence(timeout: 5))
+        info.tap()
+        XCTAssertTrue(app.staticTexts["lesson-card-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["lesson-card-prompt"].label.count > 40)
+        app.buttons["btn-lesson-done"].tap()
+        XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testSolvingTheDailyRiddleMarksItSolved() throws {
         openMore()
         app.buttons["btn-puzzles"].tap()
@@ -113,6 +125,22 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testTappingTheRiddleLineShowsTheWholeRiddle() throws {
+        openMore()
+        app.buttons["btn-puzzles"].tap()
+        let first = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'puzzle-captureInTwo-'")).firstMatch
+        XCTAssertTrue(first.waitForExistence(timeout: 5))
+        first.tap()
+        let info = app.buttons["btn-riddle-info"]
+        XCTAssertTrue(info.waitForExistence(timeout: 5))
+        info.tap()
+        XCTAssertTrue(app.staticTexts["riddle-card-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'whatever the other player replies' OR label CONTAINS 'Whatever the other player replies'")).firstMatch.exists)
+        app.buttons["btn-riddle-done"].tap()
+        XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testJourneyOpensAndFirstMatchStarts() throws {
         app.buttons["btn-journey"].tap()
         XCTAssertTrue(app.staticTexts["journey-title"].waitForExistence(timeout: 5))
@@ -133,6 +161,7 @@ final class HomeScreenUITests: XCTestCase {
         if !app.buttons["btn-settings"].exists { more.tap() }
         app.buttons["btn-settings"].tap()
         let row = app.buttons["btn-tip-jar"]
+        for _ in 0..<4 where !row.isHittable { app.swipeUp() }
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         row.tap()
         XCTAssertTrue(app.staticTexts["tip-jar-title"].waitForExistence(timeout: 5))
