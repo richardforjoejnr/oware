@@ -51,4 +51,18 @@ final class LandscapeUITests: XCTestCase {
         }
         snap(app, "menu-landscape")
     }
+
+    func testPortraitMenuScrollsOverThePinnedPhoto() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--reset-state", "--fast-animations"]
+        app.launch()
+        XCUIDevice.shared.orientation = .portrait
+        let title = app.staticTexts["home-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        app.buttons["btn-more"].tap()          // make the menu long enough to scroll
+        let before = title.frame.minY
+        app.swipeUp()
+        snap(app, "menu-scrolled")
+        XCTAssertLessThan(title.frame.minY, before, "the title scrolls with the menu")
+    }
 }
