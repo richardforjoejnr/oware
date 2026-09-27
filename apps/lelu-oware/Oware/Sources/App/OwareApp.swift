@@ -20,9 +20,17 @@ struct OwareApp: App {
             UserDefaults.standard.removeObject(forKey: "tutorialSeen")
             UserDefaults.standard.removeObject(forKey: "preferredDifficulty")
             UserDefaults.standard.removeObject(forKey: "supportkit.tipCount")
+            UserDefaults.standard.removeObject(forKey: "dailyStreak")
+            UserDefaults.standard.removeObject(forKey: "lastDailySolvedDay")
+            UserDefaults.standard.removeObject(forKey: "stats.grandmasterWins")
         }
         _session = State(initialValue: GameSession())
-        _settings = State(initialValue: AppSettings())
+        let settings = AppSettings()
+        _settings = State(initialValue: settings)
+        // Analytics and Game Center stay silent in test launches.
+        Analytics.shared.configure(enabled: settings.effectiveUsageStats)
+        Analytics.shared.track(.appLaunched)
+        if !settings.testMode { GameCenter.shared.authenticate() }
     }
 
     var body: some Scene {

@@ -14,10 +14,15 @@ final class PuzzleLibrary {
     private(set) var solvedIDs: Set<String>
     private let defaults: UserDefaults
     private static let solvedKey = "solvedPuzzleIDs"
+    static let streakKey = "dailyStreak"
+    static let lastDailyDayKey = "lastDailySolvedDay"
+    /// Days in a row on which today's riddle was solved (as of the last daily solved).
+    private(set) var dailyStreak: Int
 
     init(defaults: UserDefaults = .standard, bundle: Bundle = .main) {
         self.defaults = defaults
         solvedIDs = Set(defaults.stringArray(forKey: Self.solvedKey) ?? [])
+        dailyStreak = defaults.integer(forKey: Self.streakKey)
         func load(_ name: String) -> PuzzleSet {
             guard let url = bundle.url(forResource: name, withExtension: "json"),
                   let data = try? Data(contentsOf: url),
@@ -32,9 +37,28 @@ final class PuzzleLibrary {
     func isSolved(_ puzzle: Puzzle) -> Bool { solvedIDs.contains(puzzle.id) }
     func solvedCount(of kind: Puzzle.Kind) -> Int { puzzles(of: kind).filter(isSolved).count }
 
-    func markSolved(_ puzzle: Puzzle) {
+    func markSolved(_ puzzle: Puzzle, today: Int = PuzzleLibrary.dayNumber()) {
         solvedIDs.insert(puzzle.id)
         defaults.set(Array(solvedIDs).sorted(), forKey: Self.solvedKey)
+        if isDaily(puzzle, today: today) { extendStreak(today: today) }
+    }
+
+    func isDaily(_ puzzle: Puzzle, today: Int = PuzzleLibrary.dayNumber()) -> Bool {
+        puzzleSet.daily(dayNumber: today)?.id == puzzle.id
+    }
+
+    /// The streak as it stands today: it lapses once a whole day passes without the daily riddle.
+    func currentStreak(today: Int = PuzzleLibrary.dayNumber()) -> Int {
+        guard let last = defaults.object(forKey: Self.lastDailyDayKey) as? Int, last >= today - 1 else { return 0 }
+        return dailyStreak
+    }
+
+    private func extendStreak(today: Int) {
+        let last = defaults.object(forKey: Self.lastDailyDayKey) as? Int
+        if last == today { return }
+        dailyStreak = last == today - 1 ? dailyStreak + 1 : 1
+        defaults.set(dailyStreak, forKey: Self.streakKey)
+        defaults.set(today, forKey: Self.lastDailyDayKey)
     }
 
     /// The next unsolved puzzle of the same kind after `puzzle`, wrapping around; nil if all solved.

@@ -1,4 +1,4 @@
 title: richardforjoe apps
 description: Support and privacy pages for the apps in this repository.
 theme: jekyll-theme-minimal
-exclude: [PIPELINE.md, MONOREPO.md, DESIGN_PRINCIPLES.md]
+exclude: [PIPELINE.md, MONOREPO.md, DESIGN_PRINCIPLES.md, research]

@@ -130,6 +130,12 @@ final class JourneyProgress {
         return previous.opponents.allSatisfy { stars(for: $0) > 0 }
     }
 
+    /// Every opponent in the chapter has been beaten.
+    func isComplete(chapterIndex: Int) -> Bool {
+        guard let chapter = Journey.chapter(chapterIndex) else { return false }
+        return chapter.opponents.allSatisfy { stars(for: $0) > 0 }
+    }
+
     /// Every chapter is free; play is the only gate.
     func isUnlocked(chapterIndex: Int) -> Bool { isReached(chapterIndex: chapterIndex) }
 

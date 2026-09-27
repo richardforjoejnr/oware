@@ -201,6 +201,7 @@ final class GameSession {
     func advanceTutorial() {
         guard case let .tutorial(i) = mode else { return }
         if i + 1 < tutorialSteps.count { startTutorial(step: i + 1) }
+        if i + 1 == tutorialSteps.count - 1 { PlayerEvents.shared.lessonCompleted(rules: lessonVariant) }
     }
 
     /// Human taps a house (0–5 relative to the side to move).

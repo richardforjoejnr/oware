@@ -19,6 +19,8 @@ public final class TipJar {
     public private(set) var tipCount: Int
     /// Set for a few seconds after a tip so the view can say thank you.
     public private(set) var justTipped = false
+    /// The product of the most recent tip on this device (for a thank-you or analytics).
+    public private(set) var lastTippedProductID: String?
 
     private let defaults: UserDefaults
     private let countKey: String
@@ -73,6 +75,7 @@ public final class TipJar {
 
     private func handle(_ result: VerificationResult<Transaction>) async {
         guard case let .verified(transaction) = result, productIDs.contains(transaction.productID) else { return }
+        lastTippedProductID = transaction.productID
         record()
         await transaction.finish()
     }

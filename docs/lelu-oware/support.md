@@ -4,7 +4,7 @@ title: Lelu Oware — Support
 
 # Lelu Oware — Support
 
-Lelu Oware is a free game of Oware (Abapa rules) for iPhone and iPad, made in celebration of the
+Lelu Oware is a free game of Oware (Nam-Nam and Abapa rules) for iPhone and iPad, made in celebration of the
 people who carve the boards and the players who gather round them.
 
 ## Need help?

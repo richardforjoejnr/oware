@@ -2,6 +2,10 @@
 
 _Research note, 27 September 2026. Written for a solo indie developer before launch. Facts were checked against 2025–2026 sources, which are linked inline. Prices and quotas change, so check each vendor's page before you commit._
 
+**Audience note (owner, 27 Sep 2026):** the game is for anyone who likes Oware, worldwide, not only Ghana and the diaspora. Read the Ghana-specific points (pricing, community channels) as one market among several.
+
+**Decisions taken (27 Sep 2026):** free plus tips, no ads; online play to be a paid one-time unlock later, "the host pays"; Game Center, TelemetryDeck behind a toggle, and a website newsletter (Kit) are being built.
+
 **Short answer:** Launch free with tips. Add Game Center, App Store Connect analytics and one privacy-first analytics SDK that needs no consent prompt. Also add an `AppTransaction` check now, so any later paywall can grandfather early players. Put a newsletter link on the website rather than inside the app. Delay every other decision until real numbers arrive.
 
 ---

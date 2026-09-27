@@ -17,8 +17,11 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
     MARKETING_VERSION: "0.1.0"
+    # Keep build numbers plain increasing integers: StoreKit reports the first-installed build,
+    # which decides "founding player" status if anything is ever paid (see OnlineAccess.swift).
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: ${DEVELOPMENT_TEAM}
+    TELEMETRYDECK_APP_ID: ""
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
 packages:
@@ -26,6 +29,10 @@ packages:
     path: ../../packages/OwareEngine
   SupportKit:
     path: ../../packages/SupportKit
+  # Anonymous analytics (see Oware/Sources/Support/Analytics.swift and docs/lelu-oware/privacy.md).
+  TelemetryDeck:
+    url: https://github.com/TelemetryDeck/SwiftSDK
+    from: 2.14.2
 
 targets:
   Oware:
@@ -42,12 +49,21 @@ targets:
         product: OwareAI
       - package: SupportKit
         product: SupportKit
+      - package: TelemetryDeck
+        product: TelemetryDeck
+      - sdk: GameKit.framework
+    entitlements:
+      path: Oware/Oware.entitlements
+      properties:
+        com.apple.developer.game-center: true
     info:
       path: Oware/Info.plist
       properties:
         CFBundleDisplayName: Lelu Oware
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        # Set TELEMETRYDECK_APP_ID (e.g. in CI or a local xcconfig); empty leaves analytics off.
+        TelemetryDeckAppID: $(TELEMETRYDECK_APP_ID)
         UILaunchScreen:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]

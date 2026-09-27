@@ -1,49 +1,79 @@
 {
-  "identifier" : "LeluOwareTips",
-  "nonRenewingSubscriptions" : [],
-  "products" : [
+  "identifier": "LeluOwareTips",
+  "nonRenewingSubscriptions": [],
+  "products": [
     {
-      "displayPrice" : "0.99",
-      "familyShareable" : false,
-      "internalID" : "TIPSMALL0001",
-      "localizations" : [
-        { "description" : "A small thank-you to the maker.", "displayName" : "Small tip", "locale" : "en_GB" }
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "TIPSMALL0001",
+      "localizations": [
+        {
+          "description": "A small thank-you to the maker.",
+          "displayName": "Small tip",
+          "locale": "en_GB"
+        }
       ],
-      "productID" : "com.richardforjoe.oware.tip.small",
-      "referenceName" : "Tip (small)",
-      "type" : "Consumable"
+      "productID": "com.richardforjoe.oware.tip.small",
+      "referenceName": "Tip (small)",
+      "type": "Consumable"
     },
     {
-      "displayPrice" : "2.99",
-      "familyShareable" : false,
-      "internalID" : "TIPMEDIUM001",
-      "localizations" : [
-        { "description" : "A medium thank-you to the maker.", "displayName" : "Medium tip", "locale" : "en_GB" }
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "TIPMEDIUM001",
+      "localizations": [
+        {
+          "description": "A medium thank-you to the maker.",
+          "displayName": "Medium tip",
+          "locale": "en_GB"
+        }
       ],
-      "productID" : "com.richardforjoe.oware.tip.medium",
-      "referenceName" : "Tip (medium)",
-      "type" : "Consumable"
+      "productID": "com.richardforjoe.oware.tip.medium",
+      "referenceName": "Tip (medium)",
+      "type": "Consumable"
     },
     {
-      "displayPrice" : "4.99",
-      "familyShareable" : false,
-      "internalID" : "TIPLARGE0001",
-      "localizations" : [
-        { "description" : "A generous thank-you to the maker.", "displayName" : "Generous tip", "locale" : "en_GB" }
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "TIPLARGE0001",
+      "localizations": [
+        {
+          "description": "A generous thank-you to the maker.",
+          "displayName": "Generous tip",
+          "locale": "en_GB"
+        }
       ],
-      "productID" : "com.richardforjoe.oware.tip.large",
-      "referenceName" : "Tip (large)",
-      "type" : "Consumable"
+      "productID": "com.richardforjoe.oware.tip.large",
+      "referenceName": "Tip (large)",
+      "type": "Consumable"
+    },
+    {
+      "displayPrice": "3.99",
+      "familyShareable": true,
+      "internalID": "ONLINE000001",
+      "localizations": [
+        {
+          "description": "Play online and invite anyone; friends you invite play free.",
+          "displayName": "Play online",
+          "locale": "en_GB"
+        }
+      ],
+      "productID": "com.richardforjoe.oware.online",
+      "referenceName": "Online play (not live yet)",
+      "type": "NonConsumable"
     }
   ],
-  "settings" : {
-    "_applicationInternalID" : "0",
-    "_developerTeamID" : "",
-    "_failTransactionsEnabled" : false,
-    "_locale" : "en_GB",
-    "_storefront" : "GBR",
-    "_storeKitErrors" : []
+  "settings": {
+    "_applicationInternalID": "0",
+    "_developerTeamID": "",
+    "_failTransactionsEnabled": false,
+    "_locale": "en_GB",
+    "_storefront": "GBR",
+    "_storeKitErrors": []
   },
-  "subscriptionGroups" : [],
-  "version" : { "major" : 3, "minor" : 0 }
+  "subscriptionGroups": [],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
 }

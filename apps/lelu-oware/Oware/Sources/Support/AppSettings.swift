@@ -45,6 +45,15 @@ final class AppSettings {
         let chosen = LaunchOptions.rulesOverride ?? variant
         return RuleSet(variant: chosen, grandSlam: grandSlamRule)
     }
+    /// "Share anonymous usage stats": on by default, off stops every analytics signal at once.
+    var shareUsageStats: Bool {
+        didSet {
+            defaults.set(shareUsageStats, forKey: "shareUsageStats")
+            Analytics.shared.isEnabled = effectiveUsageStats
+        }
+    }
+    /// Test launches never send analytics.
+    var effectiveUsageStats: Bool { shareUsageStats && !testMode }
     /// Chosen board look (see `BoardTheme`).
     var boardThemeID: String {
         didSet { defaults.set(boardThemeID, forKey: "boardTheme") }
@@ -82,6 +91,7 @@ final class AppSettings {
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id
+        shareUsageStats = defaults.object(forKey: "shareUsageStats") as? Bool ?? true
     }
 
     /// Builds before 2026-09-24 leaked the test flags into saved preferences (instant sowing, sound
