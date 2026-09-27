@@ -1,16 +1,25 @@
 name: App Store Release
 
-# Publishing a GitHub Release (tag v1.2.3) uploads that build to App Store Connect.
-# Set SUBMIT_FOR_REVIEW=true in the workflow_dispatch input to also submit for review.
+# Uploads a signed build to App Store Connect for the App Store (not just TestFlight).
+#   - Publishing a GitHub Release tagged vX.Y uses X.Y as the app version.
+#   - Or run it by hand: Actions ▸ App Store Release ▸ Run workflow, give the version and choose
+#     whether to submit for review. The `production` environment can require your approval first.
+# The App Store text, screenshots, privacy answers and age rating are filled in App Store Connect.
 on:
   release:
     types: [published]
   workflow_dispatch:
     inputs:
+      version:
+        description: "App version, e.g. 1.0 (must match the version open in App Store Connect; empty = project.yml)"
+        type: string
+        required: false
       submit_for_review:
-        description: "Submit the build for App Review"
+        description: "Also submit for App Review (otherwise the build waits in App Store Connect)"
         type: boolean
         default: false
+
+run-name: ${{ github.event_name == 'release' && format('App Store {0}', github.ref_name) || format('App Store {0}{1}', inputs.version || 'project version', inputs.submit_for_review && ' + submit' || '') }}
 
 concurrency:
   group: release
@@ -36,12 +45,18 @@ jobs:
           bundler-cache: true
       - name: Install tools
         run: brew install xcodegen xcbeautify
-      - name: Set marketing version from tag
-        if: github.event_name == 'release'
+      - name: Set the app version (from the tag or the manual input)
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
-          echo "Marketing version set to $VERSION"
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then VERSION="${GITHUB_REF_NAME#v}"; else VERSION="$INPUT_VERSION"; fi
+          if [ -n "$VERSION" ]; then
+            echo "$VERSION" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}$' || { echo "Version must look like 1.0 or 1.0.1, got '$VERSION'"; exit 1; }
+            sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
+          fi
+          echo "App version: $(grep MARKETING_VERSION project.yml | head -1)"
+      - name: App Store readiness checks
+        run: python3 ../../scripts/release_readiness.py apps/lelu-oware
       - name: Upload to App Store Connect
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
