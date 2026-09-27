@@ -8,7 +8,7 @@ final class HomeScreenUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--reset-state", "--fast-animations"]
+        app.launchArguments = ["--reset-state", "--fast-animations", "--rules=abapa"]
         app.launch()
     }
 
@@ -141,16 +141,42 @@ final class HomeScreenUITests: XCTestCase {
     }
 
     @MainActor
+    func testNamNamIsTheDefaultAndSowingRelays() throws {
+        app.terminate()
+        app.launchArguments = ["--reset-state", "--fast-animations"]   // no rules pin: the shipped default
+        app.launch()
+        XCTAssertTrue(app.staticTexts["home-title"].waitForExistence(timeout: 5))
+        openMore()
+        app.buttons["btn-pass-play"].tap()
+        let a1 = app.buttons["house-A1"]
+        XCTAssertTrue(a1.waitForExistence(timeout: 5))
+        a1.tap()
+        let done = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "B to move"), object: app.staticTexts["turn-indicator"])
+        XCTAssertEqual(XCTWaiter().wait(for: [done], timeout: 8), .completed)
+        // Under Nam-Nam the four seeds from A1 land in A5 (which held four) and are carried on, so
+        // A5 is not simply 5 as it would be under Abapa; and 48 seeds are still on the board or in stores.
+        XCTAssertNotEqual(app.buttons["house-A5"].value as? String, "5 seeds")
+        var total = 0
+        for id in ["A1", "A2", "A3", "A4", "A5", "A6", "B1", "B2", "B3", "B4", "B5", "B6"] {
+            total += Int((app.buttons["house-\(id)"].value as? String ?? "0").split(separator: " ").first ?? "0") ?? 0
+        }
+        for id in ["store-A", "store-B"] {
+            total += Int((app.otherElements[id].value as? String ?? "0").split(separator: " ").first ?? "0") ?? 0
+        }
+        XCTAssertEqual(total, 48)
+    }
+
+    @MainActor
     func testDifficultyCanBeChangedMidGame() throws {
         app.buttons["btn-play-ai"].tap()
         XCTAssertTrue(app.buttons["house-A1"].waitForExistence(timeout: 5))
         let title = app.buttons["btn-mode-title"]
         XCTAssertTrue(title.exists)
-        XCTAssertTrue(title.label.contains("Learner"))
+        XCTAssertTrue(title.label.contains("Novice"))
         title.tap()
-        XCTAssertTrue(app.buttons["game-level-strong"].waitForExistence(timeout: 3))
-        app.buttons["game-level-strong"].tap()
-        let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Strong"), object: title)
+        XCTAssertTrue(app.buttons["game-level-strategist"].waitForExistence(timeout: 3))
+        app.buttons["game-level-strategist"].tap()
+        let changed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Strategist"), object: title)
         XCTAssertEqual(XCTWaiter().wait(for: [changed], timeout: 5), .completed)
         XCTAssertEqual(app.buttons["house-A1"].value as? String, "4 seeds", "the position is kept")
     }
@@ -158,8 +184,8 @@ final class HomeScreenUITests: XCTestCase {
     @MainActor
     func testPlayingAgainstTheAIGetsAReply() throws {
         app.buttons["btn-level"].tap()
-        XCTAssertTrue(app.buttons["level-beginner"].waitForExistence(timeout: 3))
-        app.buttons["level-beginner"].tap()
+        XCTAssertTrue(app.buttons["level-novice"].waitForExistence(timeout: 3))
+        app.buttons["level-novice"].tap()
         app.buttons["btn-play-ai"].tap()
         let a3 = app.buttons["house-A3"]
         XCTAssertTrue(a3.waitForExistence(timeout: 5))

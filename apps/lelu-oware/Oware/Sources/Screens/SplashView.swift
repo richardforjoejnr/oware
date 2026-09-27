@@ -1,14 +1,15 @@
 import SwiftUI
 
-/// The opening: the carved Ghana map, the title, a quiet loading line. About a second and a
-/// half, then the menu. Skipped in test launches and cut short under Reduce Motion.
+/// The opening: the carved Ghana map, the title, a quiet loading line. About three seconds, then
+/// the menu; a tap skips it. Reduce Motion keeps the length but drops the title's slide-in.
 struct SplashView: View {
     let finished: () -> Void
     @State private var progress: CGFloat = 0
     @State private var titleShown = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static let duration: Duration = .milliseconds(2200)
+    static let duration: Duration = .milliseconds(2800)
+    @State private var done = false
 
     var body: some View {
         ZStack {
@@ -38,7 +39,7 @@ struct SplashView: View {
                     .foregroundStyle(Theme.bone)
                     .shadow(color: Theme.night.opacity(0.9), radius: 14, y: 4)
                     .opacity(titleShown ? 1 : 0)
-                    .offset(y: titleShown ? 0 : 8)
+                    .offset(y: titleShown || reduceMotion ? 0 : 8)
                     .accessibilityIdentifier("splash-title")
                 Text("Ghana's game")
                     .font(Theme.caption(15))
@@ -58,12 +59,22 @@ struct SplashView: View {
             }
             .padding(.bottom, 64)
         }
+        .contentShape(Rectangle())
+        .onTapGesture { finish() }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint("Tap to skip")
         .task {
-            let total = reduceMotion ? Duration.milliseconds(500) : Self.duration
+            let total = Self.duration
             withAnimation(.easeOut(duration: 0.5)) { titleShown = true }
             withAnimation(.linear(duration: Double(total.components.seconds) + Double(total.components.attoseconds) / 1e18)) { progress = 1 }
             try? await Task.sleep(for: total)
-            finished()
+            finish()
         }
+    }
+
+    private func finish() {
+        guard !done else { return }
+        done = true
+        finished()
     }
 }

@@ -67,14 +67,14 @@ public enum Evaluation {
         var score = weights.store * (state.store(of: player) - state.store(of: opponent))
 
         var material = 0, mobility = 0, vulnerability = 0, kroo = 0, empty = 0
-        for house in player.houseRange {
+        for house in state.houses(of: player) {
             let n = state.houses[house]
             material += n
             if n > 0 { mobility += 1 } else { empty -= 1 }
             if n == 1 || n == 2 { vulnerability -= 1 }
             if n >= 12 { kroo += 1 }
         }
-        for house in opponent.houseRange {
+        for house in state.houses(of: opponent) {
             let n = state.houses[house]
             material -= n
             if n > 0 { mobility -= 1 } else { empty += 1 }

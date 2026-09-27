@@ -1,4 +1,5 @@
 import SwiftUI
+import OwareEngine
 import SupportKit
 
 @main
@@ -63,7 +64,7 @@ enum LaunchOptions {
     static var resetState: Bool { flag("--reset-state", defaultsKey: "resetState") }
     /// `--fast-animations` / `-fastAnimations YES`: instant, silent, no splash (UI tests).
     static var fastAnimations: Bool { flag("--fast-animations", defaultsKey: "fastAnimations") }
-    /// `--start-game` / `-startGame YES`: open straight onto a new game against the Learner.
+    /// `--start-game` / `-startGame YES`: open straight onto a new game at Casual level.
     static var startGame: Bool { flag("--start-game", defaultsKey: "startGame") }
     /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (animation checks).
     static var demoMove: Bool { flag("--demo-move") }
@@ -71,4 +72,13 @@ enum LaunchOptions {
     static var startScreen: String? { value("--screen=") }
     /// `--demo-stores=N`: with `--start-game`, put N seeds in each store and scatter the rest.
     static var demoStores: Int? { value("--demo-stores=").flatMap(Int.init) }
+    /// `--rules=abapa|namnam` / `-rules abapa`: pin the variant for a test run (not persisted).
+    static var rulesOverride: RuleSet.Variant? {
+        let raw = value("--rules=") ?? (enabled ? UserDefaults.standard.string(forKey: "rules") : nil)
+        switch raw?.lowercased() {
+        case "abapa": return .abapa
+        case "namnam", "nam-nam": return .namNam
+        default: return nil
+        }
+    }
 }

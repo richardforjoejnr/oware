@@ -71,7 +71,7 @@ struct RootView: View {
             default: break
             }
             if LaunchOptions.startGame, screen == .home {
-                session.newGame(.versusAI(difficulty: .learner, personality: .balanced, humanPlays: .south))
+                session.newGame(.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south))
                 screen = .game
                 #if DEBUG
                 if let n = LaunchOptions.demoStores {

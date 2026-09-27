@@ -135,6 +135,8 @@ final class GameSession {
         case .noLegalMoves: " — no moves left"
         case .grandSlam: " — grand slam"
         case .agreement: " — by agreement"
+        case .territory: " — every house is theirs"
+        case .roundLimit: " — on houses held after the last round"
         }
     }
 
@@ -146,6 +148,7 @@ final class GameSession {
         state = .initial(rules: rules)
         history = []
         previewMove = nil
+        roundMessage = nil
         puzzleAttempt = nil
         tutorialStepDone = false
         isThinking = false
@@ -193,9 +196,13 @@ final class GameSession {
     }
 
     /// Human taps a house (0–5 relative to the side to move).
+    /// Nam-Nam: set for a few seconds after a round ends, for the board to show as a hint.
+    var roundMessage: String?
+
+    /// `house` is the absolute board index 0–11.
     func play(house: Int) {
         guard humanToMove else { return }
-        let move = Move(player: state.sideToMove, house: house)
+        let move = Move(player: state.sideToMove, absoluteHouse: house)
         guard state.isLegal(move) else { return }
         if let puzzle = currentPuzzle {
             if puzzle.isSolved(by: move) {
@@ -220,7 +227,8 @@ final class GameSession {
     /// Why a house cannot be played right now, for a quiet hint. Nil if it can.
     func reasonHouseIsBlocked(_ house: Int) -> String? {
         guard !state.isOver else { return nil }
-        let move = Move(player: state.sideToMove, house: house)
+        let move = Move(player: state.sideToMove, absoluteHouse: house)
+        if state.owner(of: house) != state.sideToMove { return state.rules.variant == .namNam ? "That house is theirs this round" : "Not your house" }
         if state.houses[move.absoluteIndex] == 0 { return "Empty house" }
         if let step = currentTutorialStep, let required = step.requiredMove, move != required {
             return "Try \(required.notation) for this step"
@@ -286,7 +294,9 @@ final class GameSession {
     func resign() {
         guard !state.isOver else { return }
         aiTask?.cancel()
-        _ = state.endByAgreement()
+        // Resigning ends the whole game (in Nam-Nam, not just the round): the other side wins.
+        let loser = mode.aiSide?.opponent ?? state.sideToMove
+        state.outcome = .win(loser.opponent, .agreement)
         persist()
         animator?.render(state)
     }
@@ -325,6 +335,9 @@ final class GameSession {
         history.append(before)
         state = result.state
         previewMove = nil
+        if let round = result.events.compactMap({ if case let .roundOver(r) = $0 { return r } else { return nil } }).last {
+            roundMessage = Self.describe(round, in: mode)
+        }
         persist()
         isAnimating = true
         if let animator {
@@ -332,6 +345,23 @@ final class GameSession {
         }
         isAnimating = false
         scheduleAIIfNeeded()
+    }
+
+    /// "Round 1: you 28, Nana 20 — you gain a house"
+    static func describe(_ round: RoundResult, in mode: GameMode) -> String {
+        let you = mode.aiSide?.opponent ?? .south
+        let mine = you == .south ? round.southSeeds : round.northSeeds
+        let theirs = you == .south ? round.northSeeds : round.southSeeds
+        let myHouses = you == .south ? round.southHouses : round.northHouses
+        let gained = myHouses - 6
+        let change: String
+        if case .passAndPlay = mode {
+            let ahead = round.southHouses - 6
+            change = ahead == 0 ? "houses stay as they were" : (ahead > 0 ? "A gains \(ahead) house\(ahead == 1 ? "" : "s")" : "B gains \(-ahead) house\(ahead == -1 ? "" : "s")")
+            return "Round \(round.round): A \(round.southSeeds), B \(round.northSeeds) — \(change)"
+        }
+        change = gained == 0 ? "no houses change hands" : (gained > 0 ? "you now hold \(myHouses) houses" : "you hold \(myHouses) houses")
+        return "Round \(round.round): you \(mine), them \(theirs) — \(change)"
     }
 
     private func scheduleAIIfNeeded() {

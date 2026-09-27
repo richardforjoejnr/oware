@@ -4,6 +4,23 @@
 > `../../docs/PIPELINE.md` (repo root). Resume from "In flight" below. Paths in this file are relative to
 > `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-26.
 
+## Latest (2026-09-27): Nam-Nam rules, PR #21
+
+Splash: 2.8 s, tap to skip; Reduce Motion no longer shortens it (the owner has Reduce Motion on and found it too fast).
+
+
+The owner plays Nam-Nam and asked for it as the **default**. `RuleSet.Variant` = `.namNam` (default for
+new AI and Pass & Play games) or `.abapa` (Settings ▸ Rules; Journey, riddles and the lesson always use
+Abapa). Nam-Nam in `GameState`: relay sowing (last seed in a non-empty house → scoop and carry on, each
+lap skipping its own origin); a house reaching four is captured by its owner at any point, or by the
+sower on the opponent's side only with the last seed; when a capture leaves four seeds (board + hand)
+the capturer takes them and the round ends; seeds won become houses next round (contiguous from A1;
+spare house to larger remainder, then last capturer, then more seeds); one player holding all twelve
+wins (cap 20 rounds). Ownership is per-house `territory`; `Move` carries an absolute house. Board rings
+houses held across the row; a banner reports each round; Heritage has the rules and Twi etymology.
+Tests: `NamNamTests` (13) plus the Abapa suites; count-asserting e2e/XCUI/Maestro pin `--rules=abapa`.
+PRs #15–#20 are merged (#20 fixed the Pages build: `_site` was root-owned after the Jekyll container).
+
 ## Where things are
 
 - **Branch:** `chore/scaffold-project` → **PR #1** https://github.com/richardforjoejnr/oware/pull/1

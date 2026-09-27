@@ -15,6 +15,10 @@ public enum GameEndReason: String, Sendable, Codable, Hashable {
     case grandSlam
     /// Both players agreed to stop; each kept the seeds on their side.
     case agreement
+    /// Nam-Nam: one player owns every house.
+    case territory
+    /// Nam-Nam: the round cap was reached; more houses wins.
+    case roundLimit
 }
 
 public enum GameOutcome: Sendable, Codable, Hashable {

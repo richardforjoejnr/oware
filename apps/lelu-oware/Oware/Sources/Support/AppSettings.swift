@@ -36,7 +36,15 @@ final class AppSettings {
     var grandSlamRule: RuleSet.GrandSlamRule {
         didSet { defaults.set(grandSlamRule.rawValue, forKey: "grandSlamRule") }
     }
-    var rules: RuleSet { RuleSet(grandSlam: grandSlamRule) }
+    /// Which game new games use: Nam-Nam (the owner's default) or tournament Abapa. Journey,
+    /// riddles and the lesson always use Abapa. Test launches can pin a variant with `--rules=`.
+    var variant: RuleSet.Variant {
+        didSet { defaults.set(variant.rawValue, forKey: "rulesVariant") }
+    }
+    var rules: RuleSet {
+        let chosen = LaunchOptions.rulesOverride ?? variant
+        return RuleSet(variant: chosen, grandSlam: grandSlamRule)
+    }
     /// Chosen board look (see `BoardTheme`).
     var boardThemeID: String {
         didSet { defaults.set(boardThemeID, forKey: "boardTheme") }
@@ -59,6 +67,8 @@ final class AppSettings {
     var effectiveHaptics: Bool { hapticsEnabled && !testMode }
 
     private let defaults: UserDefaults
+    /// The backing store, for tests that re-open settings.
+    var defaultsForTesting: UserDefaults { defaults }
 
     init(defaults: UserDefaults = .standard, testMode: Bool = LaunchOptions.fastAnimations) {
         self.defaults = defaults
@@ -70,6 +80,7 @@ final class AppSettings {
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
         showSeedCounts = defaults.object(forKey: "showSeedCounts") as? Bool ?? true
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
+        variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id
     }
 

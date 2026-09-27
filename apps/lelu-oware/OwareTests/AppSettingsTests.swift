@@ -21,6 +21,14 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.animationSpeed, .normal, "the player's own preference is untouched")
     }
 
+    func testNamNamIsTheDefaultRuleSetForNewGames() {
+        let settings = AppSettings(defaults: freshDefaults(), testMode: false)
+        XCTAssertEqual(settings.variant, .namNam)
+        XCTAssertEqual(settings.rules.variant, .namNam)
+        settings.variant = .abapa
+        XCTAssertEqual(AppSettings(defaults: settings.defaultsForTesting, testMode: false).variant, .abapa, "the choice persists")
+    }
+
     func testNormalLaunchPlaysAtChosenSpeedWithSoundAndHaptics() {
         let settings = AppSettings(defaults: freshDefaults(), testMode: false)
         XCTAssertEqual(settings.effectiveSpeed, 1.0)

@@ -64,9 +64,8 @@ struct BoardView: View {
 
     @ViewBuilder
     private func houseHitArea(_ index: Int, layout: BoardLayout) -> some View {
-        let owner: Player = Player.south.owns(index) ? .south : .north
-        let relative = index - owner.houseRange.lowerBound
-        let notation = "\(owner.label)\(relative + 1)"
+        let owner = session.state.owner(of: index)
+        let notation = "\(index < 6 ? "A" : "B")\(index % 6 + 1)"
         let seeds = session.state.houses[index]
         let center = layout.houseCenter(index)
         let isTurn = session.state.sideToMove == owner && !session.state.isOver
@@ -79,20 +78,20 @@ struct BoardView: View {
             .onTapGesture {
                 scene.press(house: index)
                 guard isTurn else { return }
-                if let reason = session.reasonHouseIsBlocked(relative) {
+                if let reason = session.reasonHouseIsBlocked(index) {
                     onBlockedTap?(reason)
                 } else {
-                    session.play(house: relative)
+                    session.play(house: index)
                 }
             }
             .onLongPressGesture(minimumDuration: 0.3, maximumDistance: 30, perform: {}, onPressingChanged: { pressing in
                 guard isTurn, session.humanToMove else { return }
-                session.previewMove = pressing ? Move(player: owner, house: relative) : nil
+                session.previewMove = pressing ? Move(player: owner, absoluteHouse: index) : nil
             })
             .accessibilityElement()
             .accessibilityAddTraits(.isButton)
             .accessibilityIdentifier("house-\(notation)")
-            .accessibilityLabel("House \(notation)")
+            .accessibilityLabel(owner == (index < 6 ? .south : .north) ? "House \(notation)" : "House \(notation), \(owner == .south ? "yours" : "theirs") this round")
             .accessibilityValue("\(seeds) seeds")
             .accessibilityHint(isTurn ? "Sow these seeds" : "")
     }

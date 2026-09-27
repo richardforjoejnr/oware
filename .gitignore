@@ -36,3 +36,6 @@ vendor/bundle/
 *.mobileprovision
 .env
 .env.*
+
+# Claude Code agent worktrees
+.claude/worktrees/

@@ -21,6 +21,11 @@ struct PositionKey: Hashable {
         for i in 0..<6 { lo |= UInt64(state.houses[i] & 0x3F) << (6 * i) }
         for i in 6..<12 { hi |= UInt64(state.houses[i] & 0x3F) << (6 * (i - 6)) }
         hi |= UInt64(state.sideToMove.rawValue) << 40
+        // Nam-Nam: the same seeds mean different things with different territory or round.
+        var owners: UInt64 = 0
+        for i in 0..<12 where state.territory[i] == .north { owners |= 1 << UInt64(i) }
+        hi |= owners << 41
+        hi |= UInt64(min(state.round, 31)) << 53
         // Stores matter for terminal detection at the win threshold.
         lo |= UInt64(state.stores[0] & 0x3F) << 40
         lo |= UInt64(state.stores[1] & 0x3F) << 48
@@ -70,7 +75,13 @@ struct Searcher {
                 if next.isOver {
                     score = Evaluation.score(next, for: root.sideToMove, weights: weights, ply: 1)
                 } else {
-                    score = -negamax(next, depth: depth - 1, ply: 1, alpha: -beta, beta: -alpha)
+                    // Nam-Nam can give the same player another move (feeding, or starting the
+                    // next round); only negate when the turn actually passes.
+                    if next.sideToMove == root.sideToMove {
+                        score = negamax(next, depth: depth - 1, ply: 1, alpha: alpha, beta: beta)
+                    } else {
+                        score = -negamax(next, depth: depth - 1, ply: 1, alpha: -beta, beta: -alpha)
+                    }
                 }
                 if aborted { break }
                 if iterationBest == nil || score > iterationBest!.score { iterationBest = (move, score) }

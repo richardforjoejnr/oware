@@ -15,12 +15,12 @@ struct HomeView: View {
     let openJourney: () -> Void
     let openSettings: () -> Void
 
-    @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.learner.rawValue
+    @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
     @AppStorage("tutorialSeen") private var tutorialSeen = false
     @State private var showMore = false
     @State private var showLevels = false
 
-    private var difficulty: Difficulty { Difficulty(rawValue: preferredDifficulty) ?? .learner }
+    private var difficulty: Difficulty { (Difficulty(rawValue: preferredDifficulty) ?? .beginner).menuLevel }
 
     var body: some View {
         ZStack {
@@ -45,7 +45,7 @@ struct HomeView: View {
                         HStack(alignment: .center, spacing: 40) {
                             VStack(spacing: 18) {
                                 titleBlock
-                                Text("Oware · Abapa rules · a game of Ghana")
+                                Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
                                     .font(Theme.caption())
                                     .foregroundStyle(Theme.ivoryDim)
                             }
@@ -63,7 +63,7 @@ struct HomeView: View {
                             titleBlock
                                 .padding(.bottom, 36)
                             controls
-                            Text("Oware · Abapa rules · a game of Ghana")
+                            Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
                                 .font(Theme.caption())
                                 .foregroundStyle(Theme.ivoryDim)
                                 .padding(.top, 30)
@@ -149,12 +149,14 @@ struct HomeView: View {
             if showLevels {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 18) {
-                        ForEach(Difficulty.allCases, id: \.rawValue) { level in
+                        ForEach(Difficulty.menuLevels, id: \.rawValue) { level in
                             Button {
                                 preferredDifficulty = level.rawValue
                                 showLevels = false
                             } label: {
                                 Text(level.displayName)
+                        .lineLimit(1)
+                        .fixedSize()
                                     .font(.subheadline.weight(level == difficulty ? .semibold : .regular))
                                     .foregroundStyle(level == difficulty ? Theme.brass : Theme.ivoryDim)
                                     .frame(minHeight: 32)
