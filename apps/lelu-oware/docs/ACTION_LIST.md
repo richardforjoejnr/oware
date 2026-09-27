@@ -62,7 +62,8 @@ the first time. TestFlight needs the paid membership.
 - [ ] **Tips:** three consumable in-app purchases, exactly as in APP_STORE.md. Add the review note.
 - [ ] **App Privacy label:** as in SERVICES.md section 5. Privacy policy URL:
       https://richardforjoejnr.github.io/oware/lelu-oware/privacy
-- [ ] **TelemetryDeck App ID** into `project.yml` (`TELEMETRYDECK_APP_ID`), then `make project`.
+- [x] **TelemetryDeck App ID** into `project.yml` (done 27 Sep 2026). Use the analytics answers
+      for the privacy label below.
 - [ ] **Age rating** questionnaire (expect 4+). Category **Games ▸ Board**.
 
 ## Stage 3: TestFlight (share with family and friends)
