@@ -37,13 +37,16 @@ struct GameView: View {
                 .ignoresSafeArea()
             // The board takes the whole width; the two thin bars float over its ends.
             VStack(spacing: 0) {
+                // The bars around the board have a fixed height: let their text grow a little, not a lot.
                 topBar
+                    .dynamicTypeSize(...DynamicTypeSize.xLarge)
                 if showLevels, session.canChangeDifficulty {
                     levelRow
                         .transition(.opacity)
                 }
                 BoardView(onBlockedTap: { showHint($0) })
                 bottomBar
+                    .dynamicTypeSize(...DynamicTypeSize.xLarge)
             }
             if session.isGameOver && session.mode.isResumable {
                 GameOverOverlay(goHome: goHome, goToJourney: goToJourney)
@@ -195,7 +198,7 @@ struct GameView: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {
                     Text(session.opponentName)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(Theme.sans(15, weight: .semibold, relativeTo: .subheadline))
                         .foregroundStyle(Theme.ivory)
                     kenteMark(active: active)
                     if chevron {
@@ -311,14 +314,14 @@ struct GameView: View {
                 }
                 ZStack(alignment: .trailing) {
                     Text(session.turnDescription)
-                        .font(.system(size: 16, weight: .medium, design: .serif))
+                        .font(Theme.serifText(16, weight: .medium, relativeTo: .callout))
                         .foregroundStyle(session.humanToMove ? Theme.ivory : Theme.ivoryDim)
                         .multilineTextAlignment(.trailing)
                         .accessibilityIdentifier("turn-indicator")
                         .opacity(hint == nil ? 1 : 0)
                     if let hint {
                         Text(hint)
-                            .font(.system(size: 15, weight: .medium, design: .serif))
+                            .font(Theme.serifText(15, weight: .medium, relativeTo: .subheadline))
                             .foregroundStyle(Theme.gold)
                             .multilineTextAlignment(.trailing)
                             .transition(.opacity)
@@ -380,7 +383,7 @@ struct GameView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 5) {
                     Text(name)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(Theme.sans(15, weight: .semibold, relativeTo: .subheadline))
                         .foregroundStyle(Theme.ivory)
                     kenteMark(active: active)
                 }
@@ -408,14 +411,14 @@ struct GameView: View {
                 } else {
                     Text("Goal: \(puzzle.target) seeds")
                         .font(Theme.caption())
-                        .foregroundStyle(Theme.ivoryDim)
+                        .foregroundStyle(Theme.onPhoto)
                         .accessibilityIdentifier("puzzle-goal")
                     if case .wrong = session.puzzleAttempt {
                         smallButton("Reset", id: "btn-retry") { session.retryPuzzle() }
                     }
                 }
             }
-            .frame(height: 32)
+            .frame(minHeight: 32)
         } else if let step = session.currentTutorialStep, case let .tutorial(index) = session.mode {
             VStack(spacing: 8) {
                 if session.tutorialStepDone, let after = step.afterText {
@@ -434,6 +437,8 @@ struct GameView: View {
                                 .frame(width: 6, height: 6)
                         }
                     }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
                     .accessibilityElement()
                     .accessibilityLabel("Step \(index + 1) of \(session.tutorialSteps.count)")
                     .accessibilityIdentifier("tutorial-progress")
@@ -447,7 +452,7 @@ struct GameView: View {
                         }
                     }
                 }
-                .frame(height: 32)
+                .frame(minHeight: 32)
             }
         }
     }
@@ -458,7 +463,7 @@ struct GameView: View {
                 .font(Theme.body(17))
                 .foregroundStyle(prominent ? Theme.gold : Theme.ivoryDim)
                 .padding(.horizontal, 6)
-                .frame(height: 32)
+                .frame(minHeight: 32)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

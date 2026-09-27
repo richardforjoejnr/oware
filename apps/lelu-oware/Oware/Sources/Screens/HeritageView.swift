@@ -26,11 +26,14 @@ struct HeritageView: View {
                 Spacer()
                 HStack(spacing: 22) {
                     ForEach(Tab.allCases) { t in
-                        Button(t.rawValue) { tab = t }
+                        Button { tab = t } label: {
+                            Text(t.rawValue).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+                        }
                             .buttonStyle(.plain)
                             .font(Theme.caption(15))
                             .foregroundStyle(tab == t ? Theme.gold : Theme.ivoryDim)
                             .underline(tab == t, color: Theme.gold)
+                            .accessibilityAddTraits(tab == t ? .isSelected : [])
                             .accessibilityIdentifier("tab-\(t.rawValue.lowercased())")
                     }
                 }

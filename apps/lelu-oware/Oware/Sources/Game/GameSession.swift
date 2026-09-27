@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 import OwareEngine
 import OwareAI
 
@@ -376,7 +377,60 @@ final class GameSession {
             await animator.animate(events: result.events, from: before, to: result.state)
         }
         isAnimating = false
+        Self.announce(Self.announcement(for: move, events: result.events, after: result.state, mode: mode, opponentName: opponentName))
         scheduleAIIfNeeded()
+    }
+
+    // MARK: - VoiceOver
+
+    /// What VoiceOver says once a move has finished on the board: who played where, what was
+    /// taken, how a round or the game ended, and whose turn it is.
+    static func announcement(for move: Move, events: [MoveEvent], after: GameState, mode: GameMode, opponentName: String) -> String {
+        func name(_ p: Player) -> String {
+            if case .passAndPlay = mode { return p.label }
+            if case .puzzle = mode { return "You" }
+            if case .tutorial = mode { return "You" }
+            return p == mode.aiSide ? opponentName : "You"
+        }
+        var taken = [0, 0]
+        for case let .capture(_, seeds, by) in events { taken[by.rawValue] += seeds }
+        let mover = move.player
+        var parts = ["\(name(mover)) played \(move.notation)"]
+        if taken[mover.rawValue] > 0 { parts[0] += " and took \(taken[mover.rawValue]) seeds" }
+        if taken[mover.opponent.rawValue] > 0 { parts.append("\(name(mover.opponent)) got \(taken[mover.opponent.rawValue])") }
+        if let round = events.compactMap({ if case let .roundOver(r) = $0 { return r } else { return nil } }).last {
+            parts.append(describe(round, previous: after.roundHistory.dropLast().last, in: mode))
+        }
+        if let outcome = after.outcome {
+            parts.append(describe(outcome, mode: mode))
+        } else if case .versusAI = mode, after.sideToMove != mode.aiSide {
+            parts.append("Your move")
+        } else if case .journey = mode, after.sideToMove != mode.aiSide {
+            parts.append("Your move")
+        } else if case .passAndPlay = mode {
+            parts.append("\(after.sideToMove.label) to move")
+        }
+        return parts.joined(separator: ". ") + "."
+    }
+
+    /// Spoken for the "Preview this move" action.
+    static func previewDescription(_ preview: MovePreview) -> String {
+        let landing = Move(player: preview.move.player, absoluteHouse: preview.landingHouse).notation
+        let taking = preview.capturedSeeds > 0 ? "takes \(preview.capturedSeeds) seeds" : "takes nothing"
+        let forfeit = preview.grandSlamForfeited ? ", but the grand slam is forfeited" : ""
+        return "\(preview.move.notation): last seed lands in \(landing), \(taking)\(forfeit)."
+    }
+
+    /// Speaks now (for an action the player just asked for).
+    static func speak(_ text: String) {
+        UIAccessibility.post(notification: .announcement, argument: text)
+    }
+
+    /// Queued so one announcement does not cut off the previous one.
+    private static func announce(_ text: String) {
+        guard UIAccessibility.isVoiceOverRunning else { return }
+        let queued = NSAttributedString(string: text, attributes: [.accessibilitySpeechQueueAnnouncement: true])
+        UIAccessibility.post(notification: .announcement, argument: queued)
     }
 
     /// "Round 1: you 28, Nana 20 — you gain a house"

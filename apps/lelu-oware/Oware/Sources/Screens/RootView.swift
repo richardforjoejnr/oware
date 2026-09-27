@@ -65,6 +65,8 @@ struct RootView: View {
                 .presentationBackground(Theme.ember)
         }
         .statusBarHidden(true)
+        // Text grows with the reader's setting, up to a size the layouts still hold.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         // Riddles follow the rules chosen in Settings.
         .onChange(of: settings.variant) { library.variant = settings.rules.variant }
         .onAppear {
