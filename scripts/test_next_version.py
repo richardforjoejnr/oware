@@ -32,8 +32,22 @@ class NextVersionTests(unittest.TestCase):
         self.assertEqual(bump("1.2.3", [("feat!: online play", "")]), "2.0.0")
         self.assertEqual(bump("1.2.3", [("refactor: saves", "BREAKING CHANGE: old saves reset")]), "2.0.0")
 
+    def test_breaking_change_with_a_hyphen(self):
+        self.assertEqual(bump("1.2.3", [("fix: saves", "BREAKING-CHANGE: old saves reset")]), "2.0.0")
+        self.assertEqual(bump("1.2.3", [("docs: tidy", "BREAKING-CHANGE: links moved")]), "2.0.0")
+
     def test_titles_without_the_convention_count_as_a_patch(self):
         self.assertEqual(bump("1.2.3", [("Accessibility: VoiceOver", "")]), "1.2.4")
+
+    def test_capitalised_types_from_before_the_convention(self):
+        old = [("Docs: App Store text up to date", ""), ("CI signing: profile for the app target", "")]
+        self.assertEqual(bump("1.2.3", old[:1]), "1.2.3", "Docs: is still docs")
+        self.assertEqual(bump("1.2.3", [("Feat: journey", "")]), "1.3.0")
+        text = notes(old + [("Accessibility: VoiceOver", ""), ("Fix: rings", "")])
+        self.assertNotIn("App Store text", text)
+        self.assertIn("Fixed:\n- Rings", text)
+        self.assertIn("- CI signing: profile for the app target", text, "unknown types keep the whole title")
+        self.assertIn("- Accessibility: VoiceOver", text)
 
     def test_notes_group_by_kind(self):
         text = notes([("feat: riddle streak", ""), ("fix(board): rings", ""), ("refactor: saves", ""), ("chore: tidy", "")])

@@ -2,7 +2,9 @@ name: PR title
 
 # PR titles become the merge commit's message and decide the next version (scripts/next_version.py):
 #   feat: … → new minor version    fix: / perf: / refactor: / build: / revert: … → patch
-#   feat!: … or a "BREAKING CHANGE" note → new major version
+#   feat!: … (any type with "!") → new major version. Mark breaking changes in the title: merges use
+#     the PR title as the merge commit message, so a "BREAKING CHANGE" note in the PR description is
+#     never seen.
 #   docs: / chore: / ci: / test: / style: … → no new version and not in the release notes
 on:
   pull_request:

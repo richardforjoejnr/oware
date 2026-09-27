@@ -21,6 +21,18 @@ class ReleaseNotesPageTests(unittest.TestCase):
         self.assertIn("_2 November 2026_", page)
         self.assertNotIn("Not ours", page)
 
+    def test_only_releases_named_app_and_version(self):
+        releases = [
+            {"name": "Lelu Oware 1.2.0", "tag_name": "v1.2.0", "published_at": "2026-10-01T10:00:00Z", "body": "New:\n- Kept"},
+            {"name": "v1.3.0", "tag_name": "v1.3.0", "published_at": "2026-10-02T10:00:00Z", "body": "New:\n- Tag-only name"},
+            {"name": "Lelu Oware Extras 2.0.0", "tag_name": "x2", "published_at": "2026-10-03T10:00:00Z", "body": "New:\n- Another app"},
+            {"name": "Lelu Oware 1.4.0", "tag_name": "v1.4.0", "draft": True, "body": "New:\n- Draft"},
+        ]
+        page = render(releases, "Lelu Oware", "lelu-oware")
+        self.assertIn("## 1.2.0", page)
+        for missing in ("Tag-only name", "Another app", "Draft"):
+            self.assertNotIn(missing, page)
+
 
 if __name__ == "__main__":
     unittest.main()

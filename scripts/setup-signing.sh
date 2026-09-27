@@ -76,4 +76,4 @@ gh secret set MATCH_PASSWORD -R "$REPO" --body "$MATCH_PASSWORD"
 
 gh variable set SIGNING_READY -R "$REPO" --body true
 [ "$ADMIN_KEY_ID" != "$ASC_KEY_ID" ] && echo "You can now revoke the Admin key $ADMIN_KEY_ID in App Store Connect (GitHub uses $ASC_KEY_ID)."
-echo "Done. Every merge to main now uploads a TestFlight build; a GitHub Release (tag vX.Y) uploads for the App Store."
+echo "Done. Every merge to main that changes the app now uploads a TestFlight build; a GitHub Release (tag vX.Y.Z) uploads for the App Store."

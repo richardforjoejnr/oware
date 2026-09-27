@@ -8,7 +8,7 @@ signing and CI are in [../../../docs/PIPELINE.md](../../../docs/PIPELINE.md); st
 
 Nothing here needs the US$99 Apple Developer Program.
 
-- [ ] **Merge the open PRs in order:** #23, then #24, then #25. After each: `git checkout main && git pull && make project`.
+- [x] **Merge the open PRs** (#23 to #40, all merged). After pulling: `git checkout main && git pull && make project`.
 - [ ] **Play it with family on your own iPhones** (see "Testing with family before you pay" below).
 - [ ] **Write down what testers find.** A simple note per device: what they tapped, what felt wrong.
 - [x] **Support email:** trendnestorg34@gmail.com, on the privacy and support pages.
@@ -71,7 +71,8 @@ the first time. TestFlight needs the paid membership.
 - [ ] **Upload a build:** `make archive APP=lelu-oware` in the repo (a fresh build number every
       time), then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upload**.
       The build appears in App Store Connect ▸ TestFlight after 5–15 minutes. The app version is
-      1.0, matching App Store Connect; see PIPELINE.md "Versions and build numbers".
+      1.0.0 until the first release (the version open in App Store Connect must be 1.0.0 too); see
+      PIPELINE.md "Versions and build numbers".
 - [ ] **Test it yourself first:** TestFlight ▸ Internal Testing ▸ add yourself. Install the
       **TestFlight** app on your iPhone and open the invite.
 - [ ] **Invite family and friends:** TestFlight ▸ External Testing ▸ new group ("Family") ▸ add
@@ -83,8 +84,10 @@ the first time. TestFlight needs the paid membership.
       - Each build lasts **90 days**. Upload a new one before then.
       - Testers send feedback and screenshots from the TestFlight app; read it under TestFlight ▸ Feedback.
 - [x] **Automatic builds** (set up 27 September 2026 with `scripts/setup-signing.sh`): follow PIPELINE.md to add **all** the CI secrets first, and
-      only then set `SIGNING_READY=true`. Every merge to `main` then uploads a TestFlight build.
-      With the flag on and no secrets, the TestFlight workflow fails on every merge.
+      only then set `SIGNING_READY=true`. Every merge to `main` that changes the app (app code and
+      resources, `project.yml`, fastlane, the shared packages' sources, the Gemfile) then uploads a
+      TestFlight build; docs, website, CI-only and script-only merges do not (run TestFlight by hand
+      from the Actions tab if needed). With the flag on and no secrets, the TestFlight workflow fails.
 
 ## Stage 4: App Store submission
 

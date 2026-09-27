@@ -232,7 +232,7 @@ glass beads), Kente border patterns, Adinkra stamps for your profile.
 
 Set up in this repo (see `../../docs/PIPELINE.md` for the one-time credentials you must provide):
 - **PR → CI**: engine tests + unsigned simulator build/test on GitHub's macOS runners. Required to merge.
-- **Merge to main → TestFlight**: fastlane builds a signed Release and uploads it; build number = CI run number.
+- **Merge to main that changes the app → TestFlight**: fastlane builds a signed Release and uploads it; build number = UTC date and time (e.g. 202609271730).
 - **GitHub Release `vX.Y.Z` → App Store Connect**: upload + optional submit-for-review behind a manual approval gate.
 - Signing via fastlane *match* (certs in a private repo); App Store Connect API key for uploads; no passwords in CI.
 

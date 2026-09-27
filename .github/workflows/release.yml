@@ -1,9 +1,10 @@
 name: App Store Release
 
 # Uploads a signed build to App Store Connect for the App Store (not just TestFlight).
-#   - Publishing a GitHub Release tagged vX.Y uses X.Y as the app version.
+#   - Publishing a GitHub Release tagged vX.Y.Z uses X.Y.Z as the app version.
 #   - Or run it by hand: Actions ▸ App Store Release ▸ Run workflow, give the version and choose
 #     whether to submit for review. The `production` environment can require your approval first.
+#     Manual runs must use the main branch (they tag what they build).
 # The App Store text, screenshots, privacy answers and age rating are filled in App Store Connect.
 on:
   release:
@@ -23,6 +24,7 @@ run-name: ${{ github.event_name == 'release' && format('App Store {0}', github.r
 
 permissions:
   contents: write   # to tag the release after a manual run
+  actions: write    # to start the Pages workflow (a release made with GITHUB_TOKEN fires no `release` event)
 
 concurrency:
   group: release
@@ -38,6 +40,11 @@ jobs:
     environment: production   # add required reviewers on this environment for a manual gate
     if: ${{ vars.SIGNING_READY == 'true' }}
     steps:
+      - name: Manual releases only from main
+        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run App Store Release from the main branch (got $GITHUB_REF). A manual run tags the commit it builds."
+          exit 1
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: maxim-lobanov/setup-xcode@v1
@@ -55,7 +62,8 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "release" ]; then VERSION="${GITHUB_REF_NAME#v}"
           elif [ -n "$INPUT_VERSION" ]; then VERSION="$INPUT_VERSION"
           else VERSION="$(python3 ../../scripts/next_version.py)"; fi
-          LAST="$(git tag --list 'v*' --sort=-v:refname | head -1)"
+          # Same filter as scripts/next_version.py: only vX.Y.Z tags count as releases.
+          LAST="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)"
           if [ "$GITHUB_EVENT_NAME" != "release" ] && [ "v$VERSION" = "$LAST" ]; then
             echo "::error::Nothing new for players since $LAST (only docs/chore/ci/test/style PRs). No release made."
             exit 1
@@ -85,3 +93,5 @@ jobs:
         run: |
           python3 ../../scripts/next_version.py --notes > "$RUNNER_TEMP/notes.md"
           gh release create "v$VERSION" --target "$GITHUB_SHA" --title "Lelu Oware $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          # Refresh the public What's new page: a release created with GITHUB_TOKEN fires no `release` event.
+          gh workflow run pages.yml --ref main -R "$GITHUB_REPOSITORY"
