@@ -39,6 +39,9 @@ struct HomeView: View {
 
             GeometryReader { geo in
                 let landscape = geo.size.width > geo.size.height
+                if !landscape {
+                    portrait(geo)
+                } else {
                 ScrollView(showsIndicators: false) {
                     if landscape {
                         // Wide and short: title on the left, controls on the right.
@@ -74,10 +77,56 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity)
                     }
                 }
+                }
             }
         }
         .animation(.easeInOut(duration: 0.25), value: showMore)
         .animation(.easeInOut(duration: 0.2), value: showLevels)
+    }
+
+    /// Portrait: a photograph of a board on a table is pinned behind the top ~30 % of the screen,
+    /// running under the status bar and fading into the dark wood. The title, the Akwaaba line and
+    /// the whole menu scroll together over it, so nothing slides under an edge. Landscape keeps the
+    /// side-by-side layout without the photograph.
+    private func portrait(_ geo: GeometryProxy) -> some View {
+        let heroHeight = geo.size.height * 0.30 + geo.safeAreaInsets.top
+        return ZStack(alignment: .top) {
+            Image("heroTable")
+                .resizable()
+                .scaledToFill()
+                .frame(width: geo.size.width, height: heroHeight, alignment: .trailing)
+                .clipped()
+                .overlay(
+                    LinearGradient(stops: [
+                        .init(color: Theme.night.opacity(0.35), location: 0),
+                        .init(color: .clear, location: 0.3),
+                        .init(color: Theme.night.opacity(0.55), location: 0.72),
+                        .init(color: Theme.night.opacity(0.0), location: 1),
+                    ], startPoint: .top, endPoint: .bottom)
+                )
+                // Fade the photograph itself out at its bottom so it melts into the wood behind.
+                .mask(LinearGradient(stops: [.init(color: .black, location: 0.7), .init(color: .clear, location: 1)],
+                                     startPoint: .top, endPoint: .bottom))
+                .ignoresSafeArea(edges: .top)
+                .accessibilityHidden(true)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 0) {
+                    // Leave the upper part of the photograph clear; the title lands on its lower edge.
+                    Spacer(minLength: max(0, heroHeight - geo.safeAreaInsets.top - 96))
+                    titleBlock
+                        .padding(.bottom, 26)
+                    controls
+                    Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
+                        .font(Theme.caption())
+                        .foregroundStyle(Theme.ivoryDim)
+                        .padding(.top, 30)
+                        .padding(.bottom, 40)
+                }
+                .padding(.horizontal, 24)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity)
+            }
+        }
     }
 
     /// Continue/Play, the 2×2 grid and the More rows — shared by both orientations.
@@ -289,6 +338,8 @@ struct WoodPlank: View {
                 Text(title)
                     .font(.system(size: height >= 64 ? 22 : 18, weight: .semibold))
                     .foregroundStyle(Theme.bone)
+                    .lineLimit(1)
+                    .fixedSize()
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.footnote)
