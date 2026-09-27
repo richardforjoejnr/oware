@@ -15,6 +15,9 @@ final class SoundPlayer {
     private let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
     private var buffers: [Sound: [AVAudioPCMBuffer]] = [:]
     private var started = false
+    /// Stops the engine a few seconds after the last sound; a running engine keeps the audio
+    /// hardware awake even when silent.
+    private var idleTask: Task<Void, Never>?
 
     /// `tick`: a seed landing on bare wood. `clack`: a seed landing on other seeds. `pickUp`: a
     /// handful scooped out. `capture`: seeds tipped into the trough. `win` / `lose`: two notes.
@@ -138,5 +141,12 @@ final class SoundPlayer {
         player.volume = volume
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)
         if !player.isPlaying { player.play() }
+        idleTask?.cancel()
+        idleTask = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self, !Task.isCancelled else { return }
+            self.engine.pause()
+            self.started = false
+        }
     }
 }
