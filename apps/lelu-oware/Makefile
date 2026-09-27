@@ -3,7 +3,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
 SIM  = $$($(ROOT)/scripts/pick-simulator.sh)
 
-.PHONY: project family test open clean e2e e2e-build e2e-studio e2e-ts
+.PHONY: project family archive test open clean e2e e2e-build e2e-studio e2e-ts
 
 project:              ## Generate Oware.xcodeproj from project.yml
 	xcodegen generate
@@ -14,6 +14,14 @@ test: project         ## Run app + engine tests on the simulator
 
 open: project         ## Generate and open in Xcode
 	open Oware.xcodeproj
+
+# Upload from your Mac: a Release archive stamped with the same build-number scheme as CI (UTC date
+# and time), opened in Xcode's Organizer. Then: Distribute App ▸ App Store Connect ▸ Upload.
+archive: project      ## Archive for TestFlight/App Store with a fresh build number, open in Organizer
+	set -o pipefail; xcodebuild archive -project Oware.xcodeproj -scheme Oware -configuration Release \
+	  -destination 'generic/platform=iOS' -archivePath build/Oware.xcarchive -allowProvisioningUpdates \
+	  CURRENT_PROJECT_VERSION=$$(date -u +%Y%m%d%H%M) | xcbeautify
+	open build/Oware.xcarchive
 
 # Free Apple IDs ("Personal Team") cannot sign Game Center, and should not claim the real bundle id.
 # This project drops the Game Center entitlement and uses com.richardforjoe.oware.family, so the app

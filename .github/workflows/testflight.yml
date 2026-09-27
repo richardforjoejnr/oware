@@ -40,7 +40,6 @@ jobs:
           MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          BUILD_NUMBER: ${{ github.run_number }}
         run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios beta
       - name: Upload IPA artifact
         if: always()
