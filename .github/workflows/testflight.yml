@@ -31,6 +31,12 @@ jobs:
           bundler-cache: true
       - name: Install tools
         run: brew install xcodegen xcbeautify
+      - name: Version for this beta (next release, from PR titles since the last one)
+        run: |
+          VERSION="$(python3 ../../scripts/next_version.py)"
+          sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
+          { echo "CHANGELOG<<EOF_NOTES"; python3 ../../scripts/next_version.py --notes; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
+          echo "Beta of version $VERSION"
       - name: Upload to TestFlight
         env:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}

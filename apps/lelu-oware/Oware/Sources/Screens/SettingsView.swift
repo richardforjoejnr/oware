@@ -7,6 +7,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(TipJar.self) private var tipJar
     @State private var showTipJar = false
+    @State private var channel: AppChannel = .appStore
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -132,6 +133,11 @@ struct SettingsView: View {
             Text("Lelu Oware · \(settings.rules.variant == .namNam ? "Nam-Nam" : "Abapa") rules")
                 .font(Theme.caption())
                 .foregroundStyle(Theme.ivoryDim)
+            Text(AppVersion.label(channel: channel))
+                .font(Theme.caption(12))
+                .foregroundStyle(Theme.ivoryDim)
+                .accessibilityIdentifier("app-version")
+                .task { channel = await AppChannel.current() }
         }
         .font(Theme.body())
         .foregroundStyle(Theme.ivory)
