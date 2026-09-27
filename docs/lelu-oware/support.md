@@ -24,6 +24,6 @@ and what happened. Screenshots help.
 
 ## Privacy
 
-The game collects no data. See the [privacy policy](privacy).
+No account and no ads. The game sends only anonymous usage statistics, which you can switch off in Settings ▸ Share anonymous usage stats. See the [privacy policy](privacy).
 
-[All apps](../)
+[What's new](whats-new) · [All apps](../)
