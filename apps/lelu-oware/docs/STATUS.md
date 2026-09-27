@@ -22,7 +22,9 @@ note, tier lines (A cold Fanta / A plate of waakye / A feast), a "Rate Lelu Owar
 (`requestReview`), and a thank-you with the tip count. SupportKit's `TipJarView` gained `details:` and
 `appName:` (both optional, so the template still compiles).
 
-## Game Center, analytics, newsletter, online plumbing (2026-09-27, branch `feat/game-center-analytics`)
+## Game Center, analytics, newsletter, online plumbing (2026-09-27, PR #25)
+
+Full reference: **[SERVICES.md](SERVICES.md)** (decisions, ids, events, privacy label, setup steps).
 
 Decisions (owner): free plus tips, no ads; online play later as a paid one-time unlock where the host
 pays and invited friends play free. The audience is anyone who likes Oware, worldwide.

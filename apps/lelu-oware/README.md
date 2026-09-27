@@ -2,7 +2,7 @@
 
 A native iOS Oware (Abapa rules) game with authentic Ghanaian art direction.
 Part of the richardforjoe iOS monorepo (see the [root README](../../README.md)).
-Plan and design: **[docs/GAME_PLAN.md](docs/GAME_PLAN.md)**. Build/release pipeline: **[../../docs/PIPELINE.md](../../docs/PIPELINE.md)**.
+Plan and design: **[docs/GAME_PLAN.md](docs/GAME_PLAN.md)**. Money, analytics, Game Center and launch setup: **[docs/SERVICES.md](docs/SERVICES.md)**. Build/release pipeline: **[../../docs/PIPELINE.md](../../docs/PIPELINE.md)**.
 
 ## Layout
 ```

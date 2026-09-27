@@ -59,7 +59,10 @@ Review note: "The in-app purchases are optional tips. They unlock no content; ev
 and board look is available to all users." Local testing uses `Oware/Resources/Tips.storekit`.
 
 ## App Privacy (nutrition label)
-- Data collection: **No, we do not collect data from this app.**
+- With analytics configured (`TELEMETRYDECK_APP_ID` set): Usage Data ▸ Product Interaction and
+  Identifiers ▸ Device ID, both not linked to the user, not used for tracking, purpose Analytics.
+- With `TELEMETRYDECK_APP_ID` empty: **No, we do not collect data from this app.**
+- Details: [SERVICES.md](SERVICES.md) section 5.
 
 ## Screenshots (to produce from the simulator, see `e2e/specs/screenshots.spec.ts`)
 Required sizes: 6.9" iPhone (1320×2868), 13" iPad (2064×2752). Order:
