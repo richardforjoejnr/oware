@@ -7,8 +7,8 @@ struct OwareApp: App {
     @State private var session: GameSession
     @State private var settings: AppSettings
     @State private var library = PuzzleLibrary()
-    @State private var progress = JourneyProgress()
-    @State private var tipJar = TipJar(productIDs: Tips.productIDs)
+    @State private var progress: JourneyProgress
+    @State private var tipJar: TipJar
 
     init() {
         // Launch options used by UI tests: `--reset-state` / `-resetState YES` wipe the saved game,
@@ -24,7 +24,16 @@ struct OwareApp: App {
             UserDefaults.standard.removeObject(forKey: "lastDailySolvedDay")
             UserDefaults.standard.removeObject(forKey: "stats.grandmasterWins")
         }
-        _session = State(initialValue: GameSession())
+        // The session records results itself, so a game that ends off-screen still counts.
+        let progress = JourneyProgress()
+        let session = GameSession()
+        session.journey = progress
+        _session = State(initialValue: session)
+        _progress = State(initialValue: progress)
+        // Every tip is counted, including ones the App Store delivers later (Ask to Buy).
+        let tipJar = TipJar(productIDs: Tips.productIDs)
+        tipJar.onTip = { PlayerEvents.shared.tipPurchased(productID: $0) }
+        _tipJar = State(initialValue: tipJar)
         let settings = AppSettings()
         _settings = State(initialValue: settings)
         // Analytics and Game Center stay silent in test launches.
@@ -72,6 +81,9 @@ enum LaunchOptions {
     static var resetState: Bool { flag("--reset-state", defaultsKey: "resetState") }
     /// `--fast-animations` / `-fastAnimations YES`: instant, silent, no splash (UI tests).
     static var fastAnimations: Bool { flag("--fast-animations", defaultsKey: "fastAnimations") }
+    /// `--real-speed`: with `--fast-animations`, still sow at normal speed (tests that need a move
+    /// in flight, e.g. leaving the game mid-sowing).
+    static var realSpeed: Bool { flag("--real-speed") }
     /// `--start-game` / `-startGame YES`: open straight onto a new game at Casual level.
     static var startGame: Bool { flag("--start-game", defaultsKey: "startGame") }
     /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (animation checks).

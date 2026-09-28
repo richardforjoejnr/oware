@@ -6,6 +6,8 @@ import UIKit
 @MainActor
 enum BoardTexture {
     static func make(size: CGSize, cornerRadius: CGFloat, scorched: Bool = false, wood woodName: String = "wood") -> SKTexture {
+        // A 0×0 renderer (or pattern image) is invalid: never bake smaller than a point.
+        let size = CGSize(width: max(size.width, 1), height: max(size.height, 1))
         let scale = min(UIScreen.main.scale, 3)
         let format = UIGraphicsImageRendererFormat()
         format.scale = scale

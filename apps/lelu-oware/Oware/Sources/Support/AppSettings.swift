@@ -68,7 +68,7 @@ final class AppSettings {
     /// Test mode plays instantly. Reduce Motion does *not*: seeds must still be seen moving from
     /// house to house or the game is unreadable; it only calms the motion (see `calmMotion`).
     var effectiveSpeed: Double {
-        testMode ? AnimationSpeed.instant.rawValue : animationSpeed.rawValue
+        testMode && !LaunchOptions.realSpeed ? AnimationSpeed.instant.rawValue : animationSpeed.rawValue
     }
     /// Reduce Motion: no tumble, no lift, no landing puff — just the seed travelling and settling.
     var calmMotion: Bool { UIAccessibility.isReduceMotionEnabled }

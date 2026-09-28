@@ -13,6 +13,7 @@ final class BoardScene: SKScene, BoardAnimator {
     var showCounts = true { didSet { (countLabels + countShadows).forEach { $0.isHidden = !showCounts } } }
     var sound: SoundPlayer? = .shared
     var haptics: Haptics? = .shared
+    var humanSide: Player?
     var theme: BoardTheme = .heritage { didSet { if built { applyTheme() } } }
     private let highlightLayer = SKNode()
 
@@ -48,6 +49,11 @@ final class BoardScene: SKScene, BoardAnimator {
     private var current = GameState.initial
     private var built = false
     private var animating = false
+    /// Every action a move is waiting on, so they can all be let go if the move is abandoned.
+    private var pending: [Int: CheckedContinuation<Void, Never>] = [:]
+    private var nextPendingID = 0
+    /// Bumped when a move's animation is abandoned; the move then stops at its next step.
+    private var generation = 0
 
     override init() {
         super.init(size: CGSize(width: 390, height: 300))
@@ -64,6 +70,12 @@ final class BoardScene: SKScene, BoardAnimator {
         view.preferredFramesPerSecond = 60
         if !built { build() }
         relayout()
+    }
+
+    /// Leaving the view (Home, another screen) stops the actions, so a move in flight would never
+    /// finish: end it now, on its final position.
+    override func willMove(from view: SKView) {
+        finishAnimation()
     }
 
     override func didChangeSize(_ oldSize: CGSize) {
@@ -99,7 +111,7 @@ final class BoardScene: SKScene, BoardAnimator {
 
         handNode.zPosition = 8
         addChild(handNode)
-        for i in 0..<12 {
+        for _ in 0..<12 {
             let house = SKSpriteNode(texture: pitTexture)
             house.zPosition = 1
             addChild(house)
@@ -119,7 +131,6 @@ final class BoardScene: SKScene, BoardAnimator {
             label.zPosition = 5
             addChild(label)
             countLabels.append(label)
-            _ = i
         }
         for _ in 0..<2 {
             let store = SKSpriteNode(texture: pitTexture)
@@ -204,7 +215,8 @@ final class BoardScene: SKScene, BoardAnimator {
     private func relayout() {
         layout = BoardLayout(size: size)
         let r = layout.sk(layout.boardRect)
-        if lastBoardSize != r.size {
+        // Before the first real layout the board can be 0×0: nothing to bake yet.
+        if lastBoardSize != r.size, r.width >= 1, r.height >= 1 {
             lastBoardSize = r.size
             boardNode.texture = BoardTexture.make(size: r.size, cornerRadius: layout.cornerRadius, scorched: theme.rustic,
                                                   wood: theme.rustic ? "woodHewn" : "wood")
@@ -271,7 +283,7 @@ final class BoardScene: SKScene, BoardAnimator {
             storeLabels[p.rawValue].fontSize = max(13, layout.cell * 0.3)
             storeLabels[p.rawValue].position = layout.sk(layout.storeLabelPoint(p))
         }
-        if !animating { render(current) }
+        if !animating { draw(current) }
         applyTheme()
         highlight(house: highlightedHouse)
     }
@@ -336,14 +348,12 @@ final class BoardScene: SKScene, BoardAnimator {
                 let marks = SKShapeNode(path: path)
                 marks.strokeColor = scratch
                 marks.lineWidth = max(0.8, cell * 0.012)
-                marks.zRotation = alongLength ? .pi / 2 : 0
                 // rotate about the mark centre
                 let holder = SKNode()
                 holder.position = mid
                 marks.position = CGPoint(x: -mid.x, y: -mid.y)
                 holder.addChild(marks)
                 holder.zRotation = alongLength ? .pi / 2 : 0
-                marks.zRotation = 0
                 rusticLayer.addChild(holder)
             }
         }
@@ -434,11 +444,20 @@ final class BoardScene: SKScene, BoardAnimator {
     }
 
     /// Instantly make the scene match `state`. Safe to call before the scene is presented:
-    /// the state is remembered and drawn once `didMove(to:)` builds the nodes.
+    /// the state is remembered and drawn once `didMove(to:)` builds the nodes. A move still
+    /// animating is abandoned: the new position replaces it.
     func render(_ state: GameState) {
+        abandonAnimation()
         current = state
+        draw(state)
+    }
+
+    private func draw(_ state: GameState) {
         guard built else { return }
         wake()
+        // The nodes below are about to go, and a removed node's action never completes: let go of
+        // anything still waiting on one (a grand-slam pulse outliving its move).
+        releasePending()
         drawTerritory(state)
         hand.forEach { $0.removeFromParent() }
         hand = []
@@ -449,7 +468,7 @@ final class BoardScene: SKScene, BoardAnimator {
         seedsInHouse = Array(repeating: [], count: 12)
         seedsInStore = [[], []]
         for i in 0..<12 {
-            for k in 0..<state.houses[i] {
+            for k in 0..<max(0, state.houses[i]) {
                 let seed = makeSeed()
                 seed.position = layout.sk(layout.seedSlot(in: i, index: k))
                 seedLayer.addChild(seed)
@@ -457,7 +476,7 @@ final class BoardScene: SKScene, BoardAnimator {
             }
         }
         for p in Player.allCases {
-            for k in 0..<state.stores[p.rawValue] {
+            for k in 0..<max(0, state.stores[p.rawValue]) {
                 let seed = makeSeed()
                 seed.position = layout.sk(layout.storeSlot(p, index: k))
                 seedLayer.addChild(seed)
@@ -535,15 +554,53 @@ final class BoardScene: SKScene, BoardAnimator {
         return busy(self)
     }
 
-    private func wait(_ seconds: TimeInterval) async {
+    /// Thrown out of a wait when the move it belongs to has been abandoned.
+    private struct Abandoned: Error {}
+
+    private func wait(_ seconds: TimeInterval) async throws {
         guard seconds > 0, !isInstant else { return }
-        await run(SKAction.wait(forDuration: seconds / animationSpeed))
+        try await runAndWait(SKAction.wait(forDuration: seconds / animationSpeed))
     }
 
-    private func run(_ action: SKAction, on node: SKNode? = nil) async {
+    /// Runs `action` and waits for it. Throws if the move was abandoned meanwhile (the scene left
+    /// its view or a new position was rendered). Each continuation is resumed exactly once, by
+    /// whichever comes first: the action's completion or the abandon. (Not named `run`: SKNode's
+    /// own `run(_:) async` would win the overload and wait for ever on a detached scene.)
+    private func runAndWait(_ action: SKAction, on node: SKNode? = nil) async throws {
+        let token = generation
+        let id = nextPendingID
+        nextPendingID += 1
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            (node ?? self).run(action) { continuation.resume() }
+            pending[id] = continuation
+            // SpriteKit may call completions off the main thread (its render loop): hop back first.
+            (node ?? self).run(action) { [weak self] in
+                DispatchQueue.main.async { self?.pending.removeValue(forKey: id)?.resume() }
+            }
         }
+        if token != generation { throw Abandoned() }
+    }
+
+    /// Let go of every action a move is waiting on; that move stops without drawing anything.
+    private func abandonAnimation() {
+        guard animating || !pending.isEmpty else { return }
+        generation += 1
+        animating = false
+        releasePending()
+    }
+
+    /// Resume every waiting continuation now. Each is taken out of `pending` first, so an action
+    /// that completes later finds nothing to resume.
+    private func releasePending() {
+        let waiting = pending
+        pending = [:]
+        waiting.values.forEach { $0.resume() }
+    }
+
+    /// End a move in flight at once, on the position it was heading for (no sounds).
+    func finishAnimation() {
+        guard animating || !pending.isEmpty else { return }
+        abandonAnimation()
+        draw(current)
     }
 
     func animate(events: [MoveEvent], from before: GameState, to after: GameState) async {
@@ -552,16 +609,30 @@ final class BoardScene: SKScene, BoardAnimator {
         wake()
         if isPaused { isPaused = false }
         defer { scheduleSleep() }
+        current = after
         if isInstant {
-            render(after)
+            draw(after)
             playEndSounds(after)
             return
         }
         // Start from a clean, exact rendering of the position before the move.
-        render(before)
+        draw(before)
         handNode.removeAllChildren()
         animating = true
-        defer { animating = false }
+        let token = generation
+        defer { if token == generation { animating = false } }
+        do {
+            try await play(events, from: before, to: after)
+        } catch {
+            // Abandoned: whoever abandoned it has drawn the board already.
+            return
+        }
+        // Snap to the exact final position (guards against any drift).
+        draw(after)
+        playEndSounds(after)
+    }
+
+    private func play(_ events: [MoveEvent], from before: GameState, to after: GameState) async throws {
         var working = before
         let sowCount = events.filter { if case .sow = $0 { return true } else { return false } }.count
         // The hand carries the seeds and lets one fall into each house in turn. Long laps speed up
@@ -572,29 +643,8 @@ final class BoardScene: SKScene, BoardAnimator {
         for event in events {
             switch event {
             case let .pickUp(house, _):
-                let seeds = seedsInHouse[house]
-                seedsInHouse[house] = []
-                working.houses[house] = 0
-                updateLabels(working)
-                sound?.play(.pickUp, volume: 0.8)
-                haptics?.pickUp()
-                handNode.position = layout.sk(layout.houseCenter(house))
-                for (k, seed) in seeds.enumerated() {
-                    // Re-parent into the hand, keeping the world position, then gather into a loose cluster.
-                    let world = seed.position
-                    seed.removeFromParent()
-                    seed.position = CGPoint(x: world.x - handNode.position.x, y: world.y - handNode.position.y)
-                    handNode.addChild(seed)
-                    let angle = Double(k) * 2.399963
-                    let rr = layout.seedRadius * 0.95 * CGFloat(Double(k).squareRoot())
-                    let gather = SKAction.move(to: CGPoint(x: rr * CGFloat(cos(angle)), y: rr * CGFloat(sin(angle))), duration: 0.22 / animationSpeed)
-                    gather.timingMode = .easeOut
-                    seed.run(SKAction.group([gather, lift(seed, up: true, duration: 0.22 / animationSpeed)]), withKey: "move")
-                }
-                let rise = SKAction.move(to: layout.sk(layout.handPoint(for: house)), duration: 0.26 / animationSpeed)
-                rise.timingMode = .easeOut
-                handNode.run(rise, withKey: "hand")
-                await wait(0.3)
+                scoop(house, into: &working, volume: 0.8, gather: 0.22, rise: 0.26)
+                try await wait(0.3)
 
             case let .sow(house, count):
                 guard let seed = handNode.children.last else { continue }
@@ -603,7 +653,7 @@ final class BoardScene: SKScene, BoardAnimator {
                 let travel = SKAction.move(to: layout.sk(layout.handPoint(for: house)), duration: step / animationSpeed)
                 travel.timingMode = .easeInEaseOut
                 handNode.run(travel, withKey: "hand")
-                await wait(step * 0.7)
+                try await wait(step * 0.7)
                 // …and let one seed go. It falls, tumbles, lands with a small settle and a puff.
                 let world = handNode.convert(seed.position, to: self)
                 seed.removeFromParent()
@@ -620,7 +670,7 @@ final class BoardScene: SKScene, BoardAnimator {
                     SKAction.scale(to: 1.0, duration: 0.09 / animationSpeed),
                 ])
                 seed.run(SKAction.sequence([SKAction.group([fall, tumble, lift(seed, up: false, duration: drop / animationSpeed)]), settle]), withKey: "sow")
-                await wait(drop * 0.9)
+                try await wait(drop * 0.9)
                 seed.zPosition = 0
                 updateLabels(working)
                 sound?.play(count > 1 ? .clack : .tick, volume: Float.random(in: 0.55 ... 0.85))
@@ -629,34 +679,14 @@ final class BoardScene: SKScene, BoardAnimator {
 
             case let .relay(house, _):
                 // The last seed landed among others: scoop that house up and carry on sowing.
-                let seeds = seedsInHouse[house]
-                seedsInHouse[house] = []
-                working.houses[house] = 0
-                updateLabels(working)
-                sound?.play(.pickUp, volume: 0.7)
-                haptics?.pickUp()
-                handNode.position = layout.sk(layout.houseCenter(house))
-                for (k, seed) in seeds.enumerated() {
-                    let world = seed.position
-                    seed.removeFromParent()
-                    seed.position = CGPoint(x: world.x - handNode.position.x, y: world.y - handNode.position.y)
-                    handNode.addChild(seed)
-                    let angle = Double(k) * 2.399963
-                    let rr = layout.seedRadius * 0.95 * CGFloat(Double(k).squareRoot())
-                    let gather = SKAction.move(to: CGPoint(x: rr * CGFloat(cos(angle)), y: rr * CGFloat(sin(angle))), duration: 0.18 / animationSpeed)
-                    gather.timingMode = .easeOut
-                    seed.run(SKAction.group([gather, lift(seed, up: true, duration: 0.18 / animationSpeed)]), withKey: "move")
-                }
-                let rise = SKAction.move(to: layout.sk(layout.handPoint(for: house)), duration: 0.22 / animationSpeed)
-                rise.timingMode = .easeOut
-                handNode.run(rise, withKey: "hand")
-                await wait(0.26)
+                scoop(house, into: &working, volume: 0.7, gather: 0.18, rise: 0.22)
+                try await wait(0.26)
 
             case .skipOrigin:
-                await wait(step * 0.4)
+                try await wait(step * 0.4)
 
             case let .capture(house, seeds, by):
-                await pulse(house: house, color: UIColor(red: 0.10, green: 0.05, blue: 0.02, alpha: 0.6))
+                try await pulse(house: house, color: UIColor(red: 0.10, green: 0.05, blue: 0.02, alpha: 0.6))
                 let taken = seedsInHouse[house]
                 seedsInHouse[house] = []
                 working.houses[house] = 0
@@ -678,17 +708,17 @@ final class BoardScene: SKScene, BoardAnimator {
                     seed.run(SKAction.sequence([delay, SKAction.group([flight, tumble, self.lift(seed, up: true, duration: 0.2 / animationSpeed)]),
                                                 self.lift(seed, up: false, duration: 0.1 / animationSpeed), flip]), withKey: "capture")
                 }
-                await wait(0.62 + Double(taken.count) * 0.035)
+                try await wait(0.62 + Double(taken.count) * 0.035)
                 updateLabels(working)
 
             case let .grandSlamForfeited(_, houses):
                 for h in houses {
-                    Task { await self.pulse(house: h, color: UIColor(red: 0.70, green: 0.15, blue: 0.12, alpha: 0.8)) }
+                    Task { try? await self.pulse(house: h, color: UIColor(red: 0.70, green: 0.15, blue: 0.12, alpha: 0.8)) }
                 }
-                await wait(0.5)
+                try await wait(0.5)
 
             case .roundOver:
-                await wait(0.6)
+                try await wait(0.6)
 
             case let .sweep(player, _):
                 var moved = 0
@@ -706,7 +736,7 @@ final class BoardScene: SKScene, BoardAnimator {
                     }
                 }
                 working.stores = after.stores
-                await wait(0.6)
+                try await wait(0.6)
                 updateLabels(working)
 
             case .gameOver:
@@ -714,20 +744,54 @@ final class BoardScene: SKScene, BoardAnimator {
             }
         }
         handNode.removeAllChildren()
-        // Snap to the exact final position (guards against any drift).
-        render(after)
-        playEndSounds(after)
+    }
+
+    /// Lift every seed out of `house` into the hand (a pick-up, or a relay scoop mid-sowing).
+    private func scoop(_ house: Int, into working: inout GameState, volume: Float, gather: TimeInterval, rise: TimeInterval) {
+        let seeds = seedsInHouse[house]
+        seedsInHouse[house] = []
+        working.houses[house] = 0
+        updateLabels(working)
+        sound?.play(.pickUp, volume: volume)
+        haptics?.pickUp()
+        handNode.position = layout.sk(layout.houseCenter(house))
+        for (k, seed) in seeds.enumerated() {
+            // Re-parent into the hand, keeping the world position, then gather into a loose cluster.
+            let world = seed.position
+            seed.removeFromParent()
+            seed.position = CGPoint(x: world.x - handNode.position.x, y: world.y - handNode.position.y)
+            handNode.addChild(seed)
+            let angle = Double(k) * 2.399963
+            let rr = layout.seedRadius * 0.95 * CGFloat(Double(k).squareRoot())
+            let cluster = SKAction.move(to: CGPoint(x: rr * CGFloat(cos(angle)), y: rr * CGFloat(sin(angle))), duration: gather / animationSpeed)
+            cluster.timingMode = .easeOut
+            seed.run(SKAction.group([cluster, lift(seed, up: true, duration: gather / animationSpeed)]), withKey: "move")
+        }
+        let up = SKAction.move(to: layout.sk(layout.handPoint(for: house)), duration: rise / animationSpeed)
+        up.timingMode = .easeOut
+        handNode.run(up, withKey: "hand")
     }
 
     private func playEndSounds(_ state: GameState) {
         guard let outcome = state.outcome else { return }
+        let end = Self.endSound(for: outcome, humanSide: humanSide)
+        sound?.play(end.sound, volume: end.volume)
+        haptics?.gameOver(won: outcome.winner.flatMap { winner in humanSide.map { winner == $0 } })
+    }
+
+    /// The win sound for a win at a shared board or against the computer, the losing one when
+    /// the computer wins, and a quieter win for a draw.
+    static func endSound(for outcome: GameOutcome, humanSide: Player?) -> (sound: SoundPlayer.Sound, volume: Float) {
         switch outcome {
-        case .win: sound?.play(.win)
-        case .draw: sound?.play(.win, volume: 0.6)
+        case let .win(winner, _):
+            if let humanSide, winner != humanSide { return (.lose, 1) }
+            return (.win, 1)
+        case .draw:
+            return (.win, 0.6)
         }
     }
 
-    private func pulse(house: Int, color: UIColor) async {
+    private func pulse(house: Int, color: UIColor) async throws {
         let c = layout.sk(layout.houseCenter(house))
         let radius = layout.houseRadius
         let glow = SKShapeNode(ellipseIn: CGRect(x: c.x - radius, y: c.y - radius * 0.86, width: radius * 2, height: radius * 1.72))
@@ -742,7 +806,7 @@ final class BoardScene: SKScene, BoardAnimator {
             SKAction.fadeOut(withDuration: 0.3 / animationSpeed),
             SKAction.removeFromParent(),
         ])
-        await run(sequence, on: glow)
+        try await runAndWait(sequence, on: glow)
     }
 
     // MARK: - Preview
