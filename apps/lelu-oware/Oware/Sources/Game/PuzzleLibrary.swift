@@ -72,10 +72,14 @@ final class PuzzleLibrary {
         return nil
     }
 
-    /// Days since 1 January 2026 in the device's calendar; same puzzle for everyone on the same day.
+    /// Days since 1 January 2026 (Gregorian); same puzzle for everyone on the same day. Only the
+    /// time zone of `calendar` is used, for when the day starts: a phone set to the Japanese,
+    /// Buddhist or Islamic calendar would otherwise read the year 2026 in that calendar.
     static func dayNumber(for date: Date = .now, calendar: Calendar = .current) -> Int {
-        let epoch = calendar.date(from: DateComponents(year: 2026, month: 1, day: 1))!
-        return calendar.dateComponents([.day], from: calendar.startOfDay(for: epoch), to: calendar.startOfDay(for: date)).day ?? 0
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = calendar.timeZone
+        let epoch = gregorian.date(from: DateComponents(year: 2026, month: 1, day: 1))!
+        return gregorian.dateComponents([.day], from: gregorian.startOfDay(for: epoch), to: gregorian.startOfDay(for: date)).day ?? 0
     }
 
     var daily: Puzzle? { puzzleSet.daily(dayNumber: Self.dayNumber()) }

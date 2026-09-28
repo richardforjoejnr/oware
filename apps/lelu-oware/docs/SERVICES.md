@@ -52,7 +52,7 @@ settings. Passwords, API keys and certificates never go in this repo.
 | Game Center | `Oware/Sources/Support/GameCenter.swift`, `Oware/Oware.entitlements` | Sign-in, leaderboards, achievements, dashboard. |
 | What each moment reports | `Oware/Sources/Game/PlayerEvents.swift` | Maps games, riddles, Journey, lesson and tips to analytics and Game Center. |
 | Riddle streak | `Oware/Sources/Game/PuzzleLibrary.swift` | Days in a row the daily riddle was solved. |
-| Web links | `Oware/Sources/Support/Links.swift` | Website, newsletter, privacy. |
+| Web links | `Oware/Sources/Support/Links.swift` | Newsletter sign-up page. |
 | Public pages | `../../../docs/lelu-oware/` | `privacy.md`, `support.md`, `newsletter.md` (GitHub Pages). |
 
 Nothing is sent and no sheet appears in test launches (`--fast-animations`), so the XCUITest,

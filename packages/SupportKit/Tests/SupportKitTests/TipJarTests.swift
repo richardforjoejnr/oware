@@ -21,9 +21,13 @@ struct TipJarTests {
     @Test func recordingATipPersistsTheCount() {
         let d = defaults()
         let jar = TipJar(productIDs: ["a"], defaults: d)
-        jar.record()
+        var reported: [String] = []
+        jar.onTip = { reported.append($0) }
+        jar.record(productID: "a")
         #expect(jar.tipCount == 1)
         #expect(jar.justTipped)
+        #expect(jar.lastTippedProductID == "a")
+        #expect(reported == ["a"])
         let again = TipJar(productIDs: ["a"], defaults: d)
         #expect(again.hasTipped)
         #expect(again.tipCount == 1)

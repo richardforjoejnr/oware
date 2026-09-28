@@ -38,8 +38,7 @@ struct RootView: View {
             case .game:
                 GameView(goHome: { screen = .home },
                          goToPuzzles: { screen = .puzzles },
-                         goToJourney: { screen = .journey },
-                         openSettings: { showSettings = true })
+                         goToJourney: { screen = .journey })
                     .transition(.opacity)
             case .journey:
                 JourneyView(goBack: { screen = .home }, startMatch: { chapter, opponent in

@@ -39,6 +39,8 @@ struct BoardView: View {
                 configureScene()
                 session.attach(scene)
             }
+            // Leaving the game mid-move: the board would never finish it otherwise.
+            .onDisappear { scene.finishAnimation() }
             .onChange(of: geo.size) { _, newSize in scene.size = newSize }
             .onChange(of: settings.animationSpeed) { _, _ in configureScene() }
             .onChange(of: settings.showSeedCounts) { _, _ in configureScene() }

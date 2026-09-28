@@ -259,4 +259,30 @@ final class HomeScreenUITests: XCTestCase {
         let northEmptied = (1...6).contains { app.buttons["house-B\($0)"].value as? String == "0 seeds" }
         XCTAssertTrue(northEmptied, "the AI should have scooped one of its houses")
     }
+
+    /// Regression: going Home while seeds were still being sown froze the board for good (the move
+    /// never finished, so no taps, no undo and no reply). Sowing at real speed here.
+    @MainActor
+    func testLeavingMidMoveDoesNotFreezeTheBoard() throws {
+        app.terminate()
+        app.launchArguments = ["--reset-state", "--fast-animations", "--real-speed", "--rules=abapa"]
+        app.launch()
+        app.buttons["btn-play-ai"].tap()
+        let a3 = app.buttons["house-A3"]
+        XCTAssertTrue(a3.waitForExistence(timeout: 5))
+        a3.tap()
+        app.buttons["btn-home"].tap()
+        let resume = app.buttons["btn-continue"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 5))
+        resume.tap()
+        let turn = app.staticTexts["turn-indicator"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 5))
+        // The computer still replies, and then the board takes our next move.
+        let yourMove = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Your move"), object: turn)
+        XCTAssertEqual(XCTWaiter().wait(for: [yourMove], timeout: 15), .completed, "the board froze")
+        let a1 = app.buttons["house-A1"]
+        a1.tap()
+        let emptied = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "0 seeds"), object: a1)
+        XCTAssertEqual(XCTWaiter().wait(for: [emptied], timeout: 10), .completed, "the move was not accepted")
+    }
 }

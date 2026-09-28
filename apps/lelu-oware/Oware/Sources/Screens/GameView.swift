@@ -5,12 +5,10 @@ import OwareAI
 struct GameView: View {
     @Environment(GameSession.self) private var session
     @Environment(PuzzleLibrary.self) private var library
-    @Environment(JourneyProgress.self) private var progress
     @Environment(AppSettings.self) private var settings
     let goHome: () -> Void
     var goToPuzzles: () -> Void = {}
     var goToJourney: () -> Void = {}
-    let openSettings: () -> Void
 
     @State private var hint: String?
     @State private var hintTask: Task<Void, Never>?
@@ -19,6 +17,9 @@ struct GameView: View {
     @State private var showLesson = false
     @State private var showEndGame = false
     private var hasFullText: Bool { session.currentPuzzle != nil || session.currentTutorialStep != nil }
+    /// The result shows once the last seeds have settled, so Play again cannot start a new game
+    /// under a move still being drawn.
+    private var showsGameOver: Bool { session.isGameOver && session.mode.isResumable && !session.isAnimating }
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
 
     var body: some View {
@@ -49,22 +50,12 @@ struct GameView: View {
                 bottomBar
                     .dynamicTypeSize(...DynamicTypeSize.xLarge)
             }
-            if session.isGameOver && session.mode.isResumable {
+            if showsGameOver {
                 GameOverOverlay(goHome: goHome, goToJourney: goToJourney)
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.5), value: session.isGameOver)
-        .onChange(of: session.isGameOver) { _, over in
-            guard over else { return }
-            if let opponent = session.mode.journeyOpponent, case let .journey(chapter, _) = session.mode {
-                let wasComplete = progress.isComplete(chapterIndex: chapter)
-                progress.record(stars: Journey.stars(for: session.state), for: opponent)
-                let completed = !wasComplete && progress.isComplete(chapterIndex: chapter)
-                PlayerEvents.shared.journeyProgress(totalStars: progress.totalStars, chapterCompleted: completed ? chapter : nil)
-            }
-            PlayerEvents.shared.gameFinished(mode: session.mode, state: session.state)
-        }
+        .animation(.easeInOut(duration: 0.5), value: showsGameOver)
         .onAppear {
             if let opponent = session.mode.journeyOpponent, session.state.moveNumber == 0 {
                 showHint(opponent.greeting, seconds: 3.5)
@@ -92,6 +83,8 @@ struct GameView: View {
         } message: {
             Text(endGameMessage)
         }
+        // The computer started sowing (or the game ended) while the dialog was open: close it.
+        .onChange(of: session.canEndGame) { _, can in if !can { showEndGame = false } }
         .sheet(isPresented: $showLesson) {
             if let step = session.currentTutorialStep, case let .tutorial(index) = session.mode {
                 LessonCard(step: step, number: index + 1, count: session.tutorialSteps.count, done: session.tutorialStepDone)
@@ -302,8 +295,8 @@ struct GameView: View {
                     youStrip
                 }
                 // End the game or the round: beside your name, where the top bar has no room left.
-                if session.canEndGame {
-                    roundButton(systemName: "flag", id: "btn-end-game", label: "End game", enabled: true) { showEndGame = true }
+                if session.mode.isResumable && !session.isGameOver {
+                    roundButton(systemName: "flag", id: "btn-end-game", label: "End game", enabled: session.canEndGame) { showEndGame = true }
                 }
                 Spacer(minLength: 0)
                 HStack(spacing: 8) {
@@ -354,6 +347,7 @@ struct GameView: View {
         .padding(.bottom, 2)
         .animation(.easeInOut(duration: 0.25), value: hint)
         .animation(.easeInOut(duration: 0.3), value: session.puzzleAttempt)
+        .animation(.easeInOut(duration: 0.3), value: session.isAnimating)
         .animation(.easeInOut(duration: 0.3), value: session.tutorialStepDone)
     }
 
@@ -405,10 +399,13 @@ struct GameView: View {
         if let puzzle = session.currentPuzzle {
             HStack(spacing: 28) {
                 if session.puzzleAttempt == .solved {
-                    if let next = library.next(after: puzzle) {
-                        smallButton("Next riddle", id: "btn-next-puzzle", prominent: true) { session.startPuzzle(next) }
+                    // Offered once the answer has finished sowing.
+                    if !session.isAnimating {
+                        if let next = library.next(after: puzzle) {
+                            smallButton("Next riddle", id: "btn-next-puzzle", prominent: true) { session.startPuzzle(next) }
+                        }
+                        smallButton("All riddles", id: "btn-all-puzzles") { goToPuzzles() }
                     }
-                    smallButton("All riddles", id: "btn-all-puzzles") { goToPuzzles() }
                 } else {
                     Text("Goal: \(puzzle.target) seeds")
                         .font(Theme.caption())

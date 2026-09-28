@@ -9,6 +9,9 @@ import OwareAI
 protocol BoardAnimator: AnyObject {
     func animate(events: [MoveEvent], from before: GameState, to after: GameState) async
     func render(_ state: GameState)
+    /// The side a lone player plays against the computer (for the losing sound); nil when two
+    /// people share the board.
+    var humanSide: Player? { get set }
 }
 
 /// Drives one game: applies moves to the engine, asks the animator to play them, runs the AI
@@ -16,7 +19,9 @@ protocol BoardAnimator: AnyObject {
 @MainActor
 @Observable
 final class GameSession {
-    private(set) var state: GameState
+    private(set) var state: GameState {
+        didSet { if state.isOver, !oldValue.isOver { recordResult() } }
+    }
     private(set) var mode: GameMode
     private(set) var history: [GameState] = []
     private(set) var isAnimating = false
@@ -33,7 +38,16 @@ final class GameSession {
     private var hintTask: Task<Void, Never>?
 
     weak var animator: (any BoardAnimator)?
+    /// Where Journey stars are kept. Results are recorded here, not by a screen, so a game the
+    /// computer finishes while you are on Home still counts.
+    var journey: JourneyProgress?
+    var events: PlayerEvents = .shared
     private var aiTask: Task<Void, Never>?
+    /// Bumped whenever the board is replaced (new game, undo, resign…), so a move still animating
+    /// from before knows it has been superseded and leaves the flags alone.
+    private var generation = 0
+    /// Set once this game's result has been recorded; cleared when a new game starts.
+    private var resultRecorded = false
     private let store: GameStore
     /// Minimum "thinking" pause so the AI never replies instantly.
     var minimumThinkTime: Duration = .milliseconds(650)
@@ -154,9 +168,10 @@ final class GameSession {
     /// `rules` nil keeps the rules of the game on the board (so Play again and Next opponent
     /// stay in the same variant).
     func newGame(_ mode: GameMode, rules: RuleSet? = nil) {
-        aiTask?.cancel()
+        interrupt()
         let rules = rules ?? state.rules
         self.mode = mode
+        resultRecorded = false
         state = .initial(rules: rules)
         aiSeed = UInt64.random(in: .min ... .max)
         history = []
@@ -164,8 +179,6 @@ final class GameSession {
         roundMessage = nil
         puzzleAttempt = nil
         tutorialStepDone = false
-        isThinking = false
-        isAnimating = false
         persist()
         animator?.render(state)
         scheduleAIIfNeeded()
@@ -173,14 +186,13 @@ final class GameSession {
 
     /// Start (or restart) a puzzle. Ordinary saved games are left untouched.
     func startPuzzle(_ puzzle: Puzzle) {
-        aiTask?.cancel()
+        interrupt()
         mode = .puzzle(puzzle)
+        resultRecorded = false
         state = puzzle.state
         history = []
         previewMove = nil
         puzzleAttempt = nil
-        isThinking = false
-        isAnimating = false
         animator?.render(state)
     }
 
@@ -192,15 +204,14 @@ final class GameSession {
     /// Jump to a tutorial step.
     func startTutorial(step index: Int, variant: RuleSet.Variant? = nil) {
         if let variant { lessonVariant = variant }
-        aiTask?.cancel()
+        interrupt()
         let step = tutorialSteps[min(max(index, 0), tutorialSteps.count - 1)]
         mode = .tutorial(step: index)
+        resultRecorded = false
         state = step.position ?? .initial(rules: lessonVariant == .namNam ? .namNam : .abapa)
         history = []
         previewMove = nil
         tutorialStepDone = step.requiredMove == nil
-        isThinking = false
-        isAnimating = false
         animator?.render(state)
     }
 
@@ -210,11 +221,10 @@ final class GameSession {
         if i + 1 == tutorialSteps.count - 1 { PlayerEvents.shared.lessonCompleted(rules: lessonVariant) }
     }
 
-    /// Human taps a house (0–5 relative to the side to move).
     /// Nam-Nam: set for a few seconds after a round ends, for the board to show as a hint.
     var roundMessage: String?
 
-    /// `house` is the absolute board index 0–11.
+    /// Human taps a house; `house` is the absolute board index 0–11.
     func play(house: Int) {
         guard humanToMove else { return }
         let move = Move(player: state.sideToMove, absoluteHouse: house)
@@ -231,8 +241,7 @@ final class GameSession {
         if let step = currentTutorialStep, let required = step.requiredMove {
             guard move == required else { return }
             Task {
-                await perform(move)
-                tutorialStepDone = true
+                if await perform(move) { tutorialStepDone = true }
             }
             return
         }
@@ -277,17 +286,19 @@ final class GameSession {
 
     func undo() {
         guard canUndo else { return }
-        aiTask?.cancel()
-        isThinking = false
-        // Against the AI, undo both the AI's reply and your own move.
+        interrupt()
+        // Against the AI, undo its replies and your own move: back to a position where it is your
+        // turn. In Nam-Nam the computer can move twice running (it starts the next round).
         var target = history.removeLast()
-        if mode.aiSide != nil, let aiSide = mode.aiSide, target.sideToMove == aiSide, !history.isEmpty {
-            target = history.removeLast()
+        if let aiSide = mode.aiSide {
+            while target.sideToMove == aiSide, !history.isEmpty { target = history.removeLast() }
         }
         state = target
         previewMove = nil
         persist()
         animator?.render(state)
+        // Undone to the very start with the computer to open: let it move again.
+        scheduleAIIfNeeded()
     }
 
     /// Change the computer's level mid-game (vs AI only). The position is kept; if the AI is
@@ -306,15 +317,15 @@ final class GameSession {
         scheduleAIIfNeeded()
     }
 
-    /// A game in progress that a player may end (resign or agree to stop).
-    var canEndGame: Bool { mode.isResumable && !state.isOver }
+    /// A game in progress that a player may end (resign or agree to stop). Not while seeds are
+    /// still moving: the result would be drawn under the animation.
+    var canEndGame: Bool { mode.isResumable && !state.isOver && !isAnimating }
 
     /// `player` resigns (default: you against the computer, or whoever is to move in Pass & Play).
     /// Resigning ends the whole game (in Nam-Nam, not just the round): the other side wins.
     func resign(_ player: Player? = nil) {
         guard canEndGame else { return }
-        aiTask?.cancel()
-        isThinking = false
+        interrupt()
         let loser = player ?? mode.aiSide?.opponent ?? state.sideToMove
         state.outcome = .win(loser.opponent, .agreement)
         persist()
@@ -325,8 +336,7 @@ final class GameSession {
     /// scores decide it. Nam-Nam: the round ends and houses are shared out as usual.
     func agreeToStop() {
         guard canEndGame else { return }
-        aiTask?.cancel()
-        isThinking = false
+        interrupt()
         history.append(state)
         let events = state.endByAgreement()
         if let round = events.compactMap({ if case let .roundOver(r) = $0 { return r } else { return nil } }).last {
@@ -338,11 +348,10 @@ final class GameSession {
         scheduleAIIfNeeded()
     }
 
-    /// Re-render after the board view (re)appears.
     #if DEBUG
     /// Screenshot aid: a mid-game position with `n` seeds in each store, no AI move pending.
     func loadDemoPosition(storeSeeds n: Int) {
-        aiTask?.cancel()
+        interrupt()
         var s = GameState.initial
         let perStore = min(n, 24)
         s.stores = [perStore, perStore]
@@ -350,14 +359,14 @@ final class GameSession {
         var houses = Array(repeating: 0, count: 12)
         for i in 0..<remaining { houses[(i * 5) % 12] += 1 }
         s.houses = houses
+        resultRecorded = false
         state = s
         history = []
-        isThinking = false
-        isAnimating = false
         animator?.render(state)
     }
     #endif
 
+    /// Re-render after the board view (re)appears.
     func attach(_ animator: any BoardAnimator) {
         self.animator = animator
         animator.render(state)
@@ -366,9 +375,19 @@ final class GameSession {
 
     // MARK: - Internals
 
-    private func perform(_ move: Move) async {
+    /// Stop whatever the AI or the board is doing before the position is replaced.
+    private func interrupt() {
+        aiTask?.cancel()
+        generation += 1
+        isThinking = false
+        isAnimating = false
+    }
+
+    /// Plays a move and animates it. False if the board was replaced before the seeds settled.
+    @discardableResult
+    private func perform(_ move: Move) async -> Bool {
         let before = state
-        guard let result = try? state.applying(move) else { return }
+        guard let result = try? state.applying(move) else { return false }
         history.append(before)
         state = result.state
         previewMove = nil
@@ -378,12 +397,31 @@ final class GameSession {
         }
         persist()
         isAnimating = true
+        let current = generation
         if let animator {
+            animator.humanSide = mode.aiSide?.opponent
             await animator.animate(events: result.events, from: before, to: result.state)
         }
+        // A new game (or undo, or a resign) while the seeds moved already reset the flags.
+        guard current == generation else { return false }
         isAnimating = false
         Self.announce(Self.announcement(for: move, events: result.events, after: result.state, mode: mode, opponentName: opponentName))
         scheduleAIIfNeeded()
+        return true
+    }
+
+    /// Journey stars, analytics and achievements, once per game (undoing past the end and
+    /// finishing again does not count a second time).
+    private func recordResult() {
+        guard !resultRecorded else { return }
+        resultRecorded = true
+        if let journey, let opponent = mode.journeyOpponent, case let .journey(chapter, _) = mode {
+            let wasComplete = journey.isComplete(chapterIndex: chapter)
+            journey.record(stars: Journey.stars(for: state), for: opponent)
+            let completed = !wasComplete && journey.isComplete(chapterIndex: chapter)
+            events.journeyProgress(totalStars: journey.totalStars, chapterCompleted: completed ? chapter : nil)
+        }
+        events.gameFinished(mode: mode, state: state)
     }
 
     // MARK: - VoiceOver
@@ -478,11 +516,10 @@ final class GameSession {
             }.value
             let elapsed = clock.now - start
             if elapsed < minimum { try? await Task.sleep(for: minimum - elapsed) }
-            guard let self, !Task.isCancelled, self.state == snapshot, let chosen else {
-                self?.isThinking = false
-                return
-            }
+            // Cancelled: whoever cancelled has reset the flag, perhaps for a newer AI turn.
+            guard let self, !Task.isCancelled else { return }
             self.isThinking = false
+            guard self.state == snapshot, let chosen else { return }
             await self.perform(chosen)
         }
     }

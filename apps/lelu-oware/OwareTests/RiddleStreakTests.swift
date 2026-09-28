@@ -12,6 +12,21 @@ final class RiddleStreakTests: XCTestCase {
     }
     private func daily(_ lib: PuzzleLibrary, _ day: Int) throws -> Puzzle { try XCTUnwrap(lib.puzzleSet.daily(dayNumber: day)) }
 
+    /// The day count is Gregorian whatever calendar the phone uses: the Japanese calendar calls
+    /// 2026 year 8 and the Islamic one 1447, which used to give a hugely negative day.
+    func testDayNumberIgnoresTheDevicesCalendar() throws {
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = TimeZone(identifier: "Africa/Accra")!
+        let date = try XCTUnwrap(gregorian.date(from: DateComponents(year: 2026, month: 3, day: 15, hour: 12)))
+        XCTAssertEqual(PuzzleLibrary.dayNumber(for: date, calendar: gregorian), 73)
+        for id in [Calendar.Identifier.japanese, .islamicUmmAlQura, .buddhist, .persian] {
+            var other = Calendar(identifier: id)
+            other.timeZone = gregorian.timeZone
+            XCTAssertEqual(PuzzleLibrary.dayNumber(for: date, calendar: other), 73, "\(id)")
+        }
+        XCTAssertGreaterThanOrEqual(PuzzleLibrary.dayNumber(), 0)
+    }
+
     func testConsecutiveDaysBuildAStreak() throws {
         let lib = library()
         for day in 100...103 { lib.markSolved(try daily(lib, day), today: day) }

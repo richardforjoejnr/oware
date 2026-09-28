@@ -158,6 +158,5 @@ struct SettingsView: View {
                 .presentationBackground(Theme.ember)
                 .onAppear { PlayerEvents.shared.tipJarViewed() }
         }
-        .onChange(of: tipJar.tipCount) { _, _ in PlayerEvents.shared.tipPurchased(productID: tipJar.lastTippedProductID) }
     }
 }

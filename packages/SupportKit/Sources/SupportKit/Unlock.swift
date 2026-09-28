@@ -75,8 +75,11 @@ public final class Unlock {
     }
 
     private func handle(_ result: VerificationResult<Transaction>) async {
-        guard case let .verified(transaction) = result, transaction.productID == productID else { return }
-        set(purchased: transaction.revocationDate == nil)
+        let transaction = result.unsafePayloadValue
+        guard transaction.productID == productID else { return }
+        // One that fails verification unlocks nothing, but is still finished so StoreKit stops
+        // offering it again at every launch.
+        if case .verified = result { set(purchased: transaction.revocationDate == nil) }
         await transaction.finish()
     }
 

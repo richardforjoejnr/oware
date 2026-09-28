@@ -21,6 +21,10 @@ public final class TipJar {
     public private(set) var justTipped = false
     /// The product of the most recent tip on this device (for a thank-you or analytics).
     public private(set) var lastTippedProductID: String?
+    /// Called with the product id of every tip counted, whether bought on the tip jar's screen or
+    /// delivered later through `Transaction.updates` (Ask to Buy, an interrupted purchase). For
+    /// the app's analytics.
+    @ObservationIgnored public var onTip: (@MainActor (String) -> Void)?
 
     private let defaults: UserDefaults
     private let countKey: String
@@ -74,16 +78,20 @@ public final class TipJar {
     }
 
     private func handle(_ result: VerificationResult<Transaction>) async {
-        guard case let .verified(transaction) = result, productIDs.contains(transaction.productID) else { return }
-        lastTippedProductID = transaction.productID
-        record()
+        let transaction = result.unsafePayloadValue
+        guard productIDs.contains(transaction.productID) else { return }
+        // One that fails verification is not counted, but is still finished so StoreKit stops
+        // offering it again at every launch.
+        if case .verified = result { record(productID: transaction.productID) }
         await transaction.finish()
     }
 
     /// Remember a tip (also used by tests, which cannot reach StoreKit).
-    func record() {
+    func record(productID: String) {
+        lastTippedProductID = productID
         tipCount += 1
         defaults.set(tipCount, forKey: countKey)
+        onTip?(productID)
         justTipped = true
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(4))

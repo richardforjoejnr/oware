@@ -36,9 +36,16 @@ final class GameCenter: GameServices {
     private(set) var isAuthenticated = false
 
     func authenticate() {
-        GKLocalPlayer.local.authenticateHandler = { viewController, _ in
+        GKLocalPlayer.local.authenticateHandler = Self.authenticationHandler()
+    }
+
+    /// GameKit may call the handler off the main thread. A closure formed on the main actor would
+    /// be isolated to it and trap there, so it is built outside and hops over itself.
+    nonisolated private static func authenticationHandler() -> @Sendable (UIViewController?, (any Error)?) -> Void {
+        { viewController, _ in
+            nonisolated(unsafe) let viewController = viewController
             Task { @MainActor in
-                if let viewController { Self.present(viewController) }
+                if let viewController { present(viewController) }
                 GameCenter.shared.isAuthenticated = GKLocalPlayer.local.isAuthenticated
             }
         }

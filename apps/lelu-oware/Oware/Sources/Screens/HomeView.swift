@@ -43,9 +43,8 @@ struct HomeView: View {
                 if !landscape {
                     portrait(geo)
                 } else {
-                ScrollView(showsIndicators: false) {
-                    if landscape {
-                        // Wide and short: title on the left, controls on the right.
+                    // Wide and short: title on the left, controls on the right.
+                    ScrollView(showsIndicators: false) {
                         HStack(alignment: .center, spacing: 40) {
                             VStack(spacing: 18) {
                                 titleBlock
@@ -61,23 +60,7 @@ struct HomeView: View {
                         .padding(.vertical, 24)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: geo.size.height)
-                    } else {
-                        VStack(spacing: 0) {
-                            Spacer(minLength: 72)
-                            titleBlock
-                                .padding(.bottom, 36)
-                            controls
-                            Text("Oware · \(settings.variant == .namNam ? "Nam-Nam" : "Abapa") rules · a game of Ghana")
-                                .font(Theme.caption())
-                                .foregroundStyle(Theme.onPhoto)
-                                .padding(.top, 30)
-                                .padding(.bottom, 40)
-                        }
-                        .padding(.horizontal, 24)
-                        .frame(maxWidth: 480)
-                        .frame(maxWidth: .infinity)
                     }
-                }
                 }
             }
         }
