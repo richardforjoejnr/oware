@@ -129,6 +129,11 @@ schemes:
       config: Debug
       storeKitConfiguration: Oware/Resources/Tips.storekit
       gatherCoverageData: true
-      targets: [OwareTests, OwareUITests]
+      # Random order: a test that only passes after another one fails here, so tests stay independent.
+      targets:
+        - name: OwareTests
+          randomExecutionOrder: true
+        - name: OwareUITests
+          randomExecutionOrder: true
     archive:
       config: Release

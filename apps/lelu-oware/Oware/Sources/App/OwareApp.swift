@@ -11,18 +11,14 @@ struct OwareApp: App {
     @State private var tipJar: TipJar
 
     init() {
-        // Launch options used by UI tests: `--reset-state` / `-resetState YES` wipe the saved game,
+        // Launch options used by UI tests: `--reset-state` / `-resetState YES` start from a clean
+        // install (saved game, progress and every setting), so no test depends on one before it;
         // `--fast-animations` / `-fastAnimations YES` make everything instant and silent.
         if LaunchOptions.resetState {
             GameStore.shared.clear()
-            UserDefaults.standard.removeObject(forKey: "solvedPuzzleIDs")
-            UserDefaults.standard.removeObject(forKey: "journeyStars")
-            UserDefaults.standard.removeObject(forKey: "tutorialSeen")
-            UserDefaults.standard.removeObject(forKey: "preferredDifficulty")
-            UserDefaults.standard.removeObject(forKey: "supportkit.tipCount")
-            UserDefaults.standard.removeObject(forKey: "dailyStreak")
-            UserDefaults.standard.removeObject(forKey: "lastDailySolvedDay")
-            UserDefaults.standard.removeObject(forKey: "stats.grandmasterWins")
+            if let domain = Bundle.main.bundleIdentifier {
+                UserDefaults.standard.removePersistentDomain(forName: domain)
+            }
         }
         // The session records results itself, so a game that ends off-screen still counts.
         let progress = JourneyProgress()
@@ -81,6 +77,10 @@ enum LaunchOptions {
     static var resetState: Bool { flag("--reset-state", defaultsKey: "resetState") }
     /// `--fast-animations` / `-fastAnimations YES`: instant, silent, no splash (UI tests).
     static var fastAnimations: Bool { flag("--fast-animations", defaultsKey: "fastAnimations") }
+    /// The app is hosting the unit tests (XCTest set it running): no analytics, no Game Center.
+    static var isUnitTestHost: Bool { enabled && ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil }
+    /// Any test run: quiet, instant, and nothing sent anywhere.
+    static var testMode: Bool { fastAnimations || isUnitTestHost }
     /// `--real-speed`: with `--fast-animations`, still sow at normal speed (tests that need a move
     /// in flight, e.g. leaving the game mid-sowing).
     static var realSpeed: Bool { flag("--real-speed") }

@@ -8,13 +8,9 @@ import OwareEngine
 /// undoing against the computer, or letting it finish the game off-screen.
 @MainActor
 final class GameFlowTests: XCTestCase {
-    private func directory() -> URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
-    }
     private func session(_ store: GameStore? = nil) -> GameSession {
-        let s = GameSession(store: store ?? GameStore(directory: directory()))
+        let s = TestSupport.session(store: store)
         s.minimumThinkTime = .zero
-        s.events = PlayerEvents(track: { _ in }, services: nil, defaults: UserDefaults(suiteName: UUID().uuidString)!)
         return s
     }
     private let vsAI = GameMode.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south)
@@ -64,7 +60,7 @@ final class GameFlowTests: XCTestCase {
         let backToSouth = try north.applying(Move(player: .north, house: 0)).state
         XCTAssertEqual(north.sideToMove, .north)
         XCTAssertEqual(backToSouth.sideToMove, .south)
-        let store = GameStore(directory: directory())
+        let store = TestSupport.store()
         store.save(SavedGame(state: backToSouth, mode: vsAI, history: [start, north, north]))
         let s = session(store)
         XCTAssertEqual(s.history.count, 3)
@@ -78,7 +74,7 @@ final class GameFlowTests: XCTestCase {
         let computerOpens = GameMode.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .north)
         let start = GameState.initial(rules: .abapa)
         let afterAI = try start.applying(Move(player: .south, house: 0)).state
-        let store = GameStore(directory: directory())
+        let store = TestSupport.store()
         store.save(SavedGame(state: afterAI, mode: computerOpens, history: [start]))
         let s = session(store)
         s.undo()
@@ -134,10 +130,10 @@ final class GameFlowTests: XCTestCase {
     func testAResultIsRecordedOnceEvenWithoutAScreen() async {
         var finished = 0
         let s = session()
-        let journey = JourneyProgress(defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        let journey = JourneyProgress(defaults: TestSupport.defaults())
         s.journey = journey
         s.events = PlayerEvents(track: { if case .gameFinished = $0 { finished += 1 } }, services: nil,
-                                defaults: UserDefaults(suiteName: UUID().uuidString)!)
+                                defaults: TestSupport.defaults())
         s.newGame(.journey(chapter: 0, opponent: 0), rules: .abapa)
         s.play(house: 2)
         let replied = await waitUntil { s.humanToMove && s.history.count == 2 }

@@ -228,7 +228,7 @@ final class GameSession {
     func advanceTutorial() {
         guard case let .tutorial(i) = mode else { return }
         if i + 1 < tutorialSteps.count { startTutorial(step: i + 1) }
-        if i + 1 == tutorialSteps.count - 1 { PlayerEvents.shared.lessonCompleted(rules: lessonVariant) }
+        if i + 1 == tutorialSteps.count - 1 { events.lessonCompleted(rules: lessonVariant) }
     }
 
     /// Nam-Nam: set for a few seconds after a round ends, for the board to show as a hint.

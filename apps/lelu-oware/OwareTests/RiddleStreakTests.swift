@@ -6,7 +6,7 @@ import OwareAI
 @MainActor
 final class RiddleStreakTests: XCTestCase {
     private func library() -> PuzzleLibrary {
-        let lib = PuzzleLibrary(defaults: UserDefaults(suiteName: UUID().uuidString)!, bundle: Bundle(for: GameSession.self))
+        let lib = PuzzleLibrary(defaults: TestSupport.defaults(), bundle: Bundle(for: GameSession.self))
         lib.variant = .abapa
         return lib
     }
