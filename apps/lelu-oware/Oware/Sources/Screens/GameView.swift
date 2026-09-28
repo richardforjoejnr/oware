@@ -44,7 +44,8 @@ struct GameView: View {
                     levelRow
                         .transition(.opacity)
                 }
-                BoardView(onBlockedTap: { showHint($0) })
+                // Long enough to read why the tap was refused (and for UI tests on slow simulators to see it).
+                BoardView(onBlockedTap: { showHint($0, seconds: 3) })
                 bottomBar
                     .dynamicTypeSize(...DynamicTypeSize.xLarge)
             }
