@@ -4,7 +4,7 @@
   "description": "TypeScript end-to-end UI tests for Lelu Oware (Appium XCUITest driver + WebdriverIO)",
   "scripts": {
     "test": "wdio run wdio.conf.ts",
-    "test:ci": "wdio run wdio.conf.ts --reporters spec --reporters junit",
+    "test:ci": "wdio run wdio.conf.ts",
     "lint": "tsc --noEmit"
   },
   "devDependencies": {

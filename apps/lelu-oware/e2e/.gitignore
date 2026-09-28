@@ -2,3 +2,5 @@ node_modules/
 junit-*.xml
 screenshots/
 screenshots-*/
+# Committed iPad reference captures (design review); other screenshots-* output stays local.
+!screenshots-ipad/

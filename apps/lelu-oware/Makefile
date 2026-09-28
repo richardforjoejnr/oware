@@ -8,7 +8,7 @@ SIM  = $$($(ROOT)/scripts/pick-simulator.sh)
 project:              ## Generate Oware.xcodeproj from project.yml
 	xcodegen generate
 
-test: project         ## Run app + engine tests on the simulator
+test: project         ## Run the app's unit + UI tests on the simulator (engine: make engine-test at the root)
 	set -o pipefail; xcodebuild test -project Oware.xcodeproj -scheme Oware \
 	  -destination "platform=iOS Simulator,name=$(SIM)" CODE_SIGNING_ALLOWED=NO | xcbeautify
 

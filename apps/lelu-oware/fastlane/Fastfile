@@ -80,7 +80,7 @@ platform :ios do
     match(type: "appstore", readonly: false)
   end
 
-  desc "Build and upload to TestFlight (runs on every merge to main)"
+  desc "Build and upload to TestFlight (runs on every merge to main that changes the app)"
   lane :beta do
     build_signed
     # "What to Test" in TestFlight: release notes from PR titles (set by CI), else the last commit.

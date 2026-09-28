@@ -6,9 +6,12 @@
 
 ## Now (2026-09-27)
 
-- **Merged to main:** PRs #1–#24 (latest: #23 battery, #24 rules in every mode, Support me, rules tests).
-- **Open:** #25 `feat/game-center-analytics` (Game Center, analytics, newsletter, online plumbing, docs,
-  repo clean-up). The owner merges.
+- **Merged to main:** PRs #1–#40 (latest: #36 accessibility, #37 App Store readiness, #38 automatic
+  versions from PR titles, #39 What's new page, #40 privacy manifest for tips and TestFlight only for
+  app changes). No PRs open. The owner merges; PR titles must be Conventional Commits.
+- **Code review (2026-09-27):** a review of the whole repo led to fixes in three PRs:
+  `fix/app-game-flow` (app), `fix/engine-ai` (rules engine and AI) and `chore/ci-docs-cleanup`
+  (Pages, release and E2E workflows; these docs). Stale remote branches were deleted; only `main` remains.
 - **Next for the owner:** [ACTION_LIST.md](ACTION_LIST.md) (family testing now; Apple Developer
   Program next week; then TestFlight and submission). Services reference: [SERVICES.md](SERVICES.md).
 - **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
@@ -32,7 +35,7 @@ note, tier lines (A cold Fanta / A plate of waakye / A feast), a "Rate Lelu Owar
 (`requestReview`), and a thank-you with the tip count. SupportKit's `TipJarView` gained `details:` and
 `appName:` (both optional, so the template still compiles).
 
-## Game Center, analytics, newsletter, online plumbing (2026-09-27, PR #25)
+## Game Center, analytics, newsletter, online plumbing (2026-09-27, PR #25, merged)
 
 Full reference: **[SERVICES.md](SERVICES.md)** (decisions, ids, events, privacy label, setup steps).
 
@@ -72,7 +75,7 @@ Owner to do:
    the newsletter page's front matter.
 6. Keep build numbers plain increasing integers (see project.yml comment).
 
-## Rules tests and ring fixes (2026-09-27, PR #24)
+## Rules tests and ring fixes (2026-09-27, PR #24, merged)
 
 Test pyramid: the rules are guarded by fast engine unit tests (91 in `OwareEngineTests`, ~30 s).
 - `NamNamReferenceTests`: an independent plain Nam-Nam; thousands of random games (from the opening,
@@ -382,7 +385,7 @@ move; read old paths as relative to `apps/lelu-oware/`.
 
 ## Next steps (in order)
 
-1. **Merge PR #5** when CI is green (I merge once green unless told otherwise).
+1. ~~Merge PR #5~~ (merged long ago; the owner merges PRs).
 2. **Milestone 5 — polish & ship v1** (new branch `feat/polish`):
    - Real drum audio to replace `SoundPlayer`'s synthesised buffers (owner to source/record CC0 atumpan,
      fontomfrom samples, or approve keeping the synthesised set for v1).
@@ -391,12 +394,13 @@ move; read old paths as relative to `apps/lelu-oware/`.
      Owner to eyeball them on device; refine the bird if it reads badly.
    - ~~Cosmetic unlocks that the purchase promises~~ (no purchase any more; extra looks are optional polish).
    - App Store screenshots: iPhone 6.9" set is produced by `e2e/specs/screenshots.spec.ts` at 1320×2868;
-     iPad 13" set from `screenshots-ipad13/` (2064×2752). Add captions in Canva if wanted.
+     iPad 13" (2064×2752) captures are made locally and not committed (`e2e/screenshots-*/` is ignored,
+     except the `e2e/screenshots-ipad/` reference shots). Add captions in Canva if wanted.
    - Accessibility sweep with VoiceOver on device; Dynamic Type check for the Heritage text.
 3. ~~Owner decision on art rights~~ — **decided 2026-09-24: keep the Canva-generated art** (see
    `docs/ART_DIRECTION.md` §3 for the terms, obligations and provenance record).
-4. **Owner-gated release steps** (`docs/PIPELINE.md`): Apple secrets → `SIGNING_READY=true` → first
-   TestFlight build on merge; create the three tip consumables; host the
+4. **Owner-gated release steps** (`../../docs/PIPELINE.md`): Apple secrets → `SIGNING_READY=true` → first
+   TestFlight build on the next merge that changes the app; create the three tip consumables; host the
    privacy policy and add the support email; fill App Store Connect from `docs/APP_STORE.md`.
 5. **v1.1 — Online** via Game Center turn-based matches (GAME_PLAN §3.1), leaderboards, achievements.
 

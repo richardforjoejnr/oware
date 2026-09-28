@@ -1,7 +1,9 @@
 name: Pages
 
 # Publishes the docs/ site (app index, privacy, support, what's new) plus a test-report page per app.
-# Runs when docs change on main, when a release is published, and after CI / E2E finish on main.
+# Runs when docs change on main, when a release is published (the App Store workflow also starts it
+# by hand, because releases it creates with GITHUB_TOKEN fire no `release` event), and after CI / E2E
+# finish on main. Runs of PRs from forks whose branch happens to be called main are ignored.
 # Repository Settings ▸ Pages ▸ Source must be "GitHub Actions" for this workflow to deploy.
 on:
   push:
@@ -21,12 +23,15 @@ permissions:
   id-token: write
   actions: read
 
+# GitHub's guidance for Pages: let an in-progress deployment finish; a newer run queues behind it.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
+    # workflow_run's `branches: [main]` matches a fork PR's head branch named main too.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.event != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +57,7 @@ jobs:
         run: |
           mkdir -p artifacts
           for wf in "CI" "E2E (Maestro)"; do
-            id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+            id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --branch main --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId')
             if [ -n "$id" ] && [ "$id" != "null" ]; then
               echo "$wf → run $id"
               gh run download "$id" -R "$GITHUB_REPOSITORY" -D "artifacts/$(echo "$wf" | tr ' ()' '___')" || echo "no artifacts for $wf"

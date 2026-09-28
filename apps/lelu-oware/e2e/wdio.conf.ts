@@ -45,7 +45,12 @@ export const config: WebdriverIO.Config = {
   connectionRetryCount: 1,
   framework: "mocha",
   mochaOpts: { timeout: 120_000 },
-  reporters: ["spec"],
+  // spec for the log; JUnit XML next to this file (e2e/junit-<cid>.xml, gitignored), which CI uploads
+  // and scripts/build-reports.py turns into the Pages test report.
+  reporters: [
+    "spec",
+    ["junit", { outputDir: __dirname, outputFileFormat: (o: { cid: string }) => `junit-${o.cid}.xml` }],
+  ],
   services: [["appium", { args: { relaxedSecurity: true } }]],
   capabilities: [
     {

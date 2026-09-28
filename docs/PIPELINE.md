@@ -3,7 +3,8 @@
 ```
 feature branch ──PR──▶ CI (engine tests + unsigned simulator build/test)
         │
-      merge to main ──▶ TestFlight workflow (signed Release build → TestFlight, build # = run number)
+      merge to main ──▶ TestFlight workflow, only when the merge changes the app
+        │                 (signed Release build → TestFlight, build # = UTC date and time)
         │
   publish GitHub Release vX.Y.Z ──▶ App Store workflow (signed build → App Store Connect,
                                      optional "submit for review", manual approval gate)
@@ -15,9 +16,12 @@ lanes run locally and in CI.
 
 | Workflow | Trigger | Needs secrets? | Result |
 |---|---|---|---|
-| `ci.yml` | every PR, every push to `main` | No | Green tick on the PR |
-| `testflight.yml` | push to `main` (after merge), or manual | Yes | New build in TestFlight |
-| `release.yml` | GitHub Release published (tag `v1.0.0`), or manual | Yes | Build in App Store Connect; submit for review if chosen |
+| `ci.yml` | every PR, every push to `main` | No | Green tick on the PR; test results as artifacts |
+| `e2e.yml` | every PR, every push to `main` | No | Maestro and Appium (TypeScript) UI flows on a simulator; JUnit reports as artifacts |
+| `pr-title.yml` | PR opened / edited / updated | No | Fails unless the PR title is a Conventional Commit (it decides the version) |
+| `testflight.yml` | push to `main` that changes the app (paths below), or manual | Yes | New build in TestFlight |
+| `release.yml` | GitHub Release published (tag `v1.0.0`), or manual from `main` | Yes | Build in App Store Connect; submit for review if chosen; a manual run tags `vX.Y.Z` and publishes the GitHub Release |
+| `pages.yml` | docs change on `main`, a release, CI / E2E finishing on `main`, or manual | No | GitHub Pages: docs site, What's new page, test reports |
 
 The signed workflows are skipped until the repository variable `SIGNING_READY` is `true`, so
 merging is safe before Apple credentials are configured.
@@ -131,21 +135,38 @@ Automatic, from **Conventional Commit PR titles** (checked on every PR by the "P
 
 | PR title starts with | Next version after 1.2.3 |
 |---|---|
-| `feat!:` (or a `BREAKING CHANGE` note) | 2.0.0 |
+| `feat!:` (any type with `!`) | 2.0.0 |
 | `feat:` | 1.3.0 |
 | `fix:`, `perf:`, `refactor:`, `build:`, `revert:` | 1.2.4 |
 | `docs:`, `chore:`, `ci:`, `test:`, `style:` only | no new version, not in the release notes |
 
+- **Breaking changes need `!` in the PR title.** PRs are merged with a merge commit whose message is
+  the PR title (repository setting: merge commit message = "Pull request title"; a squash merge also
+  uses the title), so a `BREAKING CHANGE:` note in the PR description never reaches git. (A
+  `BREAKING CHANGE` / `BREAKING-CHANGE` note in a commit body is still honoured if one gets there.)
 - **Release** = a git tag `vX.Y.Z`. `scripts/next_version.py` reads the PR titles merged since the last
   tag and prints the next version (1.0.0 before the first release); `--notes` prints release notes.
-- **TestFlight** (a merge to `main` that changes the app: app code and resources, `project.yml`,
-  fastlane, package sources; not docs, website, CI or scripts): the build gets the *next* version, and its "What to Test"
+- **Titles from before the convention** (PRs up to #35) are read leniently: `Docs: …` counts as
+  docs, `Fix: …` as a fix, and any other title (`Accessibility: …`, `Milestone 2: …`) is a player-facing
+  change listed in full under "Also". The first release's notes therefore list the whole history;
+  shorten them in the GitHub Release (and TestFlight's "What to Test") if you want a tidier page.
+  Alternatively, before the first release, tag a baseline on the commit to start counting from
+  (`git tag v0.9.0 <sha> && git push origin v0.9.0`): later notes then only list PRs after it, but
+  the next version is computed from that tag (TestFlight betas become 0.9.x / 0.10.0 until the first
+  release), so give the first App Store run an explicit version such as 1.0.0.
+- **TestFlight** runs on a merge to `main` that touches `apps/lelu-oware/Oware/**` (app code and
+  resources), `apps/lelu-oware/project.yml`, `apps/lelu-oware/fastlane/**`, `packages/*/Sources/**`,
+  `packages/*/Package.swift`, the `Gemfile` or `testflight.yml` itself; not docs, the website, other
+  CI files, scripts or tests. The build gets the *next* version, and its "What to Test"
   notes list the player-facing PRs since the last release. A beta always moves past the released
-  version, even if only a `chore:` touched the app. In the app, Settings shows "Version 1.3.0 (build) · Beta".
+  version, even if only a `chore:` touched the app. A manual run with nothing merged since the last
+  tag skips the upload (there is no new version to build). In the app, Settings shows "Version 1.3.0 (build) · Beta".
 - **App Store** (Actions ▸ App Store Release ▸ Run workflow, version left empty): builds that same next
-  version, uploads it, then tags `vX.Y.Z` and publishes a GitHub Release with the notes. The next
+  version, uploads it, then tags `vX.Y.Z`, publishes a GitHub Release named "Lelu Oware X.Y.Z" with
+  the notes, and starts the Pages workflow (a release created by a workflow fires no `release` event). The next
   TestFlight builds then move on to the version after. Settings shows no "Beta" in App Store builds.
-  (Publishing a GitHub Release tagged `vX.Y.Z` by hand works too.)
+  (Publishing a GitHub Release tagged `vX.Y.Z` by hand works too. Name it exactly "Lelu Oware X.Y.Z":
+  the What's new page, `scripts/build_release_notes.py`, only lists releases named that way.)
 - **Build number** (`CFBundleVersion`): the UTC date and time of the upload, e.g. 202609271730, for
   every upload (TestFlight, App Store, `make archive`), so builds never clash.
 - Apple only accepts plain numbers as versions ("1.3.0", never "1.3.0-beta"); TestFlight itself marks
@@ -157,8 +178,9 @@ then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upl
 ## Day-to-day flow
 1. `git checkout -b feature/thing` → edit → `make engine-test` / `make test`.
 2. Push, open a PR. CI must be green.
-3. Merge → a TestFlight build appears in ~15 minutes → test on your phone.
-4. When ready to ship: Releases → "Draft a new release" → tag `v1.0.0` → Publish.
+3. Merge → if the PR changed the app, a TestFlight build appears in ~15 minutes → test on your phone.
+4. When ready to ship: Actions ▸ App Store Release ▸ Run workflow on `main` (see above), or
+   Releases → "Draft a new release" → tag `v1.0.0`, title "Lelu Oware 1.0.0" → Publish.
    The App Store workflow uploads the build; approve the `production` environment; then in App Store
    Connect attach the build to the version, fill metadata/screenshots, and submit (or set
    `submit_for_review` on a manual run).
@@ -167,8 +189,10 @@ then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upl
 GitHub Pages is deployed by `.github/workflows/pages.yml` (Settings ▸ Pages ▸ Source: **GitHub Actions**).
 It builds `docs/` with Jekyll (index, per-app privacy and support pages) and adds a **test report** per
 app at `/reports/<app>/`, generated by `scripts/build-reports.py` from the latest successful main-branch
-CI and E2E artifacts (xcresult summary JSON, Appium and Maestro JUnit XML, screenshots). It runs when
-docs change and after CI / E2E complete on main. Lelu Oware: https://richardforjoejnr.github.io/oware/lelu-oware/privacy and
+CI and E2E push runs' artifacts (xcresult summary JSON, Appium and Maestro JUnit XML, screenshots).
+It also writes `/<app>/whats-new` from the GitHub Releases. It runs when docs change, when a release
+is published (or the App Store workflow starts it), and after CI / E2E complete for a push to main
+(fork PRs whose branch is named main are ignored). Deployments queue rather than cancel each other. Lelu Oware: https://richardforjoejnr.github.io/oware/lelu-oware/privacy and
 …/support, and the newsletter page …/newsletter. Support email: trendnestorg34@gmail.com.
 
 ## Before the first App Store submission (checklist)

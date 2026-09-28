@@ -3,8 +3,9 @@
 
     build_release_notes.py <releases.json> <out.md> --app "Lelu Oware" --slug lelu-oware
 
-<releases.json> is `gh api repos/OWNER/REPO/releases`. Only releases named "<app> X.Y.Z" are used
-(the App Store workflow names them that way), newest first. The notes come from
+<releases.json> is `gh api repos/OWNER/REPO/releases`. Only published releases named exactly
+"<app> X.Y.Z" are used (the App Store workflow names them that way; name any release you publish by
+hand the same), newest first. The notes come from
 scripts/next_version.py --notes ("New:", "Fixed:", ... followed by "- " lines).
 """
 import argparse
@@ -17,12 +18,13 @@ GROUP = re.compile(r"^(New|Fixed|Faster|Also):\s*$")
 
 def render(releases: list[dict], app: str, slug: str) -> str:
     lines = ["---", f"title: {app} — What's new", "---", "", f"# What's new in {app}", ""]
-    ours = [r for r in releases if (r.get("name") or "").startswith(app) and not r.get("draft") and not r.get("prerelease")]
+    named = re.compile(rf"{re.escape(app)} (\d+\.\d+\.\d+)")
+    ours = [r for r in releases if named.fullmatch((r.get("name") or "").strip()) and not r.get("draft") and not r.get("prerelease")]
     ours.sort(key=lambda r: r.get("published_at") or "", reverse=True)
     if not ours:
         lines += ["The first release is on its way. Sign up for [news by email](newsletter) to hear when it lands.", ""]
     for r in ours:
-        version = r["name"][len(app):].strip() or r.get("tag_name", "")
+        version = named.fullmatch(r["name"].strip()).group(1)
         date = (r.get("published_at") or "")[:10]
         pretty = datetime.date.fromisoformat(date).strftime("%-d %B %Y") if date else ""
         lines += [f"## {version}", f"_{pretty}_" if pretty else "", ""]

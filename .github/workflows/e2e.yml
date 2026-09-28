@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+# Read-only: reports go out as artifacts (the Pages workflow reads them), not as checks or PR comments.
+permissions:
+  contents: read
+
 concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
@@ -22,6 +26,8 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1
         with: { xcode-version: latest-stable }
       - name: Install tools
+        env:
+          MAESTRO_VERSION: "2.10.0"   # pinned; bump deliberately (github.com/mobile-dev-inc/maestro/releases)
         run: |
           brew install xcodegen xcbeautify
           curl -fsSL "https://get.maestro.mobile.dev" | bash

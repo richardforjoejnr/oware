@@ -7,6 +7,10 @@ on:
   push:
     branches: [main]
 
+# Read-only: results go out as artifacts, not as checks or PR comments.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
