@@ -25,7 +25,7 @@ struct PositionKey: Hashable {
         var owners: UInt64 = 0
         for i in 0..<12 where state.territory[i] == .north { owners |= 1 << UInt64(i) }
         hi |= owners << 41
-        hi |= UInt64(min(state.round, 31)) << 53
+        hi |= UInt64(truncatingIfNeeded: min(max(state.round, 0), 31)) << 53
         // Stores matter for terminal detection at the win threshold.
         lo |= UInt64(state.stores[0] & 0x3F) << 40
         lo |= UInt64(state.stores[1] & 0x3F) << 48
@@ -45,6 +45,19 @@ struct Searcher {
     private(set) var nodes = 0
     private var table: [PositionKey: Entry] = [:]
     private var aborted = false
+    /// Set when a score below the current node came from a repetition. Such scores depend on the
+    /// moves that led here (the key does not include the position history), so they are not cached.
+    private var sawRepetition = false
+
+    /// Win/loss scores count plies from the root; in the table they count from the stored node, so
+    /// an entry reused at another depth still prefers the quicker win.
+    private static let winThreshold = Evaluation.winScore - 1_000
+    private static func toTable(_ score: Int, ply: Int) -> Int {
+        score >= winThreshold ? score + ply : (score <= -winThreshold ? score - ply : score)
+    }
+    private static func fromTable(_ score: Int, ply: Int) -> Int {
+        score >= winThreshold ? score - ply : (score <= -winThreshold ? score + ply : score)
+    }
 
     init(weights: EvaluationWeights, deadline: ContinuousClock.Instant?) {
         self.weights = weights
@@ -61,7 +74,8 @@ struct Searcher {
         }
 
         var best: MoveAnalysis?
-        var rootOrder = orderedMoves(root)
+        var rootOrder = orderedChildren(root)
+        guard !rootOrder.isEmpty else { return nil }
         for depth in 1...max(1, maxDepth) {
             aborted = false
             // Explicit root loop so the chosen move never depends on a transposition-table entry
@@ -69,40 +83,60 @@ struct Searcher {
             var alpha = -Evaluation.winScore * 2
             let beta = Evaluation.winScore * 2
             var iterationBest: (move: Move, score: Int)?
-            for move in rootOrder {
-                guard let next = try? root.applying(move).state else { continue }
-                let score: Int
-                if next.isOver {
-                    score = Evaluation.score(next, for: root.sideToMove, weights: weights, ply: 1)
-                } else {
-                    // Nam-Nam can give the same player another move (feeding, or starting the
-                    // next round); only negate when the turn actually passes.
-                    if next.sideToMove == root.sideToMove {
-                        score = negamax(next, depth: depth - 1, ply: 1, alpha: alpha, beta: beta)
-                    } else {
-                        score = -negamax(next, depth: depth - 1, ply: 1, alpha: -beta, beta: -alpha)
-                    }
-                }
+            for (move, next) in rootOrder {
+                let score = childScore(next, parent: root, depth: depth - 1, ply: 1, alpha: alpha, beta: beta)
                 if aborted { break }
                 if iterationBest == nil || score > iterationBest!.score { iterationBest = (move, score) }
                 alpha = max(alpha, score)
             }
             if aborted { break }
             guard let found = iterationBest else { break }
-            table[PositionKey(root)] = Entry(depth: depth, score: found.score, bound: .exact, best: found.move)
             best = MoveAnalysis(move: found.move, score: found.score, depth: depth, nodes: nodes,
-                                principalVariation: principalVariation(from: root, maxLength: depth))
+                                principalVariation: principalVariation(from: root, first: found.move, maxLength: depth))
             // Search the previous best first next iteration.
-            if let idx = rootOrder.firstIndex(of: found.move) { rootOrder.swapAt(0, idx) }
+            if let idx = rootOrder.firstIndex(where: { $0.move == found.move }) { rootOrder.swapAt(0, idx) }
             // Stop early on a forced win/loss.
             if abs(found.score) >= Evaluation.winScore - 64 { break }
         }
-        return best ?? MoveAnalysis(move: rootOrder[0], score: 0, depth: 0, nodes: nodes, principalVariation: [])
+        return best ?? MoveAnalysis(move: rootOrder[0].move, score: 0, depth: 0, nodes: nodes, principalVariation: [])
+    }
+
+    /// Negamax value of `state` to `depth` plies with a full window, sharing this searcher's table
+    /// (used by tests to compare against a plain search).
+    mutating func value(of state: GameState, depth: Int) -> Int {
+        negamax(state, depth: depth, ply: 0, alpha: -Evaluation.winScore * 2, beta: Evaluation.winScore * 2)
+    }
+
+    /// Score of `next` (reached by a move from `parent`) from the parent's side to move.
+    private mutating func childScore(_ next: GameState, parent: GameState, depth: Int, ply: Int, alpha: Int, beta: Int) -> Int {
+        if next.isOver {
+            if next.outcome?.reason == .repetition || endedRoundByRepetition(next, parent: parent) { sawRepetition = true }
+            // Terminal: evaluate from the mover's perspective.
+            return Evaluation.score(next, for: parent.sideToMove, weights: weights, ply: ply)
+        }
+        if endedRoundByRepetition(next, parent: parent) { sawRepetition = true }
+        // Nam-Nam can give the same player another move (feeding, or starting the next round);
+        // only negate when the turn actually passes.
+        if next.sideToMove == parent.sideToMove {
+            return negamax(next, depth: depth, ply: ply, alpha: alpha, beta: beta)
+        }
+        return -negamax(next, depth: depth, ply: ply, alpha: -beta, beta: -alpha)
+    }
+
+    /// Nam-Nam: whether the move from `parent` may have ended the round on a repetition. The state
+    /// does not record why a round ended, so this is conservative: the round ended and some
+    /// position of it had already been seen often enough for one more visit to hit the limit.
+    private func endedRoundByRepetition(_ next: GameState, parent: GameState) -> Bool {
+        guard parent.rules.variant == .namNam, next.roundHistory.count > parent.roundHistory.count else { return false }
+        let limit = parent.rules.repetitionLimit
+        return parent.positionCounts.values.contains { $0 >= limit - 1 }
     }
 
     private mutating func negamax(_ state: GameState, depth: Int, ply: Int, alpha: Int, beta: Int) -> Int {
         nodes += 1
-        if nodes & 1023 == 0, let deadline, ContinuousClock.now >= deadline {
+        // Every node applies each of its moves, so check the clock often: every 1024 nodes let a
+        // loaded debug build overrun a 150 ms budget several times over.
+        if nodes & 63 == 0, let deadline, ContinuousClock.now >= deadline {
             aborted = true
             return 0
         }
@@ -113,34 +147,34 @@ struct Searcher {
         let key = PositionKey(state)
         var alpha = alpha
         var beta = beta
-        if let entry = table[key], entry.depth >= depth {
+        let cached = table[key]
+        if let entry = cached, entry.depth >= depth {
+            let score = Self.fromTable(entry.score, ply: ply)
             switch entry.bound {
-            case .exact: return entry.score
-            case .lower: alpha = max(alpha, entry.score)
-            case .upper: beta = min(beta, entry.score)
+            case .exact: return score
+            case .lower: alpha = max(alpha, score)
+            case .upper: beta = min(beta, score)
             }
-            if alpha >= beta { return entry.score }
+            if alpha >= beta { return score }
         }
 
-        var moves = orderedMoves(state)
-        if let entry = table[key], let hint = entry.best, let idx = moves.firstIndex(of: hint) {
-            moves.swapAt(0, idx)
+        var children = orderedChildren(state)
+        // A hand-built position can be stuck without being marked over; score it as it stands
+        // rather than returning Int.min (which the caller would negate and overflow).
+        guard !children.isEmpty else {
+            return Evaluation.score(state, for: state.sideToMove, weights: weights, ply: ply)
+        }
+        if let hint = cached?.best, let idx = children.firstIndex(where: { $0.move == hint }) {
+            children.swapAt(0, idx)
         }
 
+        let outerRepetition = sawRepetition
+        sawRepetition = false
         let originalAlpha = alpha
         var bestScore = Int.min
         var bestMove: Move?
-        for move in moves {
-            guard let next = try? state.applying(move).state else { continue }
-            let score: Int
-            if next.isOver {
-                // Terminal: evaluate from the mover's perspective, negated for the parent's convention.
-                score = Evaluation.score(next, for: state.sideToMove, weights: weights, ply: ply + 1)
-            } else if next.sideToMove == state.sideToMove {
-                score = negamax(next, depth: depth - 1, ply: ply + 1, alpha: alpha, beta: beta)
-            } else {
-                score = -negamax(next, depth: depth - 1, ply: ply + 1, alpha: -beta, beta: -alpha)
-            }
+        for (move, next) in children {
+            let score = childScore(next, parent: state, depth: depth - 1, ply: ply + 1, alpha: alpha, beta: beta)
             if aborted { return 0 }
             if score > bestScore {
                 bestScore = score
@@ -149,31 +183,38 @@ struct Searcher {
             alpha = max(alpha, score)
             if alpha >= beta { break }
         }
+        let historyDependent = sawRepetition
+        sawRepetition = outerRepetition || historyDependent
 
         let bound: Bound = bestScore <= originalAlpha ? .upper : (bestScore >= beta ? .lower : .exact)
-        if let existing = table[key], existing.depth > depth {
+        if historyDependent {
+            // Only valid for the moves that led here; do not cache.
+        } else if let existing = table[key], existing.depth > depth {
             // Keep the deeper result.
         } else {
-            table[key] = Entry(depth: depth, score: bestScore, bound: bound, best: bestMove)
+            table[key] = Entry(depth: depth, score: Self.toTable(bestScore, ply: ply), bound: bound, best: bestMove)
         }
         return bestScore
     }
 
-    /// Captures first (largest first), then moves that keep seeds safe, then the rest.
-    func orderedMoves(_ state: GameState) -> [Move] {
-        state.legalMoves().map { move -> (Move, Int) in
-            guard let result = try? state.applying(move) else { return (move, Int.min) }
-            let gained = result.state.store(of: move.player) - state.store(of: move.player)
-            return (move, gained * 10 - result.state.houses[move.absoluteIndex])
+    /// Legal moves with the positions they lead to, ordered by seeds the mover gains (most first),
+    /// then by fewest seeds left in the house sown from (non-zero only after a Nam-Nam relay back
+    /// into it). Each move is applied once here and the result reused by the search.
+    func orderedChildren(_ state: GameState) -> [(move: Move, next: GameState)] {
+        state.legalMoves().compactMap { move -> (Move, GameState, Int)? in
+            guard let next = try? state.applying(move).state else { return nil }
+            let gained = next.store(of: move.player) - state.store(of: move.player)
+            return (move, next, gained * 10 - next.houses[move.absoluteIndex])
         }
-        .sorted { $0.1 > $1.1 }
-        .map(\.0)
+        .sorted { $0.2 > $1.2 }
+        .map { ($0.0, $0.1) }
     }
 
-    private func principalVariation(from root: GameState, maxLength: Int) -> [Move] {
-        var pv: [Move] = []
-        var state = root
-        var seen: Set<PositionKey> = []
+    private func principalVariation(from root: GameState, first: Move, maxLength: Int) -> [Move] {
+        guard let afterFirst = try? root.applying(first).state else { return [first] }
+        var pv: [Move] = [first]
+        var state = afterFirst
+        var seen: Set<PositionKey> = [PositionKey(root)]
         while pv.count < maxLength, !state.isOver {
             let key = PositionKey(state)
             guard !seen.contains(key), let move = table[key]?.best else { break }

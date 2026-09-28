@@ -4,7 +4,7 @@ import OwareEngine
 public struct EvaluationWeights: Sendable, Codable, Hashable {
     /// Per captured-seed difference. Everything else is relative to this.
     public var store: Int
-    /// Per seed on own side minus opponent's side.
+    /// Per seed on own side minus opponent's side (Abapa; under Nam-Nam these count as `store`).
     public var material: Int
     /// Per non-empty house difference (a proxy for mobility).
     public var mobility: Int
@@ -81,7 +81,16 @@ public enum Evaluation {
             if n == 1 || n == 2 { vulnerability += 1 }
             if n >= 12 { kroo -= 1 }
         }
-        score += weights.material * material
+        if state.rules.variant == .namNam {
+            // Nam-Nam: a round ends with every seed in a store (a sweep gives each side the seeds on
+            // its own territory), then the seeds won become next round's houses, four seeds apiece,
+            // and the stores empty. Valuing seeds on your territory like stored seeds keeps the score
+            // steady across that reset, so a player who is ahead is glad to finish the round instead
+            // of seeing a winning lead vanish from the score and playing on to avoid it.
+            score += weights.store * material
+        } else {
+            score += weights.material * material
+        }
         score += weights.mobility * mobility
         score += weights.vulnerability * vulnerability
         score += weights.kroo * kroo

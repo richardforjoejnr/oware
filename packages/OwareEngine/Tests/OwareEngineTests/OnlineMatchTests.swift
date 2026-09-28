@@ -58,5 +58,29 @@ struct OnlineMatchTests {
     func turns() throws {
         let match = try OnlineMatch(rules: .abapa).playing(0)
         #expect(try match.playerToMove() == .north)
+
+        // Find a Nam-Nam game where a move empties the opponent's side, so the mover goes again,
+        // then check the match data agrees.
+        var rng = LCG(s: 11)
+        var played: [Int]?
+        for _ in 0..<200 where played == nil {
+            var local = GameState.initial(rules: .namNam)
+            var houses: [Int] = []
+            while !local.isOver, let move = local.legalMoves().randomElement(using: &rng) {
+                let round = local.round
+                try local.apply(move)
+                houses.append(move.absoluteIndex)
+                if !local.isOver, local.round == round, local.sideToMove == move.player {
+                    played = houses
+                    break
+                }
+            }
+        }
+        let houses = try #require(played, "some random game should need an extra move to feed")
+        let online = try OnlineMatch.decode(OnlineMatch(rules: .namNam, houses: houses).encoded())
+        let state = try online.state()
+        let mover = try #require(state.lastMove?.player)
+        #expect(try online.playerToMove() == mover, "the mover sows again to feed")
+        #expect(state.sideIsEmpty(mover.opponent))
     }
 }

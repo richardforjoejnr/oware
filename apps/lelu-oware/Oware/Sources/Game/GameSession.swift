@@ -37,6 +37,9 @@ final class GameSession {
     private let store: GameStore
     /// Minimum "thinking" pause so the AI never replies instantly.
     var minimumThinkTime: Duration = .milliseconds(650)
+    /// Drawn afresh for each game so the computer's slips differ from game to game (the engine mixes
+    /// in the move number). Saved with the game; older saves without one draw a new one.
+    private var aiSeed = UInt64.random(in: .min ... .max)
 
     init(store: GameStore = .shared) {
         self.store = store
@@ -44,6 +47,7 @@ final class GameSession {
             state = saved.state
             mode = saved.mode
             history = saved.history
+            if let seed = saved.aiSeed { aiSeed = seed }
         } else {
             state = .initial
             mode = .passAndPlay
@@ -154,6 +158,7 @@ final class GameSession {
         let rules = rules ?? state.rules
         self.mode = mode
         state = .initial(rules: rules)
+        aiSeed = UInt64.random(in: .min ... .max)
         history = []
         previewMove = nil
         roundMessage = nil
@@ -463,12 +468,13 @@ final class GameSession {
               !state.isOver, state.sideToMove == aiSide, !isThinking, !isAnimating else { return }
         isThinking = true
         let snapshot = state
+        let seed = aiSeed
         let minimum = minimumThinkTime
         aiTask = Task { [weak self] in
             let clock = ContinuousClock()
             let start = clock.now
             let chosen = await Task.detached(priority: .userInitiated) {
-                ai.chooseMove(for: snapshot, seed: UInt64(snapshot.moveNumber) &* 7919)
+                ai.chooseMove(for: snapshot, seed: seed)
             }.value
             let elapsed = clock.now - start
             if elapsed < minimum { try? await Task.sleep(for: minimum - elapsed) }
@@ -483,6 +489,6 @@ final class GameSession {
 
     private func persist() {
         guard mode.isResumable else { return }
-        store.save(SavedGame(state: state, mode: mode, history: history))
+        store.save(SavedGame(state: state, mode: mode, history: history, aiSeed: aiSeed))
     }
 }

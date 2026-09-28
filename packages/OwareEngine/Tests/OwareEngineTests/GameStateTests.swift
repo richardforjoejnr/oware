@@ -277,8 +277,8 @@ struct EndTests {
         #expect(s.totalSeeds == 48)
     }
 
-    @Test("The final capture empties the board under captureEndsGame")
-    func boardEmpty() throws {
+    @Test("A grand slam that takes the last seeds ends the game under captureEndsGame")
+    func grandSlamEndsGame() throws {
         var s = position(a: [0, 0, 0, 0, 0, 1], b: [1, 0, 0, 0, 0, 0], stores: [22, 24],
                          rules: RuleSet(grandSlam: .captureEndsGame))
         try s.apply(move("A6"))

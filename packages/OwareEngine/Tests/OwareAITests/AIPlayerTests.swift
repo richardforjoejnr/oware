@@ -68,6 +68,23 @@ struct AIPlayerTests {
         #expect(ai.chooseMove(for: state, using: &a) == ai.chooseMove(for: state, using: &b))
     }
 
+    @Test("The per-game seed decides the slips: same seed, same game; other seeds vary")
+    func seedVariesGames() throws {
+        let ai = AIPlayer(difficulty: .beginner)
+        func game(seed: UInt64) throws -> [Move] {
+            var state = GameState.initial
+            var moves: [Move] = []
+            while !state.isOver, moves.count < 30, let move = ai.chooseMove(for: state, seed: seed) {
+                try state.apply(move)
+                moves.append(move)
+            }
+            return moves
+        }
+        #expect(try game(seed: 42) == game(seed: 42))
+        let openings = try Set((0..<12 as Range<UInt64>).map { try game(seed: $0 &* 0x9E37_79B9_7F4A_7C15) })
+        #expect(openings.count > 6, "different seeds should give different games")
+    }
+
     @Test("Respects its time budget")
     func timeBudget() {
         let clock = ContinuousClock()

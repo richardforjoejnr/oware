@@ -78,9 +78,10 @@ public struct PuzzleSet: Sendable, Codable, Hashable {
     public func puzzles(of kind: Puzzle.Kind) -> [Puzzle] { puzzles.filter { $0.kind == kind } }
 
     /// Deterministic daily pick: same puzzle for everyone on the same calendar day.
+    /// Days before the epoch (a clock set to the past) are negative and must not trap.
     public func daily(dayNumber: Int) -> Puzzle? {
         guard !puzzles.isEmpty else { return nil }
-        var rng = SeededGenerator(seed: UInt64(dayNumber) &* 0x9E37_79B9_7F4A_7C15)
+        var rng = SeededGenerator(seed: UInt64(bitPattern: Int64(dayNumber)) &* 0x9E37_79B9_7F4A_7C15)
         return puzzles[Int(rng.next() % UInt64(puzzles.count))]
     }
 }
