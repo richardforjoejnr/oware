@@ -176,6 +176,9 @@ Without CI secrets, upload from your Mac: `make archive APP=lelu-oware` (same ve
 then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upload**.
 
 ## Day-to-day flow
+0. Once per clone: `make hooks`. Xcode projects then regenerate by themselves after every branch switch
+   and pull (no more "cannot find type" errors from a stale project). `make project` fills in the
+   Apple Team ID itself.
 1. `git checkout -b feature/thing` → edit → `make engine-test` / `make test`.
 2. Push, open a PR. CI must be green.
 3. Merge → if the PR changed the app, a TestFlight build appears in ~15 minutes → test on your phone.

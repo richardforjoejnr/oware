@@ -1,0 +1,3 @@
+#!/bin/sh
+# After a pull: regenerate the Xcode projects too (same as post-checkout).
+exec "$(git rev-parse --show-toplevel)/scripts/githooks/post-checkout" "" "" 1
