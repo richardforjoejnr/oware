@@ -261,6 +261,10 @@ final class GameSession {
     /// Why a house cannot be played right now, for a quiet hint. Nil if it can.
     func reasonHouseIsBlocked(_ house: Int) -> String? {
         guard !state.isOver else { return nil }
+        // A lesson step with nothing to play (or already played): say how to go on, not nothing.
+        if case let .tutorial(i) = mode, tutorialStepDone {
+            return i + 1 < tutorialSteps.count ? "Tap Next to carry on" : "Tap Play to start a game"
+        }
         let move = Move(player: state.sideToMove, absoluteHouse: house)
         if state.owner(of: house) != state.sideToMove { return state.rules.variant == .namNam ? "That house is theirs this round" : "Not your house" }
         if state.houses[move.absoluteIndex] == 0 { return "Empty house" }

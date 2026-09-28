@@ -84,9 +84,13 @@ final class HomeScreenUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["turn-indicator"].label.hasPrefix("Step 1 of"))
         XCTAssertTrue(app.staticTexts["lesson-prompt"].label.hasPrefix("Welcome"), "the lesson text is shown in full")
         app.buttons["btn-next-step"].tap()
+        // Wait for step 2 before tapping: on a slow machine a tap could land on step 1 instead.
+        let stepTwo = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label BEGINSWITH %@", "Step 2 of"),
+                                                object: app.staticTexts["turn-indicator"])
+        XCTAssertEqual(XCTWaiter().wait(for: [stepTwo], timeout: 5), .completed)
         // Step 2 asks for A3; a different house is refused with a hint.
         app.buttons["house-A1"].tap()
-        XCTAssertTrue(app.staticTexts["hint"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["hint"].waitForExistence(timeout: 5))
         app.buttons["house-A3"].tap()
         XCTAssertTrue(app.staticTexts["tutorial-after"].waitForExistence(timeout: 8))
         XCTAssertTrue(app.buttons["btn-next-step"].exists)

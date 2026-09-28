@@ -49,4 +49,16 @@ final class LessonClarityTests: XCTestCase {
             }
         }
     }
+
+    @MainActor
+    func testTappingAHouseOnAStepWithNothingToPlaySaysHowToGoOn() {
+        let session = GameSession(store: GameStore(directory: FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)))
+        session.startTutorial(step: 0, variant: .abapa)   // Welcome: nothing to play
+        XCTAssertEqual(session.reasonHouseIsBlocked(0), "Tap Next to carry on")
+        session.startTutorial(step: Tutorial.steps.count - 1, variant: .abapa)
+        XCTAssertEqual(session.reasonHouseIsBlocked(0), "Tap Play to start a game")
+        session.startTutorial(step: 1, variant: .abapa)   // Sowing: A3 is asked for
+        XCTAssertEqual(session.reasonHouseIsBlocked(0), "That's A1. Tap the glowing house, A3")
+    }
 }
