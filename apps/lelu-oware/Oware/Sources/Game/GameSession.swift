@@ -94,6 +94,13 @@ final class GameSession {
         return nil
     }
     /// The house the lesson wants tapped next, if any.
+    /// Lessons and riddles talk about houses by name (A3, B1), so the board shows the names.
+    var namesHouses: Bool {
+        switch mode {
+        case .tutorial, .puzzle: true
+        default: false
+        }
+    }
     var highlightedHouse: Int? {
         guard let step = currentTutorialStep, !tutorialStepDone, let move = step.requiredMove else { return nil }
         return move.absoluteIndex
@@ -125,7 +132,10 @@ final class GameSession {
             case nil: return puzzle.kind.instruction
             }
         }
-        if let step = currentTutorialStep { return step.prompt }
+        // The full lesson text sits above the board's controls; this line names the step.
+        if let step = currentTutorialStep, case let .tutorial(i) = mode {
+            return "Step \(i + 1) of \(tutorialSteps.count) · \(step.title)"
+        }
         if let outcome = state.outcome { return Self.describe(outcome, mode: mode) }
         if isThinking { return "Thinking…" }
         switch mode {
@@ -255,7 +265,7 @@ final class GameSession {
         if state.owner(of: house) != state.sideToMove { return state.rules.variant == .namNam ? "That house is theirs this round" : "Not your house" }
         if state.houses[move.absoluteIndex] == 0 { return "Empty house" }
         if let step = currentTutorialStep, let required = step.requiredMove, move != required {
-            return "Try \(required.notation) for this step"
+            return "That's \(move.notation). Tap the glowing house, \(required.notation)"
         }
         if state.isLegal(move) { return nil }
         if state.sideIsEmpty(state.sideToMove.opponent) { return "You must give the other side seeds" }

@@ -81,7 +81,8 @@ final class HomeScreenUITests: XCTestCase {
     func testTutorialFirstMoveStepAdvances() throws {
         app.buttons["btn-learn"].tap()
         XCTAssertTrue(app.staticTexts["turn-indicator"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["turn-indicator"].label.hasPrefix("Welcome"))
+        XCTAssertTrue(app.staticTexts["turn-indicator"].label.hasPrefix("Step 1 of"))
+        XCTAssertTrue(app.staticTexts["lesson-prompt"].label.hasPrefix("Welcome"), "the lesson text is shown in full")
         app.buttons["btn-next-step"].tap()
         // Step 2 asks for A3; a different house is refused with a hint.
         app.buttons["house-A1"].tap()
