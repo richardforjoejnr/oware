@@ -105,6 +105,8 @@ struct SettingsView: View {
             }
             Toggle("Haptics", isOn: $settings.hapticsEnabled)
                 .accessibilityIdentifier("setting-haptics")
+            Toggle("Show house names (A1…B6)", isOn: $settings.showHouseNames)
+                .accessibilityIdentifier("setting-house-names")
             Toggle("Show seed counts", isOn: $settings.showSeedCounts)
                 .accessibilityIdentifier("setting-counts")
 

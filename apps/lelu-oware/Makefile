@@ -2,6 +2,9 @@
 # (the root Makefile forwards to APP=lelu-oware by default).
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
 SIM  = $$($(ROOT)/scripts/pick-simulator.sh)
+# Apple Developer Team ID for signing (not a secret). Set by CI; defaults to the owner's team so a
+# project generated from any shell or tool can sign for a device.
+export DEVELOPMENT_TEAM ?= 2H3QQFZLL3
 
 .PHONY: project family archive test open clean e2e e2e-build e2e-studio e2e-ts
 

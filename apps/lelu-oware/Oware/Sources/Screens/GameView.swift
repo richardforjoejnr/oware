@@ -419,13 +419,23 @@ struct GameView: View {
             .frame(minHeight: 32)
         } else if let step = session.currentTutorialStep, case let .tutorial(index) = session.mode {
             VStack(spacing: 8) {
+                // The lesson's words in full, above the dots: what to do, then what happened.
                 if session.tutorialStepDone, let after = step.afterText {
                     Text(after)
-                        .font(Theme.caption(14))
+                        .font(Theme.body(16))
                         .foregroundStyle(Theme.gold)
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 24)
                         .accessibilityIdentifier("tutorial-after")
+                } else {
+                    Text(step.prompt)
+                        .font(Theme.body(16))
+                        .foregroundStyle(Theme.ivory)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 24)
+                        .accessibilityIdentifier("lesson-prompt")
                 }
                 HStack(spacing: 28) {
                     HStack(spacing: 6) {

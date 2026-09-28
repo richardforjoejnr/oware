@@ -32,7 +32,7 @@ struct RiddleCard: View {
                 }
                 section("The riddle", Self.question(for: puzzle))
                 section("Goal", Self.goal(for: puzzle))
-                section("How to answer", "You play the bottom row, A1 to A6. Tap the house you would sow from. A wrong answer leaves the board as it was; tap Reset to look again.")
+                section("How to answer", "Your houses are A1 to A6 (their names are shown in gold on the board). Tap the house you would sow from. A wrong answer leaves the board as it was; tap Reset to look again.")
                 section(rules == .namNam ? "Nam-Nam captures" : "Abapa captures", Self.captureReminder(rules))
             }
             .padding(24)
@@ -123,7 +123,7 @@ struct LessonCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if let move = step.requiredMove, !done {
-                    Text("Tap \(move.notation) on the bottom row.")
+                    Text("Tap the glowing house, \(move.notation).")
                         .font(Theme.caption(15))
                         .foregroundStyle(Theme.ivoryDim)
                 }

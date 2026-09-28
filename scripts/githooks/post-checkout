@@ -1,0 +1,13 @@
+#!/bin/sh
+# Regenerate every app's Xcode project after switching branches, so Xcode never builds a project
+# that is missing files from the branch you are on. Enabled with `make hooks`.
+# $3 = 1 for a branch checkout (0 for a single-file checkout, which needs nothing).
+[ "$3" = "0" ] && exit 0
+command -v xcodegen >/dev/null 2>&1 || exit 0
+root="$(git rev-parse --show-toplevel)"
+for spec in "$root"/apps/*/project.yml; do
+  [ -f "$spec" ] || continue
+  dir="$(dirname "$spec")"
+  ( cd "$dir" && make -s project >/dev/null 2>&1 ) && echo "Regenerated $(basename "$dir")/$(ls "$dir" | grep -m1 .xcodeproj)"
+done
+exit 0

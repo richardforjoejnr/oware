@@ -32,6 +32,10 @@ final class AppSettings {
     var showSeedCounts: Bool {
         didSet { defaults.set(showSeedCounts, forKey: "showSeedCounts") }
     }
+    /// House names (A1…B6) on the board in ordinary games. Lessons and riddles always show them.
+    var showHouseNames: Bool {
+        didSet { defaults.set(showHouseNames, forKey: "showHouseNames") }
+    }
     /// Grand-slam convention for new games (Abapa forfeit by default).
     var grandSlamRule: RuleSet.GrandSlamRule {
         didSet { defaults.set(grandSlamRule.rawValue, forKey: "grandSlamRule") }
@@ -88,6 +92,7 @@ final class AppSettings {
         hapticsEnabled = defaults.object(forKey: "hapticsEnabled") as? Bool ?? true
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
         showSeedCounts = defaults.object(forKey: "showSeedCounts") as? Bool ?? true
+        showHouseNames = defaults.object(forKey: "showHouseNames") as? Bool ?? false
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id

@@ -3,7 +3,12 @@
 APP ?= lelu-oware
 APP_DIR := apps/$(APP)
 
-.PHONY: help bootstrap apps project family archive test open clean e2e e2e-build e2e-studio e2e-ts engine-test new-app
+# Keep each app's Xcode project in step with the checkout: regenerate after branch switches and pulls.
+hooks:                ## Regenerate Xcode projects automatically after git checkout / pull
+	git config core.hooksPath scripts/githooks
+	@echo "Git hooks on: Xcode projects regenerate after checkout and pull."
+
+.PHONY: hooks help bootstrap apps project family archive test open clean e2e e2e-build e2e-studio e2e-ts engine-test new-app
 
 help:                 ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'

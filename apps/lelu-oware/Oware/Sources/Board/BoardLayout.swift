@@ -109,14 +109,27 @@ struct BoardLayout: Equatable {
         }
     }
 
-    /// Where a house's seed count is drawn (outside the house, away from the board centre).
-    func countLabelPoint(_ house: Int) -> CGPoint {
+    /// Where a house's seed count is drawn (outside the house, away from the board centre). With
+    /// house names shown, the count makes room for the name beside it.
+    func countLabelPoint(_ house: Int, withName: Bool = false) -> CGPoint {
         let c = houseCenter(house)
+        let shift = withName ? houseRadius * 0.34 : 0
         switch orientation {
         case .horizontal:
-            return CGPoint(x: c.x, y: c.y + (Player.south.owns(house) ? houseRadius * 1.16 : -houseRadius * 1.16))
+            return CGPoint(x: c.x + shift, y: c.y + (Player.south.owns(house) ? houseRadius * 1.16 : -houseRadius * 1.16))
         case .vertical:
-            return CGPoint(x: c.x + (Player.south.owns(house) ? houseRadius * 1.24 : -houseRadius * 1.24), y: c.y)
+            return CGPoint(x: c.x + (Player.south.owns(house) ? houseRadius * 1.24 : -houseRadius * 1.24), y: c.y + shift)
+        }
+    }
+
+    /// Where a house's name (A1…B6) is drawn: on the same outer side as its count, just before it
+    /// (above it on a phone held upright, to its left when the board lies wide).
+    func nameLabelPoint(_ house: Int) -> CGPoint {
+        let count = countLabelPoint(house)
+        let shift = houseRadius * 0.34
+        switch orientation {
+        case .horizontal: return CGPoint(x: count.x - shift, y: count.y)
+        case .vertical: return CGPoint(x: count.x, y: count.y - shift)
         }
     }
 

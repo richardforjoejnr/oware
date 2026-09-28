@@ -11,6 +11,15 @@ final class BoardScene: SKScene, BoardAnimator {
     /// Reduce Motion: seeds still travel and settle, but without tumble, lift or landing puff.
     var calmMotion = false
     var showCounts = true { didSet { (countLabels + countShadows).forEach { $0.isHidden = !showCounts } } }
+    /// House names (A1…B6) beside each house: always in lessons and riddles, whose text names
+    /// houses, and in games when the player asks for them in Settings.
+    var showHouseNames = false {
+        didSet {
+            guard showHouseNames != oldValue else { return }
+            nameLabels.forEach { $0.isHidden = !showHouseNames }
+            if built { positionHouseLabels() }
+        }
+    }
     var sound: SoundPlayer? = .shared
     var haptics: Haptics? = .shared
     var humanSide: Player?
@@ -38,6 +47,7 @@ final class BoardScene: SKScene, BoardAnimator {
     private var lastBoardSize = CGSize.zero
     private var countLabels: [SKLabelNode] = []
     private var countShadows: [SKLabelNode] = []
+    private var nameLabels: [SKLabelNode] = []
     private var storeNodes: [SKSpriteNode] = []
     private var storeLabels: [SKLabelNode] = []
     private var seedsInHouse: [[SKNode]] = Array(repeating: [], count: 12)
@@ -131,6 +141,16 @@ final class BoardScene: SKScene, BoardAnimator {
             label.zPosition = 5
             addChild(label)
             countLabels.append(label)
+
+            let name = SKLabelNode(fontNamed: "Georgia-Bold")
+            name.text = "\(houseNodes.count <= 6 ? "A" : "B")\((houseNodes.count - 1) % 6 + 1)"
+            name.fontColor = UIColor(red: 0.95, green: 0.74, blue: 0.22, alpha: 1)
+            name.verticalAlignmentMode = .center
+            name.horizontalAlignmentMode = .center
+            name.zPosition = 5
+            name.isHidden = !showHouseNames
+            addChild(name)
+            nameLabels.append(name)
         }
         for _ in 0..<2 {
             let store = SKSpriteNode(texture: pitTexture)
@@ -263,10 +283,10 @@ final class BoardScene: SKScene, BoardAnimator {
             houseNodes[i].position = c
             houseNodes[i].size = theme.rustic ? CGSize(width: radius * 2.15, height: radius * 1.9) : CGSize(width: layout.pitSpriteDiameter, height: layout.pitSpriteDiameter)
             countLabels[i].fontSize = max(10, layout.cell * 0.2)
-            countLabels[i].position = layout.sk(layout.countLabelPoint(i))
             countShadows[i].fontSize = countLabels[i].fontSize
-            countShadows[i].position = CGPoint(x: countLabels[i].position.x + 0.7, y: countLabels[i].position.y - 0.9)
+            nameLabels[i].fontSize = max(10, layout.cell * 0.18)
         }
+        positionHouseLabels()
         for p in Player.allCases {
             let rect = layout.sk(layout.storeRect(p))
             storeNodes[p.rawValue].position = CGPoint(x: rect.midX, y: rect.midY)
@@ -506,6 +526,15 @@ final class BoardScene: SKScene, BoardAnimator {
                 : UIColor(red: 0.78, green: 0.32, blue: 0.2, alpha: 0.9)
             ring.lineWidth = 2
             territoryLayer.addChild(ring)
+        }
+    }
+
+    /// Counts sit beside their houses; with names shown, each name and count share that spot.
+    private func positionHouseLabels() {
+        for i in 0..<12 {
+            countLabels[i].position = layout.sk(layout.countLabelPoint(i, withName: showHouseNames))
+            countShadows[i].position = CGPoint(x: countLabels[i].position.x + 0.7, y: countLabels[i].position.y - 0.9)
+            nameLabels[i].position = layout.sk(layout.nameLabelPoint(i))
         }
     }
 
