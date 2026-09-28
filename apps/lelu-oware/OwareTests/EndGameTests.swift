@@ -6,10 +6,7 @@ import OwareEngine
 /// Resigning and agreeing to stop, from the in-game flag button.
 @MainActor
 final class EndGameTests: XCTestCase {
-    private func session() -> GameSession {
-        GameSession(store: GameStore(directory: FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)))
-    }
+    private func session() -> GameSession { TestSupport.session() }
     private let vsAI = GameMode.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south)
 
     func testResigningAgainstTheComputerGivesItTheGame() {

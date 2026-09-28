@@ -83,7 +83,7 @@ final class AppSettings {
     /// The backing store, for tests that re-open settings.
     var defaultsForTesting: UserDefaults { defaults }
 
-    init(defaults: UserDefaults = .standard, testMode: Bool = LaunchOptions.fastAnimations) {
+    init(defaults: UserDefaults = .standard, testMode: Bool = LaunchOptions.testMode) {
         self.defaults = defaults
         self.testMode = testMode
         Self.repairPreferencesIfNeeded(in: defaults, testMode: testMode)

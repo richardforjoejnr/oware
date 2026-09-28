@@ -52,8 +52,7 @@ final class LessonClarityTests: XCTestCase {
 
     @MainActor
     func testTappingAHouseOnAStepWithNothingToPlaySaysHowToGoOn() {
-        let session = GameSession(store: GameStore(directory: FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)))
+        let session = TestSupport.session()
         session.startTutorial(step: 0, variant: .abapa)   // Welcome: nothing to play
         XCTAssertEqual(session.reasonHouseIsBlocked(0), "Tap Next to carry on")
         session.startTutorial(step: Tutorial.steps.count - 1, variant: .abapa)

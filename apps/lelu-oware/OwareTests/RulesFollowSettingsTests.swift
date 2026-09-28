@@ -7,10 +7,7 @@ import OwareAI
 /// what the engine actually does.
 @MainActor
 final class RulesFollowSettingsTests: XCTestCase {
-    private func tempSession() -> GameSession {
-        GameSession(store: GameStore(directory: FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString, isDirectory: true)))
-    }
+    private func tempSession() -> GameSession { TestSupport.session() }
 
     private func play(_ step: Tutorial.Step) throws -> (GameState, [MoveEvent]) {
         var s = try XCTUnwrap(step.position)
@@ -81,7 +78,7 @@ final class RulesFollowSettingsTests: XCTestCase {
     }
 
     func testRiddlesFollowTheChosenRules() {
-        let library = PuzzleLibrary(defaults: UserDefaults(suiteName: UUID().uuidString)!, bundle: Bundle(for: GameSession.self))
+        let library = PuzzleLibrary(defaults: TestSupport.defaults(), bundle: Bundle(for: GameSession.self))
         library.variant = .namNam
         XCTAssertFalse(library.puzzles.isEmpty)
         XCTAssertTrue(library.puzzles.allSatisfy { $0.state.rules.variant == .namNam && $0.id.hasPrefix("namNam-") })

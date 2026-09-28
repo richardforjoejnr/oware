@@ -26,7 +26,7 @@ final class PlayerEventsTests: XCTestCase {
     override func setUp() async throws {
         events = []
         services = SpyServices()
-        let defaults = UserDefaults(suiteName: UUID().uuidString)!
+        let defaults = TestSupport.defaults()
         player = PlayerEvents(track: { [unowned self] in self.events.append($0) }, services: services, defaults: defaults)
     }
 
@@ -151,12 +151,12 @@ final class PlayerEventsTests: XCTestCase {
     }
 
     func testUsageStatsSettingDefaultsOnAndIsOffInTests() {
-        let d = UserDefaults(suiteName: UUID().uuidString)!
+        let d = TestSupport.defaults()
         let settings = AppSettings(defaults: d, testMode: false)
         XCTAssertTrue(settings.shareUsageStats && settings.effectiveUsageStats)
         settings.shareUsageStats = false
         XCTAssertFalse(AppSettings(defaults: d, testMode: false).shareUsageStats, "remembered")
-        XCTAssertFalse(AppSettings(defaults: UserDefaults(suiteName: UUID().uuidString)!, testMode: true).effectiveUsageStats)
+        XCTAssertFalse(AppSettings(defaults: TestSupport.defaults(), testMode: true).effectiveUsageStats)
     }
 
     // MARK: Online access ("the host pays")
