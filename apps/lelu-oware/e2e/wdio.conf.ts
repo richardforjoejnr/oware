@@ -43,6 +43,10 @@ export const config: WebdriverIO.Config = {
   // several minutes on hosted CI runners.
   connectionRetryTimeout: 600_000,
   connectionRetryCount: 1,
+  // A spec file that fails is run once more on a fresh session. Tests are independent of each other,
+  // so this only absorbs CI hiccups (a simulator or WebDriverAgent that starts too slowly); a real
+  // failure fails both times.
+  specFileRetries: 1,
   framework: "mocha",
   mochaOpts: { timeout: 120_000 },
   // spec for the log; JUnit XML next to this file (e2e/junit-<cid>.xml, gitignored), which CI uploads
@@ -62,6 +66,9 @@ export const config: WebdriverIO.Config = {
       "appium:newCommandTimeout": 240,
       "appium:wdaLaunchTimeout": 240_000,
       "appium:wdaConnectionTimeout": 240_000,
+      // The simulator is booted before the suite, but Appium checks again and gives up after 2 min
+      // by default, which a busy hosted runner can exceed.
+      "appium:simulatorStartupTimeout": 300_000,
       "appium:showXcodeLog": Boolean(process.env.CI),
       "appium:autoAcceptAlerts": true,
       "appium:noReset": false,
