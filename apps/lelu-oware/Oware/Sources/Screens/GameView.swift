@@ -524,7 +524,7 @@ struct GameOverOverlay: View {
                         .accessibilityIdentifier("btn-play-again")
                     QuietButton(title: "Journey") { goToJourney() }
                         .accessibilityIdentifier("btn-journey-overlay")
-                    if stars > 0, nextJourneyMatch(after: chapter, index) == nil {
+                    if FeatureFlags.newsletter, stars > 0, nextJourneyMatch(after: chapter, index) == nil {
                         // The end of the Journey: point to the newsletter for new chapters.
                         Link(destination: Links.newsletter) {
                             Text("Hear about new chapters")

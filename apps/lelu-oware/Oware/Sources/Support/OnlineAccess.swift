@@ -6,6 +6,9 @@ import SupportKit
 enum FeatureFlags {
     /// Online play (paid, "the host pays"). Off until matchmaking and its screens ship.
     static let onlinePlay = false
+    /// The "News by email" links. Off until the Kit form is on the newsletter page
+    /// (docs/lelu-oware/newsletter.md); a "sign-ups open soon" page reads as unfinished in App Review.
+    static let newsletter = false
 }
 
 /// Who may start and join online matches. The plan: a one-time "Play online" purchase; a player
