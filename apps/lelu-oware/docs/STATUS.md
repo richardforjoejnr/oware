@@ -17,6 +17,18 @@
 - **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
   `packages/*/.swiftpm` after `swift test`; run `make project` after pulling.
 
+## App Review readiness (2026-10-02, branch `fix/review-readiness`)
+
+Version 1.0 was submitted to App Review on 2026-10-02. A check against the guidelines found three risks, fixed here
+(ship with the next build, either after a rejection or as 1.0.1):
+- **Rate button:** `requestReview` may show nothing when tapped, which can read as a broken button. It now opens
+  `https://apps.apple.com/app/id<APP_STORE_ID>?action=write-review` (`Links.writeReview`, `LinksTests`). Set
+  `APP_STORE_ID` in `project.yml` to the numeric Apple ID (App Store Connect ▸ App Information); while it is
+  empty the Rate button is hidden.
+- **Newsletter links** (Settings and the end of the Journey) are hidden behind `FeatureFlags.newsletter = false`
+  until the Kit form is on `docs/lelu-oware/newsletter.md`; a "sign-ups open soon" page reads as unfinished.
+- **Tip label** "A cold Fanta" is now "A cold drink" (no third-party brand in the app).
+
 ## Nam-Nam everywhere (2026-09-27, PR #24, merged)
 
 The owner played Journey with Nam-Nam set and got Abapa. Now every way into a game follows Settings ▸ Rules:
@@ -31,7 +43,7 @@ four, four on their side, careful, feeding, the last four, winning), chosen by `
 Also: tap the riddle or lesson line under the board (gold ⓘ) for the whole text (`RiddleCard`,
 `LessonCard`, `btn-riddle-info` / `btn-lesson-info`). Settings now scrolls (the longer rules note had pushed
 the tip row off small screens) and its footer names the chosen rules. Tip jar renamed "Support me": personal
-note, tier lines (A cold Fanta / A plate of waakye / A feast), a "Rate Lelu Oware" button
+note, tier lines (A cold drink / A plate of waakye / A feast), a "Rate Lelu Oware" button
 (`requestReview`), and a thank-you with the tip count. SupportKit's `TipJarView` gained `details:` and
 `appName:` (both optional, so the template still compiles).
 

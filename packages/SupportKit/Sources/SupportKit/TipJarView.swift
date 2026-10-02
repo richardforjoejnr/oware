@@ -30,24 +30,29 @@ public struct TipJarView: View {
     let labels: [String]
     let details: [String]
     let appName: String?
+    let reviewURL: URL?
     let style: TipJarStyle
-    @Environment(\.requestReview) private var requestReview
+    @Environment(\.openURL) private var openURL
 
     /// - Parameters:
     ///   - labels: one per product, in the jar's order (e.g. "Small", "Medium", "Generous").
     ///   - details: an optional short line under each label.
-    ///   - appName: when set, the sheet also offers the free way to help: rating the app.
+    ///   - appName: with `reviewURL`, the sheet also offers the free way to help: rating the app.
+    ///   - reviewURL: the App Store's write-a-review page, `https://apps.apple.com/app/id<ID>?action=write-review`.
+    ///     A link rather than `requestReview`, which the system may silently skip when tapped.
     public init(title: String = "Support the maker",
                 message: String = "This game is free and always will be. If it has given you a good hour, a tip helps keep it going.",
                 labels: [String] = ["Small tip", "Medium tip", "Generous tip"],
                 details: [String] = [],
                 appName: String? = nil,
+                reviewURL: URL? = nil,
                 style: TipJarStyle) {
         self.title = title
         self.message = message
         self.labels = labels
         self.details = details
         self.appName = appName
+        self.reviewURL = reviewURL
         self.style = style
     }
 
@@ -119,13 +124,13 @@ public struct TipJarView: View {
                 }
             }
 
-            if let appName {
+            if let appName, let reviewURL {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Not today? A rating helps just as much: it is how other players find \(appName).")
                         .font(style.bodyFont)
                         .foregroundStyle(style.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
-                    Button("Rate \(appName)") { requestReview() }
+                    Button("Rate \(appName)") { openURL(reviewURL) }
                         .font(style.bodyFont)
                         .tint(style.accent)
                         .accessibilityIdentifier("tip-jar-rate")
