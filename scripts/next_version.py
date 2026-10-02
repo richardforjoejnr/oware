@@ -3,6 +3,7 @@
 
     python3 scripts/next_version.py            # e.g. 1.2.0
     python3 scripts/next_version.py --notes    # release notes for TestFlight / GitHub Release
+    python3 scripts/next_version.py --store-notes   # "What's New" on the App Store (players only)
 
 Releases are git tags vX.Y.Z (the App Store workflow creates them). Since the last tag:
   - any "feat!:" / "fix!:" title or "BREAKING CHANGE" → next major (2.0.0)
@@ -126,10 +127,26 @@ def notes(changes: list[tuple[str, str]], limit: int = 3500) -> str:
     return text
 
 
+def store_notes(changes: list[tuple[str, str]], limit: int = 3800) -> str:
+    """The App Store's "What's New": only what players notice (New, Fixed, Faster), under Apple's
+    4,000-character limit. Refactors, builds and old free-form titles stay in the GitHub Release."""
+    lines = []
+    for title, _ in releasable(changes):
+        t = Title.parse(title)
+        if t and t.type in LABELS:
+            lines.append(f"- {t.text[0].upper() + t.text[1:]}")
+    text = "\n".join(lines)
+    if len(text) > limit:
+        text = text[:limit].rsplit("\n", 1)[0] + "\n- …and more"
+    return text or "Small fixes and improvements."
+
+
 def main() -> None:
     tag = last_release()
     changes = titles_since(tag)
-    if "--notes" in sys.argv:
+    if "--store-notes" in sys.argv:
+        print(store_notes(changes))
+    elif "--notes" in sys.argv:
         print(notes(changes) or "Small improvements.")
     else:
         print(bump(tag[1:] if tag else None, changes, for_build="--build" in sys.argv))

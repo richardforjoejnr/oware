@@ -1,29 +1,21 @@
 name: App Store Release
 
-# Uploads a signed build to App Store Connect for the App Store (not just TestFlight).
-#   - Publishing a GitHub Release tagged vX.Y.Z uses X.Y.Z as the app version.
-#   - Or run it by hand: Actions ▸ App Store Release ▸ Run workflow, give the version and choose
-#     whether to submit for review. The `production` environment can require your approval first.
-#     Manual runs must use the main branch (they tag what they build).
-# The App Store text, screenshots, privacy answers and age rating are filled in App Store Connect.
+# Ships a build you have already tested on TestFlight. Nothing is rebuilt.
+#   Actions ▸ App Store Release ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸ build/X.Y.Z-NNNN ▸ Run.
+# Every TestFlight upload is tagged build/<version>-<build number> (see testflight.yml). This run:
+#   1. sends that build to App Review with "What's New" written from the PR titles,
+#   2. has Apple release it to everyone as soon as it is approved,
+#   3. tags vX.Y.Z, publishes the GitHub Release "Lelu Oware X.Y.Z" and refreshes the What's new page.
+# One version can be in review at a time. If Apple rejects it, merge the fix and run this again on
+# the newer build tag; App Store Connect's version number is updated to match.
+# The App Store text, screenshots, privacy answers and age rating stay as set in App Store Connect.
 on:
-  release:
-    types: [published]
   workflow_dispatch:
-    inputs:
-      version:
-        description: "App version, e.g. 1.2.0. Leave empty to use the next version from the PR titles since the last release"
-        type: string
-        required: false
-      submit_for_review:
-        description: "Also submit for App Review (otherwise the build waits in App Store Connect)"
-        type: boolean
-        default: false
 
-run-name: ${{ github.event_name == 'release' && format('App Store {0}', github.ref_name) || format('App Store {0}{1}', inputs.version || 'project version', inputs.submit_for_review && ' + submit' || '') }}
+run-name: App Store ${{ github.ref_name }}
 
 permissions:
-  contents: write   # to tag the release after a manual run
+  contents: write   # to tag the release
   actions: write    # to start the Pages workflow (a release made with GITHUB_TOKEN fires no `release` event)
 
 concurrency:
@@ -32,7 +24,7 @@ concurrency:
 
 jobs:
   release:
-    name: Build & upload to App Store Connect
+    name: Submit a TestFlight build for App Review
     runs-on: macos-15
     defaults:
       run:
@@ -40,58 +32,52 @@ jobs:
     environment: production   # add required reviewers on this environment for a manual gate
     if: ${{ vars.SIGNING_READY == 'true' }}
     steps:
-      - name: Manual releases only from main
-        if: github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main'
+      - name: Read the version and build number from the tag
+        working-directory: .
+        env:
+          REF: ${{ github.ref }}
         run: |
-          echo "::error::Run App Store Release from the main branch (got $GITHUB_REF). A manual run tags the commit it builds."
-          exit 1
+          if [[ ! "$REF" =~ ^refs/tags/build/([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
+            echo "::error::Run this from a build tag (Use workflow from ▸ Tags ▸ build/X.Y.Z-NNNN), not $REF. Each TestFlight upload makes one."
+            exit 1
+          fi
+          echo "APP_VERSION=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=${BASH_REMATCH[2]}" >> "$GITHUB_ENV"
+          echo "Releasing version ${BASH_REMATCH[1]}, build ${BASH_REMATCH[2]}"
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: maxim-lobanov/setup-xcode@v1
-        with: { xcode-version: latest-stable }
+      - name: Not already released
+        run: |
+          if git rev-parse -q --verify "refs/tags/v$APP_VERSION" >/dev/null; then
+            echo "::error::v$APP_VERSION is already released. Pick a newer build tag."
+            exit 1
+          fi
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"
           bundler-cache: true
-      - name: Install tools
-        run: brew install xcodegen xcbeautify
-      - name: Set the app version (from the tag or the manual input)
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = "release" ]; then VERSION="${GITHUB_REF_NAME#v}"
-          elif [ -n "$INPUT_VERSION" ]; then VERSION="$INPUT_VERSION"
-          else VERSION="$(python3 ../../scripts/next_version.py)"; fi
-          # Same filter as scripts/next_version.py: only vX.Y.Z tags count as releases.
-          LAST="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 || true)"
-          if [ "$GITHUB_EVENT_NAME" != "release" ] && [ "v$VERSION" = "$LAST" ]; then
-            echo "::error::Nothing new for players since $LAST (only docs/chore/ci/test/style PRs). No release made."
-            exit 1
-          fi
-          echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "Version must look like 1.2.0, got '$VERSION'"; exit 1; }
-          sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "App version: $VERSION"
       - name: App Store readiness checks
         run: python3 ../../scripts/release_readiness.py apps/lelu-oware
-      - name: Upload to App Store Connect
+      - name: Write the release notes
+        run: |
+          # What's New on the App Store: none for the very first version (Apple has no field for it).
+          if [ -n "$(git tag --list 'v*')" ]; then
+            { echo "RELEASE_NOTES<<EOF_NOTES"; python3 ../../scripts/next_version.py --store-notes; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
+          fi
+          python3 ../../scripts/next_version.py --notes > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+      - name: Submit for App Review (released automatically once approved)
         env:
-          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
-          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          SUBMIT_FOR_REVIEW: ${{ inputs.submit_for_review || 'false' }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios release
       - name: Tag the release and publish its notes
-        # A run from the Actions tab has no tag yet; a published GitHub Release already has one.
-        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          python3 ../../scripts/next_version.py --notes > "$RUNNER_TEMP/notes.md"
-          gh release create "v$VERSION" --target "$GITHUB_SHA" --title "Lelu Oware $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release create "v$APP_VERSION" --target "$GITHUB_SHA" --title "Lelu Oware $APP_VERSION" --notes-file "$RUNNER_TEMP/notes.md"
           # Refresh the public What's new page: a release created with GITHUB_TOKEN fires no `release` event.
           gh workflow run pages.yml --ref main -R "$GITHUB_REPOSITORY"
+          echo "Submitted $APP_VERSION ($BUILD_NUMBER) for review; it goes live when Apple approves it." >> "$GITHUB_STEP_SUMMARY"

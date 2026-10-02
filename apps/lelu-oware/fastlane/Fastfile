@@ -2,7 +2,7 @@
 #
 #   bundle exec fastlane ios test       # unit tests on simulator
 #   bundle exec fastlane ios beta       # signed build -> TestFlight
-#   bundle exec fastlane ios release    # signed build -> App Store (submit for review)
+#   bundle exec fastlane ios release    # a TestFlight build -> App Review -> released when approved
 #
 # Required env (CI secrets): see docs/PIPELINE.md at the repo root. Run from apps/lelu-oware with
 #   BUNDLE_GEMFILE=../../Gemfile bundle exec fastlane ios <lane>
@@ -14,9 +14,10 @@ PROJECT    = "Oware.xcodeproj"
 BUNDLE_ID  = "com.richardforjoe.oware"
 
 platform :ios do
-  before_all do
+  before_all do |lane|
     setup_ci if ENV["CI"]
-    sh("cd .. && xcodegen generate") unless File.exist?("../#{PROJECT}")
+    # `release` only talks to App Store Connect, so it needs no Xcode project (or XcodeGen).
+    sh("cd .. && xcodegen generate") unless lane == :release || File.exist?("../#{PROJECT}")
   end
 
   desc "Run unit tests on the iOS simulator"
@@ -92,14 +93,26 @@ platform :ios do
     )
   end
 
-  desc "Build, upload to App Store Connect and submit for review (runs on GitHub Release)"
+  desc "Submit a build already on TestFlight for App Review; Apple releases it to everyone once approved"
+  # The build players get is the one you tested: APP_VERSION and BUILD_NUMBER come from its
+  # build/<version>-<build> tag (see .github/workflows/release.yml). Nothing is rebuilt.
   lane :release do
-    build_signed
+    asc_auth
+    # Empty for the first version: App Store Connect has no "What's New" until there is an update.
+    notes = ENV["RELEASE_NOTES"].to_s.strip
     upload_to_app_store(
-      submit_for_review: ENV.fetch("SUBMIT_FOR_REVIEW", "false") == "true",
-      automatic_release: false,
+      app_version: ENV.fetch("APP_VERSION"),
+      build_number: ENV.fetch("BUILD_NUMBER"),
+      skip_binary_upload: true,
       skip_screenshots: true,
-      skip_metadata: ENV.fetch("SKIP_METADATA", "true") == "true",
+      # Only "What's New" is sent; the description, keywords and screenshots stay as set in
+      # App Store Connect. "default" fills it for every language the listing has.
+      skip_metadata: notes.empty?,
+      release_notes: notes.empty? ? nil : { "default" => notes },
+      submit_for_review: true,
+      automatic_release: true,    # owner's choice (2026-10-02): live as soon as Apple approves
+      phased_release: false,      # everyone at once
+      submission_information: { add_id_info_uses_idfa: false },
       precheck_include_in_app_purchases: false,
       force: true
     )

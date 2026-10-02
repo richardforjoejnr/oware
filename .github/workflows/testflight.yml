@@ -2,6 +2,8 @@ name: TestFlight
 
 # A merge to main that changes the app produces a signed build on TestFlight. Merges that only touch
 # docs, the website, CI or scripts do not (run it by hand from the Actions tab if needed).
+# Each uploaded build is tagged build/<version>-<build number> on the commit it was made from;
+# releasing to the App Store means running App Store Release from one of those tags.
 on:
   push:
     branches: [main]
@@ -14,6 +16,9 @@ on:
       - Gemfile
       - .github/workflows/testflight.yml
   workflow_dispatch:
+
+permissions:
+  contents: write   # to tag each uploaded build
 
 concurrency:
   group: testflight
@@ -54,7 +59,12 @@ jobs:
             exit 0
           fi
           sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
-          { echo "CHANGELOG<<EOF_NOTES"; python3 ../../scripts/next_version.py --notes; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
+          # Set here (not inside fastlane) so the build tag below names the same number.
+          {
+            echo "VERSION=$VERSION"
+            echo "BUILD_NUMBER=$(date -u +%Y%m%d%H%M)"
+            echo "CHANGELOG<<EOF_NOTES"; python3 ../../scripts/next_version.py --notes; echo "EOF_NOTES"
+          } >> "$GITHUB_ENV"
           echo "Beta of version $VERSION"
       - name: Upload to TestFlight
         if: steps.version.outputs.skip != 'true'
@@ -67,6 +77,13 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
         run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios beta
+      - name: Tag the build (pick this tag in App Store Release to ship it)
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          TAG="build/$VERSION-$BUILD_NUMBER"
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "$TAG"
+          echo "Tagged $TAG. To release it: Actions ▸ App Store Release ▸ Run workflow ▸ Use workflow from ▸ Tags ▸ $TAG" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload IPA artifact
         if: always() && steps.version.outputs.skip != 'true'
         uses: actions/upload-artifact@v4
