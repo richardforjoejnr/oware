@@ -58,6 +58,14 @@ jobs:
         run: brew install xcodegen xcbeautify
       - name: Generate Xcode project
         run: xcodegen generate
+      - name: Resolve Swift packages, retried (a clone can fail on a busy runner)
+        run: |
+          for attempt in 1 2 3; do
+            xcodebuild -resolvePackageDependencies -project Oware.xcodeproj -scheme Oware && exit 0
+            echo "Package resolution attempt $attempt failed; retrying in 20 s"
+            sleep 20
+          done
+          exit 1
       - name: Pick a simulator
         id: sim
         run: echo "name=$(../../scripts/pick-simulator.sh)" >> "$GITHUB_OUTPUT"
