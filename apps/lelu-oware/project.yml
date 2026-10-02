@@ -28,7 +28,7 @@ settings:
     # TelemetryDeck app "Lelu Oware" (not a secret: it ships inside the app). Empty turns analytics off.
     TELEMETRYDECK_APP_ID: "2B02636D-AE8C-4D55-A14A-9FCDE1C25D74"
     # The app's numeric Apple ID (App Store Connect ▸ App Information). Empty hides the Rate button.
-    APP_STORE_ID: ""
+    APP_STORE_ID: "6816694006"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
 
 packages:

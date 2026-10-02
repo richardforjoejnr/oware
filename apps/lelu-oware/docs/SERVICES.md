@@ -18,7 +18,7 @@ settings. Passwords, API keys and certificates never go in this repo.
 | App Store Connect | Bundle ID | `com.richardforjoe.oware` (free-account family builds: `com.richardforjoe.oware.family`) |
 | App Store Connect | SKU | `oware-ios` |
 | App Store Connect | Primary language | English (U.K.) |
-| App Store Connect | Apple ID (numeric) | App Information page; add it here once the app record exists |
+| App Store Connect | Apple ID (numeric) | `6816694006` (in `project.yml` as `APP_STORE_ID`; the Rate button opens its write-a-review page) |
 | TelemetryDeck | App ID | `2B02636D-AE8C-4D55-A14A-9FCDE1C25D74` (in `project.yml` as `TELEMETRYDECK_APP_ID`) |
 | TelemetryDeck | Organisation namespace | `lelu.oware`. Not set in the app: TelemetryDeck's Swift guide needs only the App ID, and the SDK advises leaving the namespace unset |
 | TelemetryDeck | Dashboard | https://dashboard.telemetrydeck.com/o/9F5A8F6A-76C1-494D-A0E0-0B00D0C532B2/apps/2B02636D-AE8C-4D55-A14A-9FCDE1C25D74/setup-helper |
