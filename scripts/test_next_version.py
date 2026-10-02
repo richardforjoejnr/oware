@@ -1,6 +1,6 @@
 import unittest
 
-from next_version import bump, notes
+from next_version import bump, notes, store_notes
 
 
 class NextVersionTests(unittest.TestCase):
@@ -60,6 +60,20 @@ class NextVersionTests(unittest.TestCase):
     def test_notes_fit_testflight(self):
         text = notes([(f"fix: change number {i} with a fairly long description", "") for i in range(200)])
         self.assertLessEqual(len(text), 3600)
+        self.assertTrue(text.endswith("…and more"))
+
+
+    def test_store_notes_list_only_what_players_notice(self):
+        text = store_notes([("feat: riddle streak", ""), ("fix(board): rings", ""), ("perf: faster AI", ""),
+                            ("refactor: saves", ""), ("chore: tidy", ""), ("Milestone 2: core", "")])
+        self.assertEqual(text, "- Riddle streak\n- Rings\n- Faster AI")
+
+    def test_store_notes_are_never_empty(self):
+        self.assertEqual(store_notes([("refactor: saves", ""), ("ci: cache", "")]), "Small fixes and improvements.")
+
+    def test_store_notes_fit_the_app_store(self):
+        text = store_notes([(f"fix: change number {i} with a fairly long description", "") for i in range(200)])
+        self.assertLessEqual(len(text), 4000)
         self.assertTrue(text.endswith("…and more"))
 
 

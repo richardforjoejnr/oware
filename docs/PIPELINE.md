@@ -4,10 +4,11 @@
 feature branch ──PR──▶ CI (engine tests + unsigned simulator build/test)
         │
       merge to main ──▶ TestFlight workflow, only when the merge changes the app
-        │                 (signed Release build → TestFlight, build # = UTC date and time)
+        │                 (signed Release build → TestFlight, build # = UTC date and time,
+        │                  tagged build/<version>-<build #>)
         │
-  publish GitHub Release vX.Y.Z ──▶ App Store workflow (signed build → App Store Connect,
-                                     optional "submit for review", manual approval gate)
+  run App Store Release from a build tag ──▶ that same build → App Review → live when approved;
+                                             tags vX.Y.Z and publishes the GitHub Release
 ```
 
 Workflows live in `.github/workflows/`; build logic lives in each app's `fastlane/Fastfile`
@@ -19,8 +20,8 @@ lanes run locally and in CI.
 | `ci.yml` | every PR, every push to `main` | No | Green tick on the PR; test results as artifacts |
 | `e2e.yml` | every PR, every push to `main` | No | Maestro and Appium (TypeScript) UI flows on a simulator; JUnit reports as artifacts |
 | `pr-title.yml` | PR opened / edited / updated | No | Fails unless the PR title is a Conventional Commit (it decides the version) |
-| `testflight.yml` | push to `main` that changes the app (paths below), or manual | Yes | New build in TestFlight |
-| `release.yml` | GitHub Release published (tag `v1.0.0`), or manual from `main` | Yes | Build in App Store Connect; submit for review if chosen; a manual run tags `vX.Y.Z` and publishes the GitHub Release |
+| `testflight.yml` | push to `main` that changes the app (paths below), or manual | Yes | New build in TestFlight, tagged `build/<version>-<build #>` |
+| `release.yml` | manual, from a `build/…` tag | Yes | That build submitted for App Review with "What's New", released automatically once approved; tags `vX.Y.Z` and publishes the GitHub Release |
 | `pages.yml` | docs change on `main`, a release, CI / E2E finishing on `main`, or manual | No | GitHub Pages: docs site, What's new page, test reports |
 
 The signed workflows are skipped until the repository variable `SIGNING_READY` is `true`, so
@@ -122,12 +123,28 @@ missing or incomplete privacy manifest (every required-reason API needs a declar
 switches in release builds, an icon with transparency, unexpected entitlements, plain-http links, and
 placeholder text or a missing contact email on the public privacy and support pages.
 
-## Deploying to the App Store by hand
+## Releasing to the App Store
 
-Actions ▸ **App Store Release** ▸ **Run workflow**: leave the version empty (the next version from
-PR titles) or type one, and tick **submit for review** if the text, screenshots, privacy answers and
-age rating are already filled in App Store Connect. After uploading it tags the release. Publishing a
-GitHub Release tagged `vX.Y.Z` does the same with that version. The `production` environment can require your approval before it runs.
+Every TestFlight upload is tagged `build/<version>-<build number>` (e.g. `build/1.0.1-202610021230`)
+on the commit it was built from. To ship one: Actions ▸ **App Store Release** ▸ **Run workflow** ▸
+**Use workflow from** ▸ **Tags** ▸ pick the build ▸ **Run workflow**. It:
+
+1. submits that exact build (nothing is rebuilt) for App Review, with "What's New" made from the
+   `feat:` / `fix:` / `perf:` PR titles since the last release (`next_version.py --store-notes`;
+   left out for the very first version, which has no "What's New"),
+2. lets Apple release it to everyone as soon as it is approved (no phased rollout),
+3. tags `vX.Y.Z`, publishes the GitHub Release "Lelu Oware X.Y.Z" and refreshes the What's new page.
+
+The App Store text, screenshots, privacy answers and age rating stay as set in App Store Connect.
+The `production` environment can require your approval before it runs.
+
+- **One version in review at a time.** Wait for Apple's answer before running it again.
+- **Rejected?** Merge the fix; its TestFlight build is tagged with the next version (the rejected
+  one already has its `v` tag). Run the workflow on that tag: App Store Connect's version number is
+  updated to match. Delete the GitHub Release of the rejected version if you want a tidy history.
+- **Released a version by hand** in App Store Connect? Publish a GitHub Release tagged `vX.Y.Z`,
+  named "Lelu Oware X.Y.Z", on the commit of that build, so later builds move on to the next version.
+  (Publishing a release by hand uploads nothing.)
 
 ## Versions and build numbers
 
@@ -161,14 +178,14 @@ Automatic, from **Conventional Commit PR titles** (checked on every PR by the "P
   notes list the player-facing PRs since the last release. A beta always moves past the released
   version, even if only a `chore:` touched the app. A manual run with nothing merged since the last
   tag skips the upload (there is no new version to build). In the app, Settings shows "Version 1.3.0 (build) · Beta".
-- **App Store** (Actions ▸ App Store Release ▸ Run workflow, version left empty): builds that same next
-  version, uploads it, then tags `vX.Y.Z`, publishes a GitHub Release named "Lelu Oware X.Y.Z" with
-  the notes, and starts the Pages workflow (a release created by a workflow fires no `release` event). The next
-  TestFlight builds then move on to the version after. Settings shows no "Beta" in App Store builds.
-  (Publishing a GitHub Release tagged `vX.Y.Z` by hand works too. Name it exactly "Lelu Oware X.Y.Z":
-  the What's new page, `scripts/build_release_notes.py`, only lists releases named that way.)
+- **App Store** (App Store Release, run from a `build/X.Y.Z-N` tag): submits that build, then tags
+  `vX.Y.Z`, publishes a GitHub Release named "Lelu Oware X.Y.Z" with the notes, and starts the Pages
+  workflow (a release created by a workflow fires no `release` event). The next TestFlight builds then
+  move on to the version after. Settings shows no "Beta" in App Store builds. (A GitHub Release
+  published by hand must be named exactly "Lelu Oware X.Y.Z": the What's new page,
+  `scripts/build_release_notes.py`, only lists releases named that way.)
 - **Build number** (`CFBundleVersion`): the UTC date and time of the upload, e.g. 202609271730, for
-  every upload (TestFlight, App Store, `make archive`), so builds never clash.
+  every upload (TestFlight and `make archive`), so builds never clash.
 - Apple only accepts plain numbers as versions ("1.3.0", never "1.3.0-beta"); TestFlight itself marks
   builds as beta. The version open in App Store Connect must match (e.g. 1.0.0 for the first release).
 
@@ -181,12 +198,10 @@ then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upl
    Apple Team ID itself.
 1. `git checkout -b feature/thing` → edit → `make engine-test` / `make test`.
 2. Push, open a PR. CI must be green.
-3. Merge → if the PR changed the app, a TestFlight build appears in ~15 minutes → test on your phone.
-4. When ready to ship: Actions ▸ App Store Release ▸ Run workflow on `main` (see above), or
-   Releases → "Draft a new release" → tag `v1.0.0`, title "Lelu Oware 1.0.0" → Publish.
-   The App Store workflow uploads the build; approve the `production` environment; then in App Store
-   Connect attach the build to the version, fill metadata/screenshots, and submit (or set
-   `submit_for_review` on a manual run).
+3. Merge → if the PR changed the app, a TestFlight build appears in ~15 minutes, tagged
+   `build/<version>-<build #>` → test on your phone.
+4. When a build is good: Actions ▸ App Store Release ▸ Run workflow from its tag (see "Releasing to
+   the App Store"). Apple reviews it and it goes live when approved.
 
 ## Hosted pages
 GitHub Pages is deployed by `.github/workflows/pages.yml` (Settings ▸ Pages ▸ Source: **GitHub Actions**).

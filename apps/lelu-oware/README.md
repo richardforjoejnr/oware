@@ -37,4 +37,4 @@ Then select the Oware target → Signing & Capabilities → your Personal Team, 
 TestFlight, App Store and Game Center need the paid programme (see docs/PIPELINE.md).
 
 ## Contributing flow
-Branch → PR (CI runs) → merge to `main` (TestFlight build) → GitHub Release `vX.Y.Z` (App Store).
+Branch → PR (CI runs) → merge to `main` (TestFlight build, tagged `build/X.Y.Z-N`) → run App Store Release from that tag (App Review, live when approved; tags `vX.Y.Z`).
