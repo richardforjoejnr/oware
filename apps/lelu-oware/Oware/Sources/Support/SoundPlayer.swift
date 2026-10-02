@@ -9,8 +9,13 @@ final class SoundPlayer {
 
     var enabled = true
 
-    private let engine = AVAudioEngine()
-    private let players: [AVAudioPlayerNode]
+    /// Built on the first sound, not at launch: connecting nodes reaches the system audio server,
+    /// which can stall (seen as an abort in `mainMixerNode` on the simulator) and need not block
+    /// drawing the board. Rebuilt after iOS resets media services, which invalidates the old one.
+    private var engine: AVAudioEngine?
+    /// For tests: whether the audio engine has been built yet.
+    var hasEngine: Bool { engine != nil }
+    private var players: [AVAudioPlayerNode] = []
     private var nextPlayer = 0
     private let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
     private var buffers: [Sound: [AVAudioPCMBuffer]] = [:]
@@ -24,18 +29,16 @@ final class SoundPlayer {
     enum Sound: CaseIterable { case tick, clack, pickUp, capture, win, lose }
 
     private init() {
-        players = (0..<6).map { _ in AVAudioPlayerNode() }
         // A phone call, Siri, or a route change (headphones) stops the engine; start it again on the
         // next sound rather than staying silent for the rest of the session.
-        NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
+        NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.started = false }
         }
         NotificationCenter.default.addObserver(forName: AVAudioSession.interruptionNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.started = false }
         }
-        for p in players {
-            engine.attach(p)
-            engine.connect(p, to: engine.mainMixerNode, format: format)
+        NotificationCenter.default.addObserver(forName: AVAudioSession.mediaServicesWereResetNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.discardEngine() }
         }
         // Four detuned takes of each sound so a sowing never repeats the exact same click.
         let detunes: [Double] = [0.94, 0.98, 1.03, 1.08]
@@ -119,24 +122,45 @@ final class SoundPlayer {
 
     /// `.ambient` follows the phone's Silent switch and mixes with the player's own music — right
     /// for a board game whose sounds are texture, not information.
-    private func startIfNeeded() {
-        guard !started || !engine.isRunning else { return }
+    private func startIfNeeded() -> AVAudioEngine? {
+        if started, let engine, engine.isRunning { return engine }
         do {
             try AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
+            let engine = self.engine ?? makeEngine()
             try engine.start()
             started = true
+            return engine
         } catch {
             // Try again on the next sound instead of switching audio off for good.
             started = false
+            return nil
         }
+    }
+
+    private func makeEngine() -> AVAudioEngine {
+        let engine = AVAudioEngine()
+        players = (0..<6).map { _ in AVAudioPlayerNode() }
+        for p in players {
+            engine.attach(p)
+            engine.connect(p, to: engine.mainMixerNode, format: format)
+        }
+        nextPlayer = 0
+        self.engine = engine
+        return engine
+    }
+
+    private func discardEngine() {
+        idleTask?.cancel()
+        engine = nil
+        players = []
+        started = false
     }
 
     func play(_ sound: Sound, volume: Float = 1) {
         guard enabled, let takes = buffers[sound], let buffer = takes.randomElement() else { return }
-        startIfNeeded()
-        guard started, engine.isRunning else { return }
-        let player = players[nextPlayer]
+        guard let engine = startIfNeeded(), engine.isRunning, !players.isEmpty else { return }
+        let player = players[nextPlayer % players.count]
         nextPlayer = (nextPlayer + 1) % players.count
         player.volume = volume
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)
@@ -145,7 +169,7 @@ final class SoundPlayer {
         idleTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(4))
             guard let self, !Task.isCancelled else { return }
-            self.engine.pause()
+            self.engine?.pause()
             self.started = false
         }
     }
