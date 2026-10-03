@@ -71,19 +71,19 @@ private struct ReferenceLudo {
             switch t.spot {
             case .home: continue
             case .yard:
-                if rules.entryRolls.contains(r) && mayEndOn(route[0], me) { out.insert([i, -1, 0, -1, 0]) }
+                if rules.entryRolls.contains(r) && mayEndOn(route[0], me) { out.insert([i, -1, 0, -1, 0, 0]) }
             case .square(let here) where t.guest != nil:
                 // A guest walks back down the lane it kicked its way into, then on along its route.
                 let lane = Board.lane(t.guest!), depth = lane.firstIndex(of: here)! + 1
                 if r < depth {
-                    if mayEndOn(lane[depth - r - 1], me) { out.insert([i, t.steps, t.steps, t.guest!.rawValue, depth - r]) }
+                    if mayEndOn(lane[depth - r - 1], me) { out.insert([i, t.steps, t.steps, t.guest!.rawValue, depth - r, 4]) }
                 } else {
                     let target = t.steps + (r - depth)
                     var blocked = false
                     if rules.stacking == .wall {
                         for s in t.steps..<target where s <= 50 && enemyPair(route[s], me) { blocked = true }
                     }
-                    if target <= 56 && !blocked && (target == 56 || mayEndOn(route[target], me)) { out.insert([i, t.steps, target, -1, 0]) }
+                    if target <= 56 && !blocked && (target == 56 || mayEndOn(route[target], me)) { out.insert([i, t.steps, target, -1, 0, 4]) }
                 }
             case .square:
                 if rules.homeKick && t.steps <= 50 {
@@ -97,7 +97,7 @@ private struct ReferenceLudo {
                             for s in (t.steps + 1)...e where enemyPair(route[s], me) { blocked = true }
                         }
                         if !blocked && !victims(Board.lane(other)[depth - 1], me).isEmpty {
-                            out.insert([i, t.steps, e, other.rawValue, depth])
+                            out.insert([i, t.steps, e, other.rawValue, depth, 3])
                         }
                     }
                 }
@@ -108,7 +108,7 @@ private struct ReferenceLudo {
                         for s in (t.steps + 1)..<target where s <= 50 && enemyPair(route[s], me) { blocked = true }
                     }
                     let ok = target == 56 || mayEndOn(route[target], me)
-                    if !blocked && ok { out.insert([i, t.steps, target, -1, 0]) }
+                    if !blocked && ok { out.insert([i, t.steps, target, -1, 0, 1]) }
                 }
                 if rules.backKick && t.steps <= 50 && r <= t.steps {
                     let back = t.steps - r
@@ -116,7 +116,31 @@ private struct ReferenceLudo {
                     if rules.stacking == .wall {
                         for s in (back + 1)..<t.steps where enemyPair(route[s], me) { blocked = true }
                     }
-                    if !blocked && !victims(route[back], me).isEmpty { out.insert([i, t.steps, back, -1, 0]) }
+                    if !blocked && !victims(route[back], me).isEmpty { out.insert([i, t.steps, back, -1, 0, 2]) }
+                }
+                // Side kicks: stop by the roll (forwards or backwards), then two squares straight across
+                // a lane square (any colour's, our own included), onto a lone opponent; it must be empty.
+                // Only from the track: a token in its own home lane never steps back out of it.
+                var stops: [(Int, Int)] = []
+                if rules.forwardSideKick && t.steps <= 50 && t.steps + r <= 50 {
+                    var blocked = false
+                    if rules.stacking == .wall { for s in (t.steps + 1)..<(t.steps + r) where enemyPair(route[s], me) { blocked = true } }
+                    if !blocked && mayEndOn(route[t.steps + r], me) { stops.append((t.steps + r, 5)) }
+                }
+                if rules.backSideKick && t.steps <= 50 && r <= t.steps {
+                    var blocked = false
+                    if rules.stacking == .wall { for s in (t.steps - r + 1)..<t.steps where enemyPair(route[s], me) { blocked = true } }
+                    if !blocked && mayEndOn(route[t.steps - r], me) { stops.append((t.steps - r, 6)) }
+                }
+                for (stop, code) in stops {
+                    let at = route[stop]
+                    for (dc, dr) in [(0, 2), (0, -2), (2, 0), (-2, 0)] {
+                        let mid = Board.Cell(at.column + dc / 2, at.row + dr / 2), far = Board.Cell(at.column + dc, at.row + dr)
+                        guard PlayerColor.allCases.contains(where: { Board.lane($0).contains(mid) }),
+                              onTrack(far), who(on: mid).isEmpty, mayEndOn(far, me), !victims(far, me).isEmpty,
+                              let to = route[0...50].firstIndex(of: far) else { continue }
+                        out.insert([i, t.steps, to, -1, 0, code])
+                    }
                 }
             }
         }
@@ -179,6 +203,9 @@ struct ReferenceTests {
         RuleSet(homeKick: true),
         RuleSet(stacking: .notAllowed, homeKick: true),
         RuleSet(kickOrHomeEarnsRoll: false, stacking: .safe, backKick: false, startSquaresSafe: true, homeKick: true),
+        RuleSet(forwardSideKick: true, backSideKick: true),
+        RuleSet(homeKick: true, forwardSideKick: true, backSideKick: true),
+        RuleSet(stacking: .notAllowed, backKick: false, starSquaresSafe: true, homeKick: true, forwardSideKick: true, backSideKick: false),
     ]
 
     @Test("Random games: the same legal moves, positions, turns and winner, roll by roll", arguments: ruleSets)
@@ -193,7 +220,8 @@ struct ReferenceTests {
             while !engine.isOver && rolls < 20_000 {
                 let v = Int.random(in: 1...6, using: &rng)
                 engine.roll(v); ref.doRoll(v); rolls += 1
-                let legal = Set(engine.legalMoves().map { [$0.token, $0.from, $0.to, $0.visit?.owner.rawValue ?? -1, $0.visit?.depth ?? 0] })
+                let kinds: [Move.Kind: Int] = [.enter: 0, .forward: 1, .backKick: 2, .homeKick: 3, .walkOut: 4, .sideKickForward: 5, .sideKickBack: 6]
+                let legal = Set(engine.legalMoves().map { [$0.token, $0.from, $0.to, $0.visit?.owner.rawValue ?? -1, $0.visit?.depth ?? 0, kinds[$0.kind]!] })
                 try #require(legal == ref.moves(), "seed \(seed) roll \(rolls): engine \(legal) vs reference \(ref.moves())")
                 if let pick = engine.legalMoves().randomElement(using: &rng) {
                     played[pick.kind, default: 0] += 1
@@ -213,5 +241,7 @@ struct ReferenceTests {
             #expect(played[.homeKick, default: 0] > 0 && played[.walkOut, default: 0] > 0, "home kicks played: \(played)")
         }
         if rules.backKick { #expect(played[.backKick, default: 0] > 0, "\(played)") }
+        if rules.forwardSideKick { #expect(played[.sideKickForward, default: 0] > 0, "side kicks played: \(played)") }
+        if rules.backSideKick { #expect(played[.sideKickBack, default: 0] > 0, "\(played)") }
     }
 }

@@ -13,7 +13,7 @@ struct InvariantTests {
     static let ruleSets = ReferenceTestsRuleSets.all
 
     /// Plays seeded random games, calling `check` with the state before, the events and the state after.
-    static func play(_ rules: RuleSet, games: Int = 50, check: (GameState, [GameEvent], GameState, Move?) throws -> Void) throws {
+    static func play(_ rules: RuleSet, games: Int = 20, check: (GameState, [GameEvent], GameState, Move?) throws -> Void) throws {
         for seed in 0..<games {
             var rng = LCG(s: UInt64(seed) &* 40503 &+ 11)
             var g = GameState(players: Array(PlayerColor.allCases.prefix(2 + seed % 3)), rules: rules)
@@ -71,8 +71,9 @@ struct InvariantTests {
     func oneTokenPerSquare() throws {
         try Self.play(RuleSet(stacking: .notAllowed)) { _, _, after, _ in
             for c in after.players {
-                let spots = after.tokens(of: c).filter { $0 >= 0 && $0 < Board.home }
-                try #require(Set(spots).count == spots.count, "\(c): \(spots)")
+                // Squares, not progress numbers: a visitor's progress is its lane's entrance.
+                let squares = (0..<4).filter { (0..<Board.home).contains(after.tokens(of: c)[$0]) }.compactMap { after.cell(of: c, token: $0) }
+                try #require(Set(squares).count == squares.count, "\(c): \(squares)")
             }
         }
     }

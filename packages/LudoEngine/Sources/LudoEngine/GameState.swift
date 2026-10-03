@@ -123,6 +123,9 @@ public struct GameState: Sendable, Codable, Hashable {
             if rules.homeKick, p <= Board.lastTrackProgress {
                 moves += homeKickMoves(token: i, progress: p, roll: r)
             }
+            if p <= Board.lastTrackProgress {
+                moves += sideKickMoves(token: i, progress: p, roll: r)
+            }
         }
         return moves
     }
@@ -139,6 +142,31 @@ public struct GameState: Sendable, Codable, Hashable {
             guard (1...Board.laneLength).contains(depth) else { continue }
             guard pathClear(me, from: p, to: entrance + 1), !laneVictims(owner, depth: depth, by: me).isEmpty else { continue }
             moves.append(Move(token: i, kind: .homeKick, from: p, to: entrance, visit: Move.Visit(owner: owner, depth: depth)))
+        }
+        return moves
+    }
+
+    /// Side kicks: by the roll to a square on the track (forwards, or backwards), then across the home
+    /// lane beside it onto a lone opponent, the lane square between them empty. Across your own lane
+    /// too (owner, 2026-10-03): from the start of your journey that jumps you almost to its end, a
+    /// recognised shortcut home.
+    private func sideKickMoves(token i: Int, progress p: Int, roll r: Int) -> [Move] {
+        let me = toMove
+        var moves: [Move] = []
+        var steps: [(Move.Kind, Int)] = []
+        if rules.forwardSideKick, p + r <= Board.lastTrackProgress, pathClear(me, from: p, to: p + r), landingOK(me, progress: p + r) {
+            steps.append((.sideKickForward, p + r))
+        }
+        if rules.backSideKick, r <= p, pathClear(me, from: p - r, to: p), canLand(me, at: Board.trackIndex(me, progress: p - r)) {
+            steps.append((.sideKickBack, p - r))
+        }
+        for (kind, stop) in steps {
+            guard let across = Board.across[Board.trackIndex(me, progress: stop)],
+                  laneOccupants(across.laneOwner, depth: across.depth).isEmpty,
+                  canLand(me, at: across.opposite), !kickable(at: across.opposite, by: me).isEmpty else { continue }
+            let to = Self.progress(of: me, atTrackIndex: across.opposite)
+            guard to <= Board.lastTrackProgress else { continue }
+            moves.append(Move(token: i, kind: kind, from: p, to: to))
         }
         return moves
     }

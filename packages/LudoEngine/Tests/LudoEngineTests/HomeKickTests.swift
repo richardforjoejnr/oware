@@ -9,7 +9,7 @@ import Testing
 /// Yellow's lane entrance is track square 11 (the top of the board), which is red's progress 11.
 @Suite("Home kick")
 struct HomeKickTests {
-    static let rules = RuleSet(homeKick: true)
+    static let rules = RuleSet(homeKick: true, forwardSideKick: false, backSideKick: false)
 
     func game(_ placed: [PlayerColor: [Int]], visits: [PlayerColor: [Move.Visit?]] = [:], rules: RuleSet = Self.rules) -> GameState {
         var g = GameState(players: [.red, .yellow], rules: rules, first: .red)
@@ -44,7 +44,7 @@ struct HomeKickTests {
         var short = game([.red: [8, -1, -1, -1], .yellow: [52, -1, -1, -1]])
         short.roll(4)   // would reach the lane's first square, which is empty
         #expect(!short.legalMoves().contains { $0.kind == .homeKick })
-        var off = game([.red: [8, -1, -1, -1], .yellow: [52, -1, -1, -1]], rules: RuleSet())
+        var off = game([.red: [8, -1, -1, -1], .yellow: [52, -1, -1, -1]], rules: RuleSet(homeKick: false))
         off.roll(5)
         #expect(!off.legalMoves().contains { $0.kind == .homeKick })
     }

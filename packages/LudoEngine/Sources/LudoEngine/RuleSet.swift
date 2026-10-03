@@ -38,8 +38,8 @@ public struct RuleSet: Sendable, Codable, Hashable {
 
     public init(kickOrHomeEarnsRoll: Bool = true, threeSixesForfeit: Bool = true, stacking: Stacking = .wall,
                 backKick: Bool = true, startSquaresSafe: Bool = false, starSquaresSafe: Bool = false,
-                entryRolls: Set<Int> = [6], homeKick: Bool = false, forwardSideKick: Bool = false,
-                backSideKick: Bool = false, labourerEnabled: Bool = false) {
+                entryRolls: Set<Int> = [6], homeKick: Bool = true, forwardSideKick: Bool = true,
+                backSideKick: Bool = true, labourerEnabled: Bool = false) {
         self.kickOrHomeEarnsRoll = kickOrHomeEarnsRoll
         self.threeSixesForfeit = threeSixesForfeit
         self.stacking = stacking
@@ -74,8 +74,11 @@ public struct RuleSet: Sendable, Codable, Hashable {
         labourerEnabled = try c.decodeIfPresent(Bool.self, forKey: .labourerEnabled) ?? false
     }
 
-    /// Lelu Ludo's defaults.
-    public static let ghana = RuleSet()
+    /// Ghana Classic, Lelu Ludo's defaults (owner, 2026-10-03): forward, back, forward side, back side
+    /// and home kicks on; a 6 rolls again; home needs the exact roll; Labourer off until it is defined.
+    public static let ghanaClassic = RuleSet()
+    public static let ghana = ghanaClassic
     /// Plain Ludo as most printed rule sheets give it, for tests and comparison.
-    public static let classic = RuleSet(kickOrHomeEarnsRoll: false, threeSixesForfeit: false, stacking: .wall, backKick: false)
+    public static let classic = RuleSet(kickOrHomeEarnsRoll: false, threeSixesForfeit: false, stacking: .wall, backKick: false,
+                                        homeKick: false, forwardSideKick: false, backSideKick: false)
 }
