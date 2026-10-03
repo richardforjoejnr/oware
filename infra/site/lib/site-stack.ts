@@ -10,6 +10,8 @@ import { Construct } from 'constructs';
 
 export interface SiteStackProps extends cdk.StackProps {
   stage: string;
+  /** Names the stack's resources, e.g. oware-site. One per website. */
+  siteName: string;
   /** The built site to upload (Jekyll output plus test reports). */
   siteDir: string;
   /** A domain bought in Route 53 (its hosted zone exists); the site is also served at www. */
@@ -25,10 +27,10 @@ export interface SiteStackProps extends cdk.StackProps {
 export class SiteStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: SiteStackProps) {
     super(scope, id, props);
-    const { stage, siteDir, domainName } = props;
+    const { stage, siteName, siteDir, domainName } = props;
 
     const bucket = new s3.Bucket(this, 'SiteBucket', {
-      bucketName: `${stage}-oware-site-${this.account}`,
+      bucketName: `${stage}-${siteName}-${this.account}`,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       encryption: s3.BucketEncryption.S3_MANAGED,
       enforceSSL: true,
@@ -39,7 +41,7 @@ export class SiteStack extends cdk.Stack {
     // Short URLs, as GitHub Pages served them: /lelu-oware/privacy and /lelu-oware/ resolve to
     // their index.html (the workflow writes privacy.html as privacy/index.html too).
     const prettyUrls = new cloudfront.Function(this, 'PrettyUrlsFn', {
-      functionName: `${stage}-oware-site-pretty-urls`,
+      functionName: `${stage}-${siteName}-pretty-urls`,
       code: cloudfront.FunctionCode.fromInline(`
 function handler(event) {
   var req = event.request;
@@ -64,7 +66,7 @@ function handler(event) {
     }
 
     const distribution = new cloudfront.Distribution(this, 'SiteDistribution', {
-      comment: `${stage} oware site`,
+      comment: `${stage} ${siteName.replace(/-/g, ' ')}`,
       defaultRootObject: 'index.html',
       domainNames: domainName ? [domainName, `www.${domainName}`] : undefined,
       certificate,
@@ -102,7 +104,7 @@ function handler(event) {
     });
 
     const url = `https://${domainName ?? distribution.distributionDomainName}`;
-    new cdk.CfnOutput(this, 'SiteUrl', { value: url, exportName: `${stage}-oware-site-url` });
+    new cdk.CfnOutput(this, 'SiteUrl', { value: url, exportName: `${stage}-${siteName}-url` });
     new cdk.CfnOutput(this, 'CloudFrontUrl', { value: `https://${distribution.distributionDomainName}` });
     new cdk.CfnOutput(this, 'PrivacyUrl', { value: `${url}/lelu-oware/privacy` });
     new cdk.CfnOutput(this, 'SupportUrl', { value: `${url}/lelu-oware/support` });

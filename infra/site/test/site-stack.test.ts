@@ -11,7 +11,7 @@ function synth(domainName?: string): Template {
   const siteDir = fs.mkdtempSync(path.join(os.tmpdir(), 'site-'));
   fs.writeFileSync(path.join(siteDir, 'index.html'), '<h1>ok</h1>');
   const app = new cdk.App();
-  const stack = new SiteStack(app, 'test-oware-site', { env, stage: 'test', siteDir, domainName });
+  const stack = new SiteStack(app, 'test-oware-site', { env, stage: 'test', siteName: 'oware-site', siteDir, domainName });
   return Template.fromStack(stack);
 }
 

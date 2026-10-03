@@ -15,20 +15,24 @@ const siteDir = process.env.SITE_DIR ?? path.join(__dirname, '../../../_site');
 // e.g. leluoware.com once bought in Route 53 (its hosted zone is created with it). Empty: the
 // site is served at its CloudFront address only.
 const domainName = process.env.SITE_DOMAIN || undefined;
+// One stack per website: another app with its own domain uses its own name (e.g. SITE_NAME=ludo-site)
+// and never touches this one. See docs/WEBSITE_ON_AWS.md.
+const siteName = process.env.SITE_NAME ?? 'oware-site';
 
-new SiteStack(app, `${stage}-oware-site`, {
+new SiteStack(app, `${stage}-${siteName}`, {
   env: {
     account: process.env.CDK_DEFAULT_ACCOUNT,
     region: 'us-east-1',
   },
-  stackName: `${stage}-oware-site`,
-  description: `Lelu Oware website: privacy, support, What's new and test reports (${stage})`,
+  stackName: `${stage}-${siteName}`,
+  description: `${siteName}: public website (privacy, support, What's new, test reports) (${stage})`,
   stage,
+  siteName,
   siteDir,
   domainName,
 });
 
-cdk.Tags.of(app).add('App', 'oware-site');
+cdk.Tags.of(app).add('App', siteName);
 cdk.Tags.of(app).add('Environment', stage);
 cdk.Tags.of(app).add('ManagedBy', 'CDK');
 

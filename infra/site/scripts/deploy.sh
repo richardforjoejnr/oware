@@ -1,11 +1,14 @@
 #!/bin/bash
 # Deploy the website to a stage. Usage: SITE_DIR=../../_site ./scripts/deploy.sh [dev|prod]
 # Optional: SITE_DOMAIN=leluoware.com once the domain is bought in Route 53.
-# Self-contained: only ever touches the <stage>-oware-site stack.
+# SITE_NAME (default oware-site) names the stack: <stage>-<SITE_NAME>. Another website, another name.
+# Self-contained: only ever touches that one stack.
 set -e
 STAGE=${1:-dev}
 GREEN='\033[0;32m'; BLUE='\033[0;34m'; RED='\033[0;31m'; NC='\033[0m'
 cd "$(dirname "$0")/.."
+SITE_NAME=${SITE_NAME:-oware-site}; export SITE_NAME
+STACK="${STAGE}-${SITE_NAME}"
 SITE_DIR=${SITE_DIR:-../../_site}
 if [ ! -f "$SITE_DIR/index.html" ]; then
   echo -e "${RED}No built site at $SITE_DIR (the Site workflow builds it).${NC}"; exit 1
@@ -17,10 +20,10 @@ echo -e "${BLUE}Building + testing...${NC}"; npm run build && npm test
 echo -e "${BLUE}Bootstrapping CDK (idempotent)...${NC}"
 npx cdk bootstrap "aws://$(aws sts get-caller-identity --query Account --output text)/us-east-1" 2>/dev/null || true
 echo -e "${BLUE}Deploying stage: ${STAGE}${SITE_DOMAIN:+ (domain $SITE_DOMAIN)}...${NC}"
-STAGE=${STAGE} npx cdk deploy "${STAGE}-oware-site" --require-approval never
+STAGE=${STAGE} npx cdk deploy "$STACK" --require-approval never
 
 get_output() {
-  aws cloudformation describe-stacks --region us-east-1 --stack-name "${STAGE}-oware-site" \
+  aws cloudformation describe-stacks --region us-east-1 --stack-name "$STACK" \
     --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text 2>/dev/null
 }
 SITE_URL=$(get_output SiteUrl); PRIVACY_URL=$(get_output PrivacyUrl); SUPPORT_URL=$(get_output SupportUrl)

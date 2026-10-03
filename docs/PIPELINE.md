@@ -204,6 +204,9 @@ then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upl
    the App Store"). Apple reviews it and it goes live when approved.
 
 ## Hosted pages (AWS)
+Full setup, costs, troubleshooting and how to add another app: [WEBSITE_ON_AWS.md](WEBSITE_ON_AWS.md)
+(local script: `scripts/setup-site.sh`).
+
 The public website lives on AWS, not GitHub Pages, so the code repository can be private. The CDK
 app in `infra/site` (same conventions as `aws-cdk-boilerplate`) keeps it in a private S3 bucket behind
 CloudFront (Origin Access Control, HTTPS only, security headers, a 404 page); `infra/site/test` checks
