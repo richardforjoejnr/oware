@@ -34,9 +34,7 @@ struct GameView: View {
                 }
             }
             .foregroundStyle(Palette.ivory)
-            BoardView()
-                .padding(6)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Palette.wood))
+            BoardFrame(plaque: false) { BoardView() }
             HStack(spacing: 18) {
                 // One scoreboard for VoiceOver (and one target big enough for the audit), not a chip each.
                 HStack(spacing: 18) {
@@ -58,7 +56,7 @@ struct GameView: View {
             Spacer(minLength: 0)
         }
         .padding()
-        .background(Palette.night.ignoresSafeArea())
+        .background(SplashView.background.ignoresSafeArea())
         .onChange(of: session.log) { _, log in
             if let line = log.last { AccessibilityNotification.Announcement(line).post() }
         }

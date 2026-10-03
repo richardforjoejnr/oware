@@ -2,9 +2,8 @@
   "images": [
     {
       "idiom": "universal",
-      "platform": "ios",
-      "size": "1024x1024",
-      "filename": "AppIcon.png"
+      "filename": "Die-4.png",
+      "scale": "3x"
     }
   ],
   "info": {

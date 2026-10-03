@@ -75,6 +75,9 @@ final class LeluLudoUITests: XCTestCase {
     @MainActor
     func testPassAndPlayFromTheMenu() throws {
         let app = launch(["--dice=3"])
+        let friends = app.buttons["tile-friends"]
+        XCTAssertTrue(friends.waitForExistence(timeout: 5))
+        friends.tap()
         let play = app.buttons["btn-pass-play"]
         XCTAssertTrue(play.waitForExistence(timeout: 5))
         play.tap()
@@ -91,7 +94,7 @@ final class LeluLudoUITests: XCTestCase {
         // Contrast and Dynamic Type are left out, as in Lelu Oware: they misfire on painted boards.
         let checks = XCUIAccessibilityAuditType.all.subtracting([.contrast, .dynamicType, .textClipped])
         let app = launch([])
-        XCTAssertTrue(app.staticTexts["home-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.images["home-title"].waitForExistence(timeout: 5))
         try app.performAccessibilityAudit(for: checks)
         app.terminate()
         let game = launch(["--start-game"])

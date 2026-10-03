@@ -2,87 +2,149 @@ import LudoAI
 import LudoEngine
 import SwiftUI
 
-/// The menu: continue, play the computer, or pass & play.
+/// The menu, after the owner's art: the carved LELU LUDO plaque, wooden tiles (Start Game, Friends,
+/// Settings) and the board in its box on a sand table.
 struct HomeView: View {
     @Environment(LudoSession.self) private var session
     @Environment(AppSettings.self) private var settings
     let startGame: () -> Void
-    @State private var showSettings = false
-    @State private var opponents = 1
-    @State private var level: LudoAIDifficulty = .novice
-    @State private var players = 2
+    @State private var sheet: Sheet?
+
+    enum Sheet: String, Identifiable {
+        case computer, friends, settings
+        var id: String { rawValue }
+    }
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
-                Text("Lelu Ludo")
-                    .font(.system(size: 46, weight: .semibold, design: .serif))
-                    .foregroundStyle(Palette.ivory)
-                    .padding(.top, 40)
+            VStack(spacing: 18) {
+                Image(Art.menuTitle)
+                    .resizable().scaledToFit()
+                    .frame(maxWidth: 420)
+                    .accessibilityLabel("Lelu Ludo")
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("home-title")
-                Text("Ludo as it is played in Ghana")
-                    .font(.system(.subheadline, design: .serif))
-                    .foregroundStyle(Palette.ivory.opacity(0.75))
+                    .padding(.top, 12)
 
                 if session.hasGame {
-                    menuButton("Continue", id: "btn-continue") { startGame() }
+                    Button { startGame() } label: {
+                        Text("Continue")
+                            .font(.system(.title3, design: .serif).weight(.semibold))
+                            .foregroundStyle(Palette.ivory)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                            .background(Capsule().fill(Palette.wood))
+                            .overlay(Capsule().stroke(Palette.brass, lineWidth: 2))
+                    }
+                    .accessibilityIdentifier("btn-continue")
                 }
 
-                panel {
-                    Text("Play the computer").font(.headline)
-                    Stepper("Opponents: \(opponents)", value: $opponents, in: 1...3).accessibilityIdentifier("stepper-opponents")
-                    Picker("Level", selection: $level) {
-                        ForEach(LudoAIDifficulty.allCases, id: \.self) { Text($0.displayName).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("picker-level")
-                    menuButton("Play", id: "btn-play-computer") {
-                        session.newGame(.versusComputer(opponents: opponents, level: level, rules: settings.rules))
-                        startGame()
-                    }
+                HStack(spacing: 12) {
+                    tile(Art.tileStart, label: "Start game against the computer", id: "tile-start") { sheet = .computer }
+                    tile(Art.tileFriends, label: "Play with friends on this phone", id: "tile-friends") { sheet = .friends }
+                    tile(Art.tileSettings, label: "Settings. Rules: \(settings.preset.title)", id: "btn-settings") { sheet = .settings }
                 }
 
-                panel {
-                    Text("Pass & play").font(.headline)
-                    Stepper("Players: \(players)", value: $players, in: 2...4).accessibilityIdentifier("stepper-players")
-                    menuButton("Play together", id: "btn-pass-play") {
-                        session.newGame(.passAndPlay(players: players, rules: settings.rules))
-                        startGame()
-                    }
-                }
+                BoardFrame { BoardCanvas(rules: settings.rules) }
+                    .padding(.horizontal, 8)
+                    .accessibilityHidden(true)
 
-                Button {
-                    showSettings = true
-                } label: {
-                    Label("Rules: \(settings.preset.title)", systemImage: "gearshape")
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .accessibilityIdentifier("btn-settings")
+                Text("\(settings.preset.title) rules")
+                    .font(.system(.footnote, design: .serif).weight(.semibold))
+                    .foregroundStyle(Palette.wood)
             }
             .padding()
         }
-        .foregroundStyle(Palette.ivory)
-        .tint(Palette.brass)
-        .background(Palette.night.ignoresSafeArea())
-        .sheet(isPresented: $showSettings) { SettingsView() }
-    }
-
-    private func panel<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12, content: content)
-            .padding()
-            .background(RoundedRectangle(cornerRadius: 14).fill(Palette.wood))
-    }
-
-    private func menuButton(_ title: String, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.system(.title3, design: .serif).weight(.semibold))
-                .frame(maxWidth: .infinity, minHeight: 50)
+        .background(Self.table.ignoresSafeArea())
+        .sheet(item: $sheet) { which in
+            switch which {
+            case .computer: ComputerGameSheet(startGame: startGame)
+            case .friends: FriendsGameSheet(startGame: startGame)
+            case .settings: SettingsView()
+            }
         }
-        .buttonStyle(.borderedProminent)
-        .tint(Palette.brass)
-        .foregroundStyle(Palette.night)
+    }
+
+    /// Warm sand cloth, darker towards the edges.
+    static var table: some View {
+        RadialGradient(colors: [Palette.sand, Palette.sandDeep], center: .center, startRadius: 80, endRadius: 600)
+    }
+
+    private func tile(_ image: String, label: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(image).resizable().scaledToFit()
+                .shadow(color: .black.opacity(0.35), radius: 4, y: 3)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
         .accessibilityIdentifier(id)
+    }
+}
+
+/// You against 1–3 computers: how many, and how strong.
+struct ComputerGameSheet: View {
+    @Environment(LudoSession.self) private var session
+    @Environment(AppSettings.self) private var settings
+    @Environment(\.dismiss) private var dismiss
+    let startGame: () -> Void
+    @State private var opponents = 1
+    @State private var level: LudoAIDifficulty = .novice
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Stepper("Opponents: \(opponents)", value: $opponents, in: 1...3).accessibilityIdentifier("stepper-opponents")
+                Picker("Level", selection: $level) {
+                    ForEach(LudoAIDifficulty.allCases, id: \.self) { Text($0.displayName).tag($0) }
+                }
+                .accessibilityIdentifier("picker-level")
+                Section {
+                    Button("Play") {
+                        session.newGame(.versusComputer(opponents: opponents, level: level, rules: settings.rules))
+                        dismiss()
+                        startGame()
+                    }
+                    .font(.headline)
+                    .accessibilityIdentifier("btn-play-computer")
+                } footer: {
+                    Text("\(settings.preset.title) rules. You are red.")
+                }
+            }
+            .navigationTitle("Start game")
+            .toolbar { Button("Cancel") { dismiss() } }
+        }
+        .presentationDetents([.medium])
+        .tint(Palette.brass)
+    }
+}
+
+/// 2–4 people passing one phone.
+struct FriendsGameSheet: View {
+    @Environment(LudoSession.self) private var session
+    @Environment(AppSettings.self) private var settings
+    @Environment(\.dismiss) private var dismiss
+    let startGame: () -> Void
+    @State private var players = 2
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Stepper("Players: \(players)", value: $players, in: 2...4).accessibilityIdentifier("stepper-players")
+                Section {
+                    Button("Play together") {
+                        session.newGame(.passAndPlay(players: players, rules: settings.rules))
+                        dismiss()
+                        startGame()
+                    }
+                    .font(.headline)
+                    .accessibilityIdentifier("btn-pass-play")
+                } footer: {
+                    Text("\(settings.preset.title) rules. Pass the phone on each turn.")
+                }
+            }
+            .navigationTitle("Friends")
+            .toolbar { Button("Cancel") { dismiss() } }
+        }
+        .presentationDetents([.medium])
+        .tint(Palette.brass)
     }
 }

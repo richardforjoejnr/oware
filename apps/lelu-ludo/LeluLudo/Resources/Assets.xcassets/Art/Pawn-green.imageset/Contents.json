@@ -2,9 +2,8 @@
   "images": [
     {
       "idiom": "universal",
-      "platform": "ios",
-      "size": "1024x1024",
-      "filename": "AppIcon.png"
+      "filename": "Pawn-green.png",
+      "scale": "3x"
     }
   ],
   "info": {

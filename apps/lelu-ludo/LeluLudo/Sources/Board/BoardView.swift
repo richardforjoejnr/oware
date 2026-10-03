@@ -126,7 +126,8 @@ struct BoardView: View {
     }
 }
 
-/// A turned-wood pawn seen from above (a drawn stand-in until the owner's token art).
+/// A turned-wood pawn (the owner's art) standing on its square: its base sits on the square, its
+/// head rises above it. A ring round the base shows it can move.
 struct TokenView: View {
     let color: PlayerColor
     let movable: Bool
@@ -136,18 +137,25 @@ struct TokenView: View {
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(RadialGradient(colors: [Palette.color(color).opacity(0.75), Palette.color(color)],
-                                     center: .init(x: 0.35, y: 0.3), startRadius: 1, endRadius: size * 0.6))
-                .overlay(Circle().stroke(color == .black ? Palette.brass : .black.opacity(0.45), lineWidth: color == .black ? 2 : 1))
-                .shadow(color: .black.opacity(0.35), radius: 2, y: 1.5)
-            Circle().fill(.white.opacity(0.25)).frame(width: size * 0.28).offset(x: -size * 0.14, y: -size * 0.16)
+            // Shadow on the board under the base.
+            Ellipse().fill(.black.opacity(0.35))
+                .frame(width: size * 0.95, height: size * 0.38)
+                .blur(radius: 1.5)
+                .offset(y: size * 0.32)
             if movable {
                 // Brass: can move. Red dashes: also has a kick to choose (back, side or home).
-                Circle().stroke(kickChoice ? Palette.color(.red) : Palette.brass,
-                                style: StrokeStyle(lineWidth: selected ? 4 : 3, dash: kickChoice ? [5, 3] : []))
-                    .frame(width: size * 1.3, height: size * 1.3)
+                Ellipse().stroke(kickChoice ? Palette.color(.red) : Palette.brass,
+                                 style: StrokeStyle(lineWidth: selected ? 4 : 3, dash: kickChoice ? [5, 3] : []))
+                    .frame(width: size * 1.35, height: size * 0.75)
+                    .offset(y: size * 0.28)
             }
+            Image(Art.pawn(color))
+                .resizable()
+                .scaledToFit()
+                .frame(height: size * 1.6)
+                .offset(y: -size * 0.42)
+                // Lifted a little when chosen.
+                .scaleEffect(selected ? 1.12 : 1, anchor: .bottom)
         }
         .frame(width: size, height: size)
     }

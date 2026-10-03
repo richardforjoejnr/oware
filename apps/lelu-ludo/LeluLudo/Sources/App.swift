@@ -33,9 +33,13 @@ struct LeluLudoApp: App {
 
 struct RootView: View {
     @State private var inGame = LaunchOptions.startGame || LaunchOptions.scenario != nil
+    /// The opening card, skipped by tests and when opening straight onto a game.
+    @State private var splash = !LaunchOptions.testMode && !LaunchOptions.startGame && LaunchOptions.scenario == nil
 
     var body: some View {
-        if inGame {
+        if splash {
+            SplashView { withAnimation(.easeOut(duration: 0.4)) { splash = false } }
+        } else if inGame {
             GameView(goHome: { inGame = false })
         } else {
             HomeView(startGame: { inGame = true })

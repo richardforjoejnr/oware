@@ -1,27 +1,49 @@
 import LudoEngine
 import SwiftUI
 
-/// The die: shows the last roll in the colour of whoever rolled; tap to roll on your turn.
+/// The dice cup and the die (the owner's art): tap the cup to shake it and roll. The die shows the
+/// last roll, on a bar in the colour of whoever rolled; before the first roll it shows the flag.
 struct DiceView: View {
     @Environment(LudoSession.self) private var session
-    @State private var tumble = false
+    @State private var shakes = 0
 
     var body: some View {
         let value = session.lastRoll?.value
         Button {
-            tumble.toggle()
+            shakes += 1
             Task { await session.roll() }
         } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Palette.cream)
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(session.lastRoll.map { Palette.color($0.color) } ?? Palette.line, lineWidth: 3))
-                    .shadow(color: .black.opacity(0.4), radius: 4, y: 3)
-                if let value { Pips(value: value) } else { Text("Roll").font(.headline).foregroundStyle(Palette.line) }
+            HStack(alignment: .bottom, spacing: 10) {
+                VStack(spacing: 4) {
+                    Image(value.map(Art.die) ?? Art.dieFlag)
+                        .resizable().scaledToFit()
+                        .frame(width: 62, height: 62)
+                        .shadow(color: .black.opacity(0.45), radius: 3, y: 2)
+                        .id(value.map { "\($0)-\(shakes)" } ?? "flag")
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    Capsule().fill(session.lastRoll.map { Palette.color($0.color) } ?? .clear)
+                        .overlay(Capsule().stroke(Palette.brass, lineWidth: session.lastRoll?.color == .black ? 1 : 0))
+                        .frame(width: 40, height: 5)
+                }
+                Image(Art.diceCup)
+                    .resizable().scaledToFit()
+                    .frame(height: 78)
+                    .rotationEffect(.degrees(shakes % 2 == 0 ? 0 : 0.001))
+                    .keyframeAnimator(initialValue: 0.0, trigger: shakes) { cup, angle in
+                        cup.rotationEffect(.degrees(angle), anchor: .bottom)
+                    } keyframes: { _ in
+                        KeyframeTrack {
+                            CubicKeyframe(-12, duration: 0.08)
+                            CubicKeyframe(12, duration: 0.12)
+                            CubicKeyframe(-8, duration: 0.1)
+                            CubicKeyframe(0, duration: 0.1)
+                        }
+                    }
+                    // Glows when it is your roll.
+                    .shadow(color: session.canRoll ? Palette.brass.opacity(0.9) : .clear, radius: 10)
             }
-            .frame(width: 72, height: 72)
-            .rotationEffect(.degrees(tumble ? 360 : 0))
-            .animation(.spring(duration: 0.45), value: tumble)
+            .frame(minHeight: 80)
+            .animation(.spring(duration: 0.35), value: value)
         }
         .buttonStyle(.plain)
         .disabled(!session.canRoll)
