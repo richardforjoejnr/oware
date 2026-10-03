@@ -34,6 +34,15 @@ public struct GameState: Sendable, Codable, Hashable {
         turnStartVisits = visits
     }
 
+    /// A game set up mid-play: tokens where given (progress per colour, missing colours in the yard),
+    /// for lessons, screenshots and app tests. Preconditions as `place`.
+    public static func arranged(players: [PlayerColor], rules: RuleSet = .ghanaClassic, toMove: PlayerColor,
+                                tokens: [PlayerColor: [Int]], visits: [PlayerColor: [Move.Visit?]] = [:]) -> GameState {
+        var g = GameState(players: players, rules: rules, first: toMove)
+        g.place(tokens, visits: visits)
+        return g
+    }
+
     /// Puts tokens where a test wants them (progress per colour, and any visits); the turn starts
     /// afresh from there.
     mutating func place(_ placed: [PlayerColor: [Int]], visits placedVisits: [PlayerColor: [Move.Visit?]] = [:]) {
@@ -182,6 +191,37 @@ public struct GameState: Sendable, Codable, Hashable {
         let q = entrance + (r - v.depth)
         guard q <= Board.home, pathClear(me, from: entrance - 1, to: q), landingOK(me, progress: q) else { return [] }
         return [Move(token: i, kind: .walkOut, from: entrance, to: q)]
+    }
+
+    /// The squares a legal move passes through, in order, ending where the token lands (the centre
+    /// for home). For the app to animate moves along the board rather than across it.
+    public func path(for move: Move) -> [Board.Cell] {
+        let me = toMove
+        let cell = { (q: Int) in Board.cell(me, progress: q)! }
+        let r = pendingRoll ?? abs(move.to - move.from)
+        switch move.kind {
+        case .enter:
+            return [cell(0)]
+        case .forward:
+            return (move.from + 1...move.to).map(cell)
+        case .backKick:
+            return (move.to..<move.from).reversed().map(cell)
+        case .sideKickForward:
+            return (move.from + 1...move.from + r).map(cell) + [Board.track[Board.trackIndex(me, progress: move.to)]]
+        case .sideKickBack:
+            return (move.from - r..<move.from).reversed().map(cell) + [Board.track[Board.trackIndex(me, progress: move.to)]]
+        case .homeKick:
+            let visit = move.visit!
+            let toEntrance = move.to > move.from ? (move.from + 1...move.to).map(cell) : []
+            return toEntrance + Board.lane(visit.owner)[0..<visit.depth]
+        case .walkOut:
+            let here = visit(of: me, token: move.token)!
+            let lane = Board.lane(here.owner)
+            if let still = move.visit { return (still.depth..<here.depth).reversed().map { lane[$0 - 1] } }
+            let down = (1..<here.depth).reversed().map { lane[$0 - 1] }
+            let on = move.to > move.from ? (move.from + 1...move.to).map(cell) : []
+            return down + [cell(move.from)] + on
+        }
     }
 
     /// A colour's progress at a track square (0…51 round from its start).
