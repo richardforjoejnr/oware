@@ -6,9 +6,10 @@ import XCTest
 /// counted. The total since process start is logged for reference. The splash is left out (a design
 /// choice, timed by SplashSchedule). Median of three cold launches.
 final class LaunchTimeUITests: XCTestCase {
-    /// Our own work is about 0.5 s on a Mac's simulator today; CI machines are slower. Well past
-    /// this and something in launch (setup, the home screen's first render) has got heavier.
-    static let budget: TimeInterval = 1.5
+    /// Our own work is about 0.5–0.6 s today, on a Mac's simulator and on CI alike (CI, 2026-10-03:
+    /// 0.48–0.86 s, median 0.59). Well past this and launch (setup, the home screen's first render)
+    /// has got heavier.
+    static let budget: TimeInterval = 1.0
 
     @MainActor
     func testTheHomeMenuAppearsQuickly() throws {
