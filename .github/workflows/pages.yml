@@ -1,14 +1,15 @@
-name: Pages
+name: Site
 
-# Publishes the docs/ site (app index, privacy, support, what's new) plus a test-report page per app.
-# Runs when docs change on main, when a release is published (the App Store workflow also starts it
-# by hand, because releases it creates with GITHUB_TOKEN fire no `release` event), and after CI / E2E
-# finish on main. Runs of PRs from forks whose branch happens to be called main are ignored.
-# Repository Settings ▸ Pages ▸ Source must be "GitHub Actions" for this workflow to deploy.
+# The public website on AWS (S3 + CloudFront, infra/site): privacy and support pages App Review
+# links to, the What's new page from the GitHub Releases, and test reports from main's CI and E2E
+# runs. The code repository is private; only this built site is public.
+# AWS access works as in aws-cdk-boilerplate: secrets AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.
+# Skipped until the repository variable SITE_ON_AWS is "true". SITE_DOMAIN (a variable) is the
+# domain bought in Route 53; leave it unset to serve the site at its CloudFront address.
 on:
   push:
     branches: [main]
-    paths: [docs/**, scripts/build-reports.py, scripts/build_release_notes.py, .github/workflows/pages.yml]
+    paths: [docs/**, infra/site/**, scripts/build-reports.py, scripts/build_release_notes.py, scripts/site_pretty_urls.py, .github/workflows/pages.yml]
   release:
     types: [published]
   workflow_run:
@@ -19,23 +20,25 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-  actions: read
+  actions: read   # to download the test artifacts
 
-# GitHub's guidance for Pages: let an in-progress deployment finish; a newer run queues behind it.
 concurrency:
-  group: pages
+  group: site
   cancel-in-progress: false
 
+env:
+  AWS_REGION: us-east-1
+
 jobs:
-  build:
-    # workflow_run's `branches: [main]` matches a fork PR's head branch named main too.
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.event != 'pull_request'
+  deploy:
+    name: Build & deploy the site
+    if: vars.SITE_ON_AWS == 'true' && (github.event_name != 'workflow_run' || github.event.workflow_run.event != 'pull_request')
     runs-on: ubuntu-latest
+    environment:
+      name: site
+      url: ${{ steps.deploy.outputs.site_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
       - name: What's new page from the GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
@@ -47,8 +50,6 @@ jobs:
         with:
           source: ./docs
           destination: ./_site
-      # jekyll-build-pages runs in a Docker container as root, so _site comes out root-owned
-      # and the report step below can't write into it. Hand it back to the runner user.
       - name: Take ownership of _site
         run: sudo chown -R "$(id -u):$(id -g)" _site
       - name: Download the latest main-branch test artifacts
@@ -64,22 +65,27 @@ jobs:
               echo "$id" >> artifacts/runs.txt
             fi
           done
-          find artifacts -maxdepth 3 | head -50
       - name: Build the report pages
         run: |
+          # The run link is for the owner (the repository is private); the report itself is public.
           run_id=$(tail -1 artifacts/runs.txt 2>/dev/null || echo "")
           url=""; [ -n "$run_id" ] && url="https://github.com/$GITHUB_REPOSITORY/actions/runs/$run_id"
           python3 scripts/build-reports.py artifacts _site/reports/lelu-oware --app "Lelu Oware" --run-url "$url" --sha "$GITHUB_SHA"
-      - uses: actions/upload-pages-artifact@v3
+      - name: Short URLs (/lelu-oware/privacy, as on GitHub Pages)
+        run: python3 scripts/site_pretty_urls.py _site
+      - uses: actions/setup-node@v4
         with:
-          path: ./_site
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: infra/site/package-lock.json
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Deploy
+        id: deploy
+        env:
+          SITE_DIR: ${{ github.workspace }}/_site
+          SITE_DOMAIN: ${{ vars.SITE_DOMAIN }}
+        run: infra/site/scripts/deploy.sh prod

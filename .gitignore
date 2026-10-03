@@ -43,3 +43,6 @@ Gemfile.lock
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Built website (scripts and the Site workflow build it)
+_site/
