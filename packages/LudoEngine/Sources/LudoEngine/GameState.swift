@@ -182,7 +182,7 @@ public struct GameState: Sendable, Codable, Hashable {
     // MARK: - Squares
 
     /// Tokens of each colour on a track square.
-    func occupants(at trackIndex: Int) -> [(color: PlayerColor, token: Int)] {
+    public func occupants(at trackIndex: Int) -> [(color: PlayerColor, token: Int)] {
         var found: [(PlayerColor, Int)] = []
         for color in players {
             for (i, p) in tokens(of: color).enumerated() where (0...Board.lastTrackProgress).contains(p) {
