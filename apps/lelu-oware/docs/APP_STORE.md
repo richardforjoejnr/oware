@@ -38,7 +38,7 @@ JOURNEY
 
 Leaderboards and achievements with Game Center.
 
-Free, with no ads and no account. Optional tips support the maker and unlock nothing. Anonymous usage statistics help decide what to make next, and you can switch them off in Settings.
+Free, with no ads and no account. Optional tips support the maker and unlock nothing. Anonymous usage statistics, only if you agree, help decide what to make next; you can change your answer in Settings.
 
 Akwaaba.
 
@@ -58,8 +58,9 @@ awale,mancala,ayo,warri,nam-nam,abapa,board game,strategy,seeds,african,ghana,ri
 - **Contact:** your name, phone and email (seen only by Apple's reviewers).
 - **Notes:** "No login is needed. The three in-app purchases are optional tips; they unlock nothing,
   and every level, chapter and board look is available to all users. Game Center is optional. The
-  game works fully offline. Anonymous usage statistics (TelemetryDeck) can be switched off in
-  Settings. Cultural content is traditional (Adinkra symbols, Kente colours); artwork is original."
+  game works fully offline. Anonymous usage statistics (TelemetryDeck) are off until the player
+  agrees: they are asked once, after their first finished game, and can change it in Settings, which
+  also links the privacy policy. Cultural content is traditional (Adinkra symbols, Kente colours); artwork is original."
 
 ## What's new (1.0)
 First release.

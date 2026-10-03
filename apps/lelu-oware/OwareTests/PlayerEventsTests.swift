@@ -150,13 +150,35 @@ final class PlayerEventsTests: XCTestCase {
         XCTAssertEqual(keys, ["mode", "level", "result", "rules", "chapter", "kind", "daily", "tier"])
     }
 
-    func testUsageStatsSettingDefaultsOnAndIsOffInTests() {
+    /// App Review 5.1.1(ii): nothing is collected until the player agrees.
+    func testUsageStatsAreOffUntilThePlayerAgrees() {
         let d = TestSupport.defaults()
         let settings = AppSettings(defaults: d, testMode: false)
-        XCTAssertTrue(settings.shareUsageStats && settings.effectiveUsageStats)
-        settings.shareUsageStats = false
-        XCTAssertFalse(AppSettings(defaults: d, testMode: false).shareUsageStats, "remembered")
-        XCTAssertFalse(AppSettings(defaults: TestSupport.defaults(), testMode: true).effectiveUsageStats)
+        XCTAssertFalse(settings.shareUsageStats || settings.effectiveUsageStats, "off before any answer")
+        XCTAssertTrue(settings.shouldAskUsageStats)
+        settings.answerUsageStats(true)
+        XCTAssertTrue(settings.effectiveUsageStats)
+        XCTAssertFalse(settings.shouldAskUsageStats, "asked once")
+        let reopened = AppSettings(defaults: d, testMode: false)
+        XCTAssertTrue(reopened.shareUsageStats && !reopened.shouldAskUsageStats, "remembered")
+        reopened.answerUsageStats(false)
+        XCTAssertFalse(AppSettings(defaults: d, testMode: false).shareUsageStats)
+    }
+
+    /// Earlier builds saved "on" without asking; that is not consent.
+    func testAnOldUnaskedOnIsNotConsent() {
+        let d = TestSupport.defaults()
+        d.set(true, forKey: "shareUsageStats")
+        let settings = AppSettings(defaults: d, testMode: false)
+        XCTAssertFalse(settings.shareUsageStats)
+        XCTAssertTrue(settings.shouldAskUsageStats)
+    }
+
+    func testTestLaunchesNeitherSendNorAsk() {
+        let settings = AppSettings(defaults: TestSupport.defaults(), testMode: true)
+        settings.answerUsageStats(true)
+        XCTAssertFalse(settings.effectiveUsageStats)
+        XCTAssertFalse(AppSettings(defaults: TestSupport.defaults(), testMode: true).shouldAskUsageStats)
     }
 
     // MARK: Online access ("the host pays")

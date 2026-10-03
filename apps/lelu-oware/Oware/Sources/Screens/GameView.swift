@@ -491,6 +491,7 @@ struct GameView: View {
 struct GameOverOverlay: View {
     @Environment(GameSession.self) private var session
     @Environment(JourneyProgress.self) private var progress
+    @Environment(AppSettings.self) private var settings
     let goHome: () -> Void
     var goToJourney: () -> Void = {}
 
@@ -506,6 +507,9 @@ struct GameOverOverlay: View {
                 .font(Theme.body(22))
                 .foregroundStyle(Theme.gold)
                 .accessibilityIdentifier("game-over-score")
+            if settings.shouldAskUsageStats {
+                UsageStatsQuestion { settings.answerUsageStats($0) }
+            }
             if case let .journey(chapter, index) = session.mode {
                 let stars = Journey.stars(for: session.state)
                 Text(String(repeating: "★", count: stars) + String(repeating: "☆", count: 3 - stars))
@@ -555,6 +559,42 @@ struct GameOverOverlay: View {
     }
 }
 
+
+/// Asked once, after the first finished game: a natural pause, once the player knows the game
+/// (HIG: defer requests until the right time). Nothing is sent until they say yes.
+struct UsageStatsQuestion: View {
+    let answer: (Bool) -> Void
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text("Help improve Lelu Oware?")
+                .font(Theme.body(18))
+                .foregroundStyle(Theme.ivory)
+            Text("Share anonymous stats: which modes are played and how games end, never who you are. You can change this in Settings.")
+                .font(Theme.caption(14))
+                .foregroundStyle(Theme.ivoryDim)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 24) {
+                Button("No thanks") { answer(false) }
+                    .frame(minWidth: 44, minHeight: 44)
+                    .foregroundStyle(Theme.ivoryDim)
+                    .accessibilityIdentifier("btn-usage-stats-no")
+                Button("Share") { answer(true) }
+                    .frame(minWidth: 44, minHeight: 44)
+                    .foregroundStyle(Theme.gold)
+                    .accessibilityIdentifier("btn-usage-stats-yes")
+            }
+            .font(Theme.body(17))
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .frame(maxWidth: 340)
+        .background(Theme.ember.opacity(0.9), in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("usage-stats-question")
+    }
+}
 
 private func nextJourneyMatch(after chapter: Int, _ index: Int) -> (chapter: Int, index: Int, opponent: Journey.Opponent)? {
     if let same = Journey.opponent(chapter: chapter, index: index + 1) { return (chapter, index + 1, same) }
