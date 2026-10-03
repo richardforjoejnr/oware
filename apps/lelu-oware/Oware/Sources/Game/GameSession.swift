@@ -510,7 +510,16 @@ final class GameSession {
         let theirs = you == .south ? round.northSeeds : round.southSeeds
         let before = houses(previous, you), after = houses(round, you)
         let moved = after - before
-        let what = moved == 0 ? "you keep \(after) houses" : (moved > 0 ? "you gain \(change(moved)), now \(after)" : "you lose \(change(moved)), now \(after)")
+        let what: String
+        if moved < 0, mine > theirs {
+            // Houses come from this round's seeds, four each: winning the round is not enough to
+            // keep them all. Say why, or a won round that costs a house looks like a mistake.
+            what = "\(before) houses need \(before * 4) seeds: now \(after)"
+        } else if moved > 0, mine < theirs {
+            what = "\(before) houses need only \(before * 4): now \(after)"
+        } else {
+            what = moved == 0 ? "you keep \(after) houses" : (moved > 0 ? "you gain \(change(moved)), now \(after)" : "you lose \(change(moved)), now \(after)")
+        }
         return "Round \(round.round): you \(mine), them \(theirs) — \(what)"
     }
 
