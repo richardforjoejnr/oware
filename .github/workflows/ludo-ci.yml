@@ -11,9 +11,8 @@ name: Lelu Ludo CI
 # affects them all). Changes to Lelu Oware or its workflows do not run it.
 #
 # The rules engine is pure Swift, so it is tested on Linux in Apple's Swift container: a tenth of
-# the cost of a macOS runner on a private repository. The app job (macOS, simulator) is added in
-# the stage that gives the app its screens (see apps/lelu-ludo/docs/GAME_PLAN.md); when it is, add
-# .github/workflows/reusable-ios-app.yml to both `paths:` lists below.
+# the cost of a macOS runner on a private repository. The app (stage 3 on) builds and runs its unit
+# and UI tests on a macOS simulator through reusable-ios-app.yml.
 on:
   pull_request:
     paths:
@@ -21,6 +20,7 @@ on:
       - packages/LudoEngine/**
       - .github/workflows/ludo-ci.yml
       - .github/workflows/reusable-swift-package.yml
+      - .github/workflows/reusable-ios-app.yml
   push:
     branches: [main]
     paths:
@@ -28,6 +28,7 @@ on:
       - packages/LudoEngine/**
       - .github/workflows/ludo-ci.yml
       - .github/workflows/reusable-swift-package.yml
+      - .github/workflows/reusable-ios-app.yml
 
 permissions:
   contents: read
@@ -44,13 +45,11 @@ jobs:
       package-path: packages/LudoEngine
       runner: linux
 
-  # The app job, to add when the app has screens (artifact named apart from Oware's TestResults):
-  #
-  # app:
-  #   name: iOS app
-  #   uses: ./.github/workflows/reusable-ios-app.yml
-  #   with:
-  #     app-dir: apps/lelu-ludo
-  #     project: LeluLudo.xcodeproj
-  #     scheme: LeluLudo
-  #     artifact-name: LudoTestResults
+  app:
+    name: iOS app
+    uses: ./.github/workflows/reusable-ios-app.yml
+    with:
+      app-dir: apps/lelu-ludo
+      project: LeluLudo.xcodeproj
+      scheme: LeluLudo
+      artifact-name: LudoTestResults   # named apart from Lelu Oware's TestResults (the site's report)
