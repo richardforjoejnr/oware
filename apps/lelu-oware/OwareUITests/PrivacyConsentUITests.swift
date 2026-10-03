@@ -55,9 +55,10 @@ final class PrivacyConsentUITests: XCTestCase {
         let stats = app.switches["setting-usage-stats"]
         XCTAssertTrue(stats.waitForExistence(timeout: 5))
         XCTAssertEqual(stats.value as? String, "0", "off until the player agrees")
-        let privacy = app.links["link-privacy"]
-        for _ in 0..<3 where !privacy.isHittable { app.swipeUp() }
-        XCTAssertTrue(privacy.exists, "privacy policy reachable in the app")
-        XCTAssertTrue(app.links["link-support"].exists)
+        // By identifier, whatever the type: SwiftUI's Link is a link on some iOS versions, a button on others.
+        let privacy = app.descendants(matching: .any)["link-privacy"]
+        for _ in 0..<4 where !(privacy.exists && privacy.isHittable) { app.swipeUp() }
+        XCTAssertTrue(privacy.waitForExistence(timeout: 3), "privacy policy reachable in the app")
+        XCTAssertTrue(app.descendants(matching: .any)["link-support"].exists)
     }
 }

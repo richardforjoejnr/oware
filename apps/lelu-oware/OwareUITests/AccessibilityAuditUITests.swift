@@ -39,6 +39,8 @@ final class AccessibilityAuditUITests: XCTestCase {
         for _ in 0..<3 where !tips.isHittable { app.swipeUp() }
         tips.tap()
         XCTAssertTrue(app.staticTexts["tip-jar-title"].waitForExistence(timeout: 5))
+        // Audit once the products have loaded (or failed to): a spinner that vanishes mid-audit fails it.
+        for _ in 0..<20 where app.activityIndicators.count > 0 { usleep(500_000) }
         try app.performAccessibilityAudit(for: checks)
     }
 
