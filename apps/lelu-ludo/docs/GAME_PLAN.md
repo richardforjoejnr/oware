@@ -39,24 +39,30 @@ House rules (Settings switches; defaults in bold):
 | Safe star squares | off | The four stars half-way along the arms are safe |
 | Entry rolls | **6** | A gentler game lets a 1 bring tokens out too |
 
-### Proposed, needing the owner's confirmation before they are built
+### Ghana Classic (owner, 2026-10-03), built with tests
 
-These are recognisably Ghanaian but are played several ways. The engine is built so each slots in as
-another `RuleSet` switch. For each: the rule as proposed, and the questions to answer.
+Defaults: forward kick, back kick, forward side kick, back side kick and home kick ON; a 6 rolls
+again; home needs the exact roll; Labourer OFF (reserved). `RuleSet.ghanaClassic`; `RuleSet.classic`
+turns every kick off.
 
-- **Home kick.** An opponent in their home lane is not safe: with the exact roll, a token passing
-  that lane's entrance may turn into it and kick them; the attacker must then come back out.
-  *Questions:* which tokens may turn in (any passing token, or only one that would otherwise pass the
-  entrance this move)? Does it come back out by moving backwards along the lane on later rolls, or
-  is it put back on the entrance square at once? Can it be kicked while it is in someone else's lane?
-- **Side kick.** A token facing an opponent across an arm (the other outer column of the same arm,
-  with the home lane between them) slides across and kicks it. *Questions:* which roll does it take
-  (any roll, the roll matching some count, a 1)? Forwards side and backwards side, or one only?
-  Does the kicker end on the opponent's square?
-- **Labourer** (advanced, optional). When a player is down to one active token, an opponent can
-  capture it and use it as their own until its owner frees it by rolling a 6. *Questions:* exactly
-  when can it be taken (by a kick? by landing beside?), who moves it, can it be kicked while held,
-  and what happens to it when freed?
+- **Back kick:** an opponent exactly the roll behind one of your tokens on the track can be kicked
+  by moving back onto it. Not back past your own start square; not through a wall; not onto a safe
+  square or a pair. *(To confirm: may a token near its start back-kick into the previous arm?)*
+- **Home kick:** with the exact roll, a token on the track turns into an opponent's home lane (its
+  entrance must still be ahead on the token's journey) and kicks the token there. It stays, and on
+  later turns walks back out the way it came, carrying on along its track if the roll is longer.
+  *Choices made where the notes were silent:* the lane's owner kicks a visitor by landing on it; a
+  visitor can only walk out (no other kicks from inside the lane).
+- **Side kicks:** by the roll forwards (or backwards) to a track square, then across the home lane
+  beside it onto a lone opponent, the lane square between them empty. Across your own lane too
+  (owner: a big, valid shortcut home). Only from the track: a token in its own home lane never steps
+  back out (the reference implementation found this case).
+- **Every alternative is its own move:** the player taps a token, sees a marker on each square it
+  could end on ("Move 4", "Back kick", "Side kick", "Home kick") and chooses; the computer weighs
+  each.
+- **Labourer:** `labourerEnabled`, off, no behaviour until the owner defines it.
+- **Lelu identity, not universal Ghana rules:** black instead of blue; the black star as the die's 6
+  (it is simply a 6, announced "six").
 
 ## Stages
 
