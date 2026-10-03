@@ -38,10 +38,21 @@ final class AccessibilityAuditUITests: XCTestCase {
         let tips = app.buttons["btn-tip-jar"]
         for _ in 0..<3 where !tips.isHittable { app.swipeUp() }
         tips.tap()
-        XCTAssertTrue(app.staticTexts["tip-jar-title"].waitForExistence(timeout: 5))
+        let title = app.staticTexts["tip-jar-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
         // Audit once the products have loaded (or failed to): a spinner that vanishes mid-audit fails it.
         for _ in 0..<20 where app.activityIndicators.count > 0 { usleep(500_000) }
-        try app.performAccessibilityAudit(for: checks)
+        // Full height, so Settings is no longer showing behind the sheet.
+        title.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 0.1, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02)))
+        sleep(1)
+        let sheetTop = title.frame.minY - 80
+        try app.performAccessibilityAudit(for: checks) { issue in
+            // Settings behind the sheet is rightly hidden from VoiceOver while the sheet is up; the
+            // audit's text detection (iOS 26) still reports its visible text. Everything in the sheet counts.
+            guard issue.auditType == .elementDetection, let frame = issue.element?.frame else { return false }
+            return frame.maxY <= sheetTop
+        }
     }
 
     @MainActor func testRiddlesJourneyAndRules() throws {
