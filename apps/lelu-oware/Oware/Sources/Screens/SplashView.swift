@@ -1,14 +1,29 @@
 import SwiftUI
 
-/// The opening: the carved Ghana map, the title, a quiet loading line. About three seconds, then
-/// the menu; a tap skips it. Reduce Motion keeps the length but drops the title's slide-in.
+/// How long the opening plays: the whole carved-map moment on the first launch of the day, a short
+/// one after that, so returning players reach the board well inside three seconds.
+enum SplashSchedule {
+    static let full: Duration = .milliseconds(2800)
+    static let short: Duration = .milliseconds(1000)
+    static let key = "splashFullShownOn"
+
+    /// The length for this launch; records today when it is the full one.
+    static func durationForThisLaunch(defaults: UserDefaults = .standard, now: Date = .now, calendar: Calendar = .current) -> Duration {
+        if let last = defaults.object(forKey: key) as? Date, calendar.isDate(last, inSameDayAs: now) { return short }
+        defaults.set(now, forKey: key)
+        return full
+    }
+}
+
+/// The opening: the carved Ghana map, the title, a quiet loading line, then the menu; a tap skips
+/// it. Reduce Motion keeps the length but drops the title's slide-in.
 struct SplashView: View {
+    var duration: Duration = SplashSchedule.full
     let finished: () -> Void
     @State private var progress: CGFloat = 0
     @State private var titleShown = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    static let duration: Duration = .milliseconds(2800)
     @State private var done = false
 
     var body: some View {
@@ -64,7 +79,7 @@ struct SplashView: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityHint("Tap to skip")
         .task {
-            let total = Self.duration
+            let total = duration
             withAnimation(.easeOut(duration: 0.5)) { titleShown = true }
             withAnimation(.linear(duration: Double(total.components.seconds) + Double(total.components.attoseconds) / 1e18)) { progress = 1 }
             try? await Task.sleep(for: total)
