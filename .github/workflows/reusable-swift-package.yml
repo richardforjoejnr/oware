@@ -1,0 +1,62 @@
+name: Reusable - Swift package tests
+
+# Shared template: `swift test` for one Swift package, called by each app's own CI workflow
+# (ci.yml for Lelu Oware, ludo-ci.yml for Lelu Ludo). It has no triggers of its own.
+#
+# Editing this file affects every app that calls it, so every caller lists it in its `paths:`
+# filter and a change here legitimately runs all of them. Editing one app's caller runs only that
+# app.
+#
+# runner: "linux" (default) runs in Apple's swift:6.0 container on ubuntu-latest, a tenth of a
+# macOS runner's cost on a private repository; use it for pure-Swift packages. "macos" runs on
+# macos-15 with the latest stable Xcode; use it for packages that import Apple frameworks
+# (StoreKit, SwiftUI, ...). Two jobs gated by `if:` because `container:` cannot be made
+# conditionally empty; the one not chosen shows as skipped.
+on:
+  workflow_call:
+    inputs:
+      package-path:
+        description: Path of the Swift package from the repository root (e.g. packages/LudoEngine)
+        required: true
+        type: string
+      runner:
+        description: '"linux" (swift:6.0 container) or "macos" (macos-15, latest stable Xcode)'
+        required: false
+        type: string
+        default: linux
+      parallel:
+        description: Pass --parallel to swift test
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: swift test (Linux)
+    if: inputs.runner == 'linux'
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    defaults:
+      run:
+        working-directory: ${{ inputs.package-path }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: swift test
+        run: swift test ${{ inputs.parallel && '--parallel' || '' }}
+
+  macos:
+    name: swift test (macOS)
+    if: inputs.runner == 'macos'
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: ${{ inputs.package-path }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - name: swift test
+        run: swift test ${{ inputs.parallel && '--parallel' || '' }}
