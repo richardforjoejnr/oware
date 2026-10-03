@@ -66,7 +66,7 @@ before the earlier one is green and merged.
 1. **Rules engine** (`packages/LudoEngine`) — *done in the first PR.* Board geometry, turns, dice,
    forward and back kicks, bonus rolls, three sixes, stacking modes, safe squares, entry rolls,
    winning, validated saves. Tests: see "Test pyramid".
-2. **Computer opponents** (`LudoAI` target in the package). Levels like Oware's ladder (Novice to
+2. **Computer opponents** (`LudoAI` target in the package) — *done (branch `feat/lelu-ludo-ai`).* Levels like Oware's ladder (Novice to
    Grandmaster): heuristic move choice (kick, escape danger, enter on 6, race, protect a wall, use
    back kicks), slips for the lower levels, no lookahead needed for a dice game at first. Tests:
    every choice is legal; stronger levels beat weaker ones in seeded tournaments; a balance test
@@ -95,7 +95,7 @@ As for Lelu Oware: most tests are fast engine tests, a few slow ones at the top.
 | Independent reference implementation | Abapa 2,000 games, Nam-Nam several suites | `ReferenceTests`: a second Ludo written square by square must agree on every legal move, position, turn and winner, roll by roll, in 560 random games under 7 rule sets. Proven to catch a planted off-by-one in the wall check |
 | Invariants over random games | `RuleInvariantTests` | `InvariantTests`: tokens in range, no two colours on an unsafe square, one-per-square holds, moves do what they say and kicks go to the yard, turn order, walls never passed, three sixes undo, determinism, saves resume at any point |
 | Damaged saves | `CorruptSaveTests` | `CorruptSaveTests`: good saves load, 10 kinds of damage refused, random damage never crashes (Apple platforms; Linux's JSON parser traps on its own) |
-| AI | `AIPlayerTests`, `BalanceTests`, fuzz | Stage 2 |
+| AI | `AIPlayerTests`, `BalanceTests`, fuzz | Stage 2, `LudoAITests`: always a legal move at every level under every rule set; takes kicks and back kicks; goes home; avoids and escapes danger; deterministic; seeded tournaments where each level beats the one below (Intermediate 69% vs Novice, Strategist 71% vs Intermediate, Grandmaster 59% vs Strategist, 85% vs Novice). A casual-player balance test, as Oware's, comes with the app (stage 3) |
 | App unit, UI, accessibility, E2E | yes | Stage 3 |
 
 The pyramid already found one bug in stage 1: saves refused a run of three or more sixes under rules
