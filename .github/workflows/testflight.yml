@@ -11,8 +11,10 @@ on:
       - apps/lelu-oware/Oware/**
       - apps/lelu-oware/project.yml
       - apps/lelu-oware/fastlane/**
-      - packages/*/Sources/**
-      - packages/*/Package.swift
+      - packages/OwareEngine/Sources/**
+      - packages/OwareEngine/Package.swift
+      - packages/SupportKit/Sources/**
+      - packages/SupportKit/Package.swift
       - Gemfile
       - .github/workflows/testflight.yml
   workflow_dispatch:
