@@ -53,6 +53,26 @@ final class LeluLudoUITests: XCTestCase {
     }
 
     @MainActor
+    func testRulesAreChosenInSettings() throws {
+        let app = launch([])
+        let settings = app.buttons["btn-settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        XCTAssertTrue(settings.label.contains("Ghana Classic"), settings.label)
+        settings.tap()
+        let picker = app.segmentedControls["picker-rules"]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.switches["rule-home-kick"].exists, "switches only for Custom")
+        picker.buttons["Custom"].tap()
+        XCTAssertTrue(app.switches["rule-home-kick"].waitForExistence(timeout: 3))
+        try app.performAccessibilityAudit(for: XCUIAccessibilityAuditType.all.subtracting([.contrast, .dynamicType, .textClipped]))
+        picker.buttons["Classic"].tap()
+        app.buttons["btn-done"].tap()
+        XCTAssertTrue(settings.waitForExistence(timeout: 3))
+        expectation(for: NSPredicate(format: "label CONTAINS 'Classic' AND NOT (label CONTAINS 'Ghana')"), evaluatedWith: settings)
+        waitForExpectations(timeout: 5)
+    }
+
+    @MainActor
     func testPassAndPlayFromTheMenu() throws {
         let app = launch(["--dice=3"])
         let play = app.buttons["btn-pass-play"]
