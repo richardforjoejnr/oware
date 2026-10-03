@@ -23,7 +23,7 @@ settings. Passwords, API keys and certificates never go in this repo.
 | TelemetryDeck | Organisation namespace | `lelu.oware`. Not set in the app: TelemetryDeck's Swift guide needs only the App ID, and the SDK advises leaving the namespace unset |
 | TelemetryDeck | Dashboard | https://dashboard.telemetrydeck.com/o/9F5A8F6A-76C1-494D-A0E0-0B00D0C532B2/apps/2B02636D-AE8C-4D55-A14A-9FCDE1C25D74/setup-helper |
 | Support | Email | trendnestorg34@gmail.com (on the support and privacy pages) |
-| GitHub Pages | Site | https://diqw2b8iw2b16.cloudfront.net/lelu-oware/ |
+| AWS (S3 + CloudFront, infra/site) | Site | https://leluoware.com/lelu-oware/ (domain in Route 53, account 842822459513) |
 | Kit | Newsletter form | not created yet (see section 6) |
 
 ## 1. Decisions
@@ -146,7 +146,7 @@ Collected" is still correct.
   sign-ups open soon.
 - **Links in the app:** Settings ▸ "News by email", and "Hear about new chapters" on the result
   screen after the last Journey match.
-- **Page:** https://diqw2b8iw2b16.cloudfront.net/lelu-oware/newsletter
+- **Page:** https://leluoware.com/lelu-oware/newsletter
 
 ## 7. App Store Small Business Program
 

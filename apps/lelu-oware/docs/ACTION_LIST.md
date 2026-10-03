@@ -61,7 +61,7 @@ the first time. TestFlight needs the paid membership.
 - [ ] **Game Center:** enable it and create the 3 leaderboards and 6 achievements (SERVICES.md section 3).
 - [ ] **Tips:** three consumable in-app purchases, exactly as in APP_STORE.md. Add the review note.
 - [ ] **App Privacy label:** as in SERVICES.md section 5. Privacy policy URL:
-      https://diqw2b8iw2b16.cloudfront.net/lelu-oware/privacy
+      https://leluoware.com/lelu-oware/privacy
 - [x] **TelemetryDeck App ID** into `project.yml` (done 27 Sep 2026). Use the analytics answers
       for the privacy label below.
 - [ ] **Age rating** questionnaire (expect 4+). Category **Games ▸ Board**.

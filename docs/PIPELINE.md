@@ -221,8 +221,9 @@ domain in Route 53, set the variable `SITE_DOMAIN` (e.g. `leluoware.com`): the n
 certificate and DNS records, and the site answers on the domain and on `www`. To deploy from a Mac:
 build the site, then `SITE_DIR=$PWD/_site infra/site/scripts/deploy.sh prod`.
 
-Lelu Oware today: https://diqw2b8iw2b16.cloudfront.net/lelu-oware/privacy and …/support (until the
-domain is set). Support email: trendnestorg34@gmail.com.
+Lelu Oware: https://leluoware.com/lelu-oware/privacy and …/support (domain `leluoware.com`,
+bought in Route 53 in account 842822459513; CloudFront also answers at
+https://diqw2b8iw2b16.cloudfront.net). Support email: trendnestorg34@gmail.com.
 
 ## Before the first App Store submission (checklist)
 - [ ] App Store Connect: privacy policy URL, support URL, age rating questionnaire (4+), category **Games › Board**
