@@ -37,7 +37,7 @@ struct HomeView: View {
                     .accessibilityIdentifier("picker-level")
                     menuButton("Play", id: "btn-play-computer") {
                         // You are red; the computer takes the seats opposite first, then the sides.
-                        let order: [PlayerColor] = [.black, .gold, .green]
+                        let order: [PlayerColor] = [.black, .yellow, .green]
                         var seats: [PlayerColor: Seat] = [.red: .human]
                         for c in order.prefix(opponents) { seats[c] = .computer(level) }
                         session.newGame(GameSetup(seats: seats))
@@ -49,7 +49,7 @@ struct HomeView: View {
                     Text("Pass & play").font(.headline)
                     Stepper("Players: \(players)", value: $players, in: 2...4).accessibilityIdentifier("stepper-players")
                     menuButton("Play together", id: "btn-pass-play") {
-                        let order: [PlayerColor] = [.red, .black, .gold, .green]
+                        let order: [PlayerColor] = [.red, .black, .yellow, .green]
                         session.newGame(GameSetup(seats: Dictionary(uniqueKeysWithValues: order.prefix(players).map { ($0, Seat.human) })))
                         startGame()
                     }

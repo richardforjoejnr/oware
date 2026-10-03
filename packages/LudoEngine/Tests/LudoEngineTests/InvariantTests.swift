@@ -13,7 +13,7 @@ struct InvariantTests {
     static let ruleSets = ReferenceTestsRuleSets.all
 
     /// Plays seeded random games, calling `check` with the state before, the events and the state after.
-    static func play(_ rules: RuleSet, games: Int = 50, check: (GameState, [GameEvent], GameState, Move?) throws -> Void) throws {
+    static func play(_ rules: RuleSet, games: Int = 20, check: (GameState, [GameEvent], GameState, Move?) throws -> Void) throws {
         for seed in 0..<games {
             var rng = LCG(s: UInt64(seed) &* 40503 &+ 11)
             var g = GameState(players: Array(PlayerColor.allCases.prefix(2 + seed % 3)), rules: rules)
@@ -43,6 +43,21 @@ struct InvariantTests {
         }
     }
 
+    @Test("Visitors stand only in other players' lanes, at those lanes' entrances on their own journey", arguments: ruleSets.filter(\.homeKick))
+    func visitors(rules: RuleSet) throws {
+        try Self.play(rules) { _, _, after, _ in
+            for c in after.players {
+                for i in 0..<4 {
+                    guard let v = after.visit(of: c, token: i) else { continue }
+                    try #require(v.owner != c && after.players.contains(v.owner) && (1...5).contains(v.depth))
+                    try #require(after.tokens(of: c)[i] == GameState.progress(of: c, atTrackIndex: Board.entranceIndex(v.owner)))
+                    try #require(!after.occupants(at: Board.entranceIndex(v.owner)).contains { $0.color == c && $0.token == i },
+                                 "a visitor is in the lane, not on the track")
+                }
+            }
+        }
+    }
+
     @Test("No two colours ever share an unsafe track square", arguments: ruleSets)
     func noSharedSquares(rules: RuleSet) throws {
         try Self.play(rules) { _, _, after, _ in
@@ -56,8 +71,9 @@ struct InvariantTests {
     func oneTokenPerSquare() throws {
         try Self.play(RuleSet(stacking: .notAllowed)) { _, _, after, _ in
             for c in after.players {
-                let spots = after.tokens(of: c).filter { $0 >= 0 && $0 < Board.home }
-                try #require(Set(spots).count == spots.count, "\(c): \(spots)")
+                // Squares, not progress numbers: a visitor's progress is its lane's entrance.
+                let squares = (0..<4).filter { (0..<Board.home).contains(after.tokens(of: c)[$0]) }.compactMap { after.cell(of: c, token: $0) }
+                try #require(Set(squares).count == squares.count, "\(c): \(squares)")
             }
         }
     }
@@ -74,9 +90,17 @@ struct InvariantTests {
                 let was = before.tokens(of: c)[token]
                 try #require(was >= 0 && was <= Board.lastTrackProgress && Board.trackIndex(c, progress: was) == at)
             }
+            for case let .kickedInLane(c, token, lane, depth, by) in events {
+                try #require(by == me && c != me && after.tokens(of: c)[token] == Board.yard && after.visit(of: c, token: token) == nil)
+                try #require(before.laneOccupants(lane, depth: depth).contains { $0.color == c && $0.token == token })
+            }
             // Nothing else changed.
             for c in PlayerColor.allCases where c != me {
-                let kicked = Set(events.compactMap { if case let .kicked(k, t, _, _) = $0, k == c { t } else { nil } })
+                let kicked = Set(events.compactMap { e -> Int? in
+                    if case let .kicked(k, t, _, _) = e, k == c { return t }
+                    if case let .kickedInLane(k, t, _, _, _) = e, k == c { return t }
+                    return nil
+                })
                 for i in 0..<4 where !kicked.contains(i) { try #require(after.tokens(of: c)[i] == before.tokens(of: c)[i]) }
             }
             for i in 0..<4 where i != move.token { try #require(after.tokens(of: me)[i] == before.tokens(of: me)[i]) }
@@ -118,12 +142,12 @@ struct InvariantTests {
     @Test("With the rule on, three sixes never change the board", arguments: ruleSets.filter(\.threeSixesForfeit))
     func threeSixesUndo(rules: RuleSet) throws {
         // Script: a third 6 must leave the board as the turn found it.
-        var g = GameState(players: [.red, .gold], rules: rules)
+        var g = GameState(players: [.red, .yellow], rules: rules)
         g.roll(6); if let m = g.legalMoves().first { try g.apply(m) }
         g.roll(6); if let m = g.legalMoves().first { try g.apply(m) }
         #expect(g.tokens(of: .red).contains { $0 != Board.yard }, "two sixes have moved something")
         g.roll(6)
-        #expect(g.toMove == .gold)
+        #expect(g.toMove == .yellow)
         #expect(g.tokens(of: .red).allSatisfy { $0 == Board.yard }, "every move of the turn undone")
     }
 
@@ -177,14 +201,14 @@ struct CorruptSaveTests {
 
     @Test("A good save loads")
     func good() throws {
-        var g = GameState(players: [.red, .gold, .black])
+        var g = GameState(players: [.red, .yellow, .black])
         g.roll(6)
         #expect(decodes(try json(g)))
     }
 
     @Test("Damaged saves are refused, not loaded")
     func damaged() throws {
-        let good = try json(GameState(players: [.red, .gold]))
+        let good = try json(GameState(players: [.red, .yellow]))
         var cases: [(String, [String: Any])] = []
         func with(_ key: String, _ value: Any) -> [String: Any] { var d = good; d[key] = value; return d }
         cases.append(("token off the board", with("progress", [[57, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1]])))

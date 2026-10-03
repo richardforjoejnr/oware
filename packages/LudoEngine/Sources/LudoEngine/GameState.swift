@@ -15,8 +15,12 @@ public struct GameState: Sendable, Codable, Hashable {
     /// Sixes rolled in a row this turn.
     public private(set) var sixesInARow = 0
     public private(set) var winner: PlayerColor?
+    /// Tokens standing in another colour's home lane after a home kick (nil for everyone else).
+    /// A visitor's progress is that of the lane's entrance square on its own journey.
+    public private(set) var visits: [[Move.Visit?]]
     /// Where the tokens stood when this turn began, for the three-sixes rule.
     private var turnStart: [[Int]]
+    private var turnStartVisits: [[Move.Visit?]]
 
     public init(players: [PlayerColor] = PlayerColor.allCases, rules: RuleSet = .ghana, first: PlayerColor? = nil) {
         precondition((2...4).contains(players.count) && Set(players).count == players.count, "2 to 4 different colours")
@@ -24,17 +28,43 @@ public struct GameState: Sendable, Codable, Hashable {
         self.players = seated
         self.rules = rules
         progress = Array(repeating: Array(repeating: Board.yard, count: Board.tokensPerPlayer), count: 4)
+        visits = Array(repeating: Array(repeating: nil, count: Board.tokensPerPlayer), count: 4)
         toMove = first.flatMap { seated.contains($0) ? $0 : nil } ?? seated[0]
         turnStart = progress
+        turnStartVisits = visits
     }
 
-    /// Puts tokens where a test wants them (progress per colour); the turn starts afresh from there.
-    mutating func place(_ placed: [PlayerColor: [Int]]) {
+    /// A game set up mid-play: tokens where given (progress per colour, missing colours in the yard),
+    /// for lessons, screenshots and app tests. Preconditions as `place`.
+    public static func arranged(players: [PlayerColor], rules: RuleSet = .ghanaClassic, toMove: PlayerColor,
+                                tokens: [PlayerColor: [Int]], visits: [PlayerColor: [Move.Visit?]] = [:]) -> GameState {
+        var g = GameState(players: players, rules: rules, first: toMove)
+        g.place(tokens, visits: visits)
+        return g
+    }
+
+    /// Puts tokens where a test wants them (progress per colour, and any visits); the turn starts
+    /// afresh from there.
+    mutating func place(_ placed: [PlayerColor: [Int]], visits placedVisits: [PlayerColor: [Move.Visit?]] = [:]) {
         for (color, tokens) in placed {
             precondition(tokens.count == Board.tokensPerPlayer && tokens.allSatisfy { (Board.yard...Board.home).contains($0) })
             progress[color.rawValue] = tokens
         }
+        for (color, v) in placedVisits {
+            precondition(v.count == Board.tokensPerPlayer)
+            visits[color.rawValue] = v
+        }
         turnStart = progress
+        turnStartVisits = visits
+    }
+
+    /// The lane a token is visiting, if any.
+    public func visit(of color: PlayerColor, token: Int) -> Move.Visit? { visits[color.rawValue][token] }
+
+    /// The square a token stands on (nil in the yard), visitors included.
+    public func cell(of color: PlayerColor, token: Int) -> Board.Cell? {
+        if let v = visit(of: color, token: token) { return Board.lane(v.owner)[v.depth - 1] }
+        return Board.cell(color, progress: tokens(of: color)[token])
     }
 
     public var isOver: Bool { winner != nil }
@@ -56,6 +86,7 @@ public struct GameState: Sendable, Codable, Hashable {
         sixesInARow = value == 6 ? sixesInARow + 1 : 0
         if rules.threeSixesForfeit && sixesInARow == 3 {
             progress = turnStart
+            visits = turnStartVisits
             events.append(.threeSixes(toMove))
             endTurn(&events)
             return events
@@ -75,6 +106,10 @@ public struct GameState: Sendable, Codable, Hashable {
         let me = toMove
         var moves: [Move] = []
         for (i, p) in tokens(of: me).enumerated() {
+            if let v = visit(of: me, token: i) {
+                moves += walkOutMoves(token: i, entrance: p, visit: v, roll: r)
+                continue
+            }
             if p == Board.yard {
                 if rules.entryRolls.contains(r), canLand(me, at: Board.startIndex(me)) {
                     moves.append(Move(token: i, kind: .enter, from: p, to: 0))
@@ -94,8 +129,104 @@ public struct GameState: Sendable, Codable, Hashable {
                     moves.append(Move(token: i, kind: .backKick, from: p, to: p - r))
                 }
             }
+            if rules.homeKick, p <= Board.lastTrackProgress {
+                moves += homeKickMoves(token: i, progress: p, roll: r)
+            }
+            if p <= Board.lastTrackProgress {
+                moves += sideKickMoves(token: i, progress: p, roll: r)
+            }
         }
         return moves
+    }
+
+    /// Into an opponent's lane with the exact roll, onto a token there: on along the track to the
+    /// lane's entrance (which must still be ahead on this token's journey), then into the lane.
+    private func homeKickMoves(token i: Int, progress p: Int, roll r: Int) -> [Move] {
+        let me = toMove
+        var moves: [Move] = []
+        for owner in players where owner != me {
+            let entrance = Self.progress(of: me, atTrackIndex: Board.entranceIndex(owner))
+            guard entrance >= p && entrance <= Board.lastTrackProgress else { continue }
+            let depth = r - (entrance - p)
+            guard (1...Board.laneLength).contains(depth) else { continue }
+            guard pathClear(me, from: p, to: entrance + 1), !laneVictims(owner, depth: depth, by: me).isEmpty else { continue }
+            moves.append(Move(token: i, kind: .homeKick, from: p, to: entrance, visit: Move.Visit(owner: owner, depth: depth)))
+        }
+        return moves
+    }
+
+    /// Side kicks: by the roll to a square on the track (forwards, or backwards), then across the home
+    /// lane beside it onto a lone opponent, the lane square between them empty. Across your own lane
+    /// too (owner, 2026-10-03): from the start of your journey that jumps you almost to its end, a
+    /// recognised shortcut home.
+    private func sideKickMoves(token i: Int, progress p: Int, roll r: Int) -> [Move] {
+        let me = toMove
+        var moves: [Move] = []
+        var steps: [(Move.Kind, Int)] = []
+        if rules.forwardSideKick, p + r <= Board.lastTrackProgress, pathClear(me, from: p, to: p + r), landingOK(me, progress: p + r) {
+            steps.append((.sideKickForward, p + r))
+        }
+        if rules.backSideKick, r <= p, pathClear(me, from: p - r, to: p), canLand(me, at: Board.trackIndex(me, progress: p - r)) {
+            steps.append((.sideKickBack, p - r))
+        }
+        for (kind, stop) in steps {
+            guard let across = Board.across[Board.trackIndex(me, progress: stop)],
+                  laneOccupants(across.laneOwner, depth: across.depth).isEmpty,
+                  canLand(me, at: across.opposite), !kickable(at: across.opposite, by: me).isEmpty else { continue }
+            let to = Self.progress(of: me, atTrackIndex: across.opposite)
+            guard to <= Board.lastTrackProgress else { continue }
+            moves.append(Move(token: i, kind: kind, from: p, to: to))
+        }
+        return moves
+    }
+
+    /// A visitor goes back the way it came: down the lane, onto the entrance, then on along its track.
+    private func walkOutMoves(token i: Int, entrance: Int, visit v: Move.Visit, roll r: Int) -> [Move] {
+        let me = toMove
+        if r < v.depth {
+            let depth = v.depth - r
+            guard laneCanLand(v.owner, depth: depth, mover: me) else { return [] }
+            return [Move(token: i, kind: .walkOut, from: entrance, to: entrance, visit: Move.Visit(owner: v.owner, depth: depth))]
+        }
+        let q = entrance + (r - v.depth)
+        guard q <= Board.home, pathClear(me, from: entrance - 1, to: q), landingOK(me, progress: q) else { return [] }
+        return [Move(token: i, kind: .walkOut, from: entrance, to: q)]
+    }
+
+    /// The squares a legal move passes through, in order, ending where the token lands (the centre
+    /// for home). For the app to animate moves along the board rather than across it.
+    public func path(for move: Move) -> [Board.Cell] {
+        let me = toMove
+        let cell = { (q: Int) in Board.cell(me, progress: q)! }
+        let r = pendingRoll ?? abs(move.to - move.from)
+        switch move.kind {
+        case .enter:
+            return [cell(0)]
+        case .forward:
+            return (move.from + 1...move.to).map(cell)
+        case .backKick:
+            return (move.to..<move.from).reversed().map(cell)
+        case .sideKickForward:
+            return (move.from + 1...move.from + r).map(cell) + [Board.track[Board.trackIndex(me, progress: move.to)]]
+        case .sideKickBack:
+            return (move.from - r..<move.from).reversed().map(cell) + [Board.track[Board.trackIndex(me, progress: move.to)]]
+        case .homeKick:
+            let visit = move.visit!
+            let toEntrance = move.to > move.from ? (move.from + 1...move.to).map(cell) : []
+            return toEntrance + Board.lane(visit.owner)[0..<visit.depth]
+        case .walkOut:
+            let here = visit(of: me, token: move.token)!
+            let lane = Board.lane(here.owner)
+            if let still = move.visit { return (still.depth..<here.depth).reversed().map { lane[$0 - 1] } }
+            let down = (1..<here.depth).reversed().map { lane[$0 - 1] }
+            let on = move.to > move.from ? (move.from + 1...move.to).map(cell) : []
+            return down + [cell(move.from)] + on
+        }
+    }
+
+    /// A colour's progress at a track square (0…51 round from its start).
+    public static func progress(of color: PlayerColor, atTrackIndex t: Int) -> Int {
+        (t - Board.startIndex(color) + Board.trackLength) % Board.trackLength
     }
 
     /// Play one of `legalMoves()`.
@@ -105,11 +236,23 @@ public struct GameState: Sendable, Codable, Hashable {
         let me = toMove
         var events: [GameEvent] = [.moved(me, move)]
         progress[me.rawValue][move.token] = move.to
+        visits[me.rawValue][move.token] = move.visit
         var earned = false
-        if move.to <= Board.lastTrackProgress {
+        let laneSquare: (owner: PlayerColor, depth: Int)? = move.visit.map { ($0.owner, $0.depth) }
+            ?? ((Board.lastTrackProgress + 1)..<Board.home ~= move.to ? (me, move.to - Board.lastTrackProgress) : nil)
+        if let lane = laneSquare {
+            // A home kick, or a lane's owner landing on a visitor.
+            for (color, token) in laneVictims(lane.owner, depth: lane.depth, by: me) where !(color == me && token == move.token) {
+                progress[color.rawValue][token] = Board.yard
+                visits[color.rawValue][token] = nil
+                events.append(.kickedInLane(color, token: token, lane: lane.owner, depth: lane.depth, by: me))
+                earned = true
+            }
+        } else if move.to <= Board.lastTrackProgress {
             let at = Board.trackIndex(me, progress: move.to)
             for (color, token) in kickable(at: at, by: me) {
                 progress[color.rawValue][token] = Board.yard
+                visits[color.rawValue][token] = nil
                 events.append(.kicked(color, token: token, at: at, by: me))
                 earned = true
             }
@@ -137,7 +280,7 @@ public struct GameState: Sendable, Codable, Hashable {
     // MARK: - Saves
 
     private enum CodingKeys: String, CodingKey {
-        case rules, players, progress, toMove, pendingRoll, sixesInARow, winner, turnStart
+        case rules, players, progress, toMove, pendingRoll, sixesInARow, winner, turnStart, visits, turnStartVisits
     }
 
     /// Throws `DecodingError.dataCorrupted` for a damaged save rather than loading a game the rules
@@ -152,6 +295,9 @@ public struct GameState: Sendable, Codable, Hashable {
         sixesInARow = try c.decode(Int.self, forKey: .sixesInARow)
         winner = try c.decodeIfPresent(PlayerColor.self, forKey: .winner)
         turnStart = try c.decode([[Int]].self, forKey: .turnStart)
+        let none = Array(repeating: Array(repeating: Move.Visit?.none, count: Board.tokensPerPlayer), count: 4)
+        visits = try c.decodeIfPresent([[Move.Visit?]].self, forKey: .visits) ?? none
+        turnStartVisits = try c.decodeIfPresent([[Move.Visit?]].self, forKey: .turnStartVisits) ?? none
 
         func check(_ ok: Bool, _ key: CodingKeys, _ what: String) throws {
             guard ok else { throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: what) }
@@ -168,6 +314,20 @@ public struct GameState: Sendable, Codable, Hashable {
         try check(winner.map { w in players.contains(w) && progress[w.rawValue].allSatisfy { $0 == Board.home } } ?? true,
                   .winner, "a winner has every token home")
         try check(rules.entryRolls.allSatisfy { (1...6).contains($0) } && !rules.entryRolls.isEmpty, .rules, "entry rolls are faces of a die")
+        // A visitor stands in another player's lane, 1…5 deep, its progress that lane's entrance.
+        let seated = players
+        let visitsOK = { (v: [[Move.Visit?]], p: [[Int]]) -> Bool in
+            v.count == 4 && v.allSatisfy { $0.count == Board.tokensPerPlayer } && PlayerColor.allCases.allSatisfy { color in
+                (0..<Board.tokensPerPlayer).allSatisfy { i in
+                    guard let visit = v[color.rawValue][i] else { return true }
+                    return visit.owner != color && seated.contains(visit.owner) && seated.contains(color)
+                        && (1...Board.laneLength).contains(visit.depth)
+                        && p[color.rawValue][i] == Self.progress(of: color, atTrackIndex: Board.entranceIndex(visit.owner))
+                }
+            }
+        }
+        try check(visitsOK(visits, progress), .visits, "visitors stand in another player's lane")
+        try check(visitsOK(turnStartVisits, turnStart), .turnStartVisits, "visitors stand in another player's lane")
     }
 
     private mutating func endTurn(_ events: inout [GameEvent]) {
@@ -176,6 +336,7 @@ public struct GameState: Sendable, Codable, Hashable {
         sixesInARow = 0
         pendingRoll = nil
         turnStart = progress
+        turnStartVisits = visits
         events.append(.turn(toMove))
     }
 
@@ -185,7 +346,7 @@ public struct GameState: Sendable, Codable, Hashable {
     public func occupants(at trackIndex: Int) -> [(color: PlayerColor, token: Int)] {
         var found: [(PlayerColor, Int)] = []
         for color in players {
-            for (i, p) in tokens(of: color).enumerated() where (0...Board.lastTrackProgress).contains(p) {
+            for (i, p) in tokens(of: color).enumerated() where (0...Board.lastTrackProgress).contains(p) && visit(of: color, token: i) == nil {
                 if Board.trackIndex(color, progress: p) == trackIndex { found.append((color, i)) }
             }
         }
@@ -224,8 +385,38 @@ public struct GameState: Sendable, Codable, Hashable {
     private func landingOK(_ mover: PlayerColor, progress q: Int) -> Bool {
         if q <= Board.lastTrackProgress { return canLand(mover, at: Board.trackIndex(mover, progress: q)) }
         if q == Board.home { return true }
-        // The home lane is private; only the one-token-per-square rule applies there.
-        return !(rules.stacking == .notAllowed && tokens(of: mover).contains(q))
+        return laneCanLand(mover, depth: q - Board.lastTrackProgress, mover: mover)
+    }
+
+    /// Tokens on a lane square: the owner's own, and any visitors.
+    public func laneOccupants(_ owner: PlayerColor, depth: Int) -> [(color: PlayerColor, token: Int)] {
+        var found: [(PlayerColor, Int)] = []
+        for color in players {
+            for i in 0..<Board.tokensPerPlayer {
+                if let v = visit(of: color, token: i) {
+                    if v.owner == owner && v.depth == depth { found.append((color, i)) }
+                } else if color == owner && tokens(of: color)[i] == Board.lastTrackProgress + depth {
+                    found.append((color, i))
+                }
+            }
+        }
+        return found
+    }
+
+    /// The tokens a token of `mover` landing on a lane square would kick (lone tokens of others).
+    private func laneVictims(_ owner: PlayerColor, depth: Int, by mover: PlayerColor) -> [(color: PlayerColor, token: Int)] {
+        let others = laneOccupants(owner, depth: depth).filter { $0.color != mover }
+        if rules.stacking != .notAllowed && Dictionary(grouping: others, by: \.color).values.contains(where: { $0.count >= 2 }) { return [] }
+        return others
+    }
+
+    /// Whether a token of `mover` may end on a lane square: one token per square if that rule is on,
+    /// and never on another colour's pair.
+    private func laneCanLand(_ owner: PlayerColor, depth: Int, mover: PlayerColor) -> Bool {
+        let here = laneOccupants(owner, depth: depth)
+        if rules.stacking == .notAllowed && here.contains(where: { $0.color == mover }) { return false }
+        let others = here.filter { $0.color != mover }
+        return !(rules.stacking != .notAllowed && Dictionary(grouping: others, by: \.color).values.contains { $0.count >= 2 })
     }
 
     /// No opponent wall strictly between two progresses on the track (walls only with `.wall`).

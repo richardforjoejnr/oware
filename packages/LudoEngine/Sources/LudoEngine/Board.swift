@@ -1,6 +1,6 @@
 /// The standard Ludo cross on a 15×15 grid (columns and rows counted from the top left).
 ///
-/// Each colour's yard is a corner (red top left, then clockwise gold, black, green). The shared track
+/// Each colour's yard is a corner (red top left, then clockwise yellow, black, green). The shared track
 /// is 52 squares around the cross; each colour enters it on its own start square and, after 51
 /// squares, turns into its own 5-square home lane towards the centre, where its tokens finish.
 ///
@@ -81,6 +81,34 @@ public enum Board {
         default: centre
         }
     }
+
+    /// The track square from which a colour turns into its home lane (its progress 50): the square a
+    /// home kick passes on its way into that lane, and where a visitor comes back out.
+    public static func entranceIndex(_ color: PlayerColor) -> Int { trackIndex(color, progress: lastTrackProgress) }
+
+    /// Track squares that face each other across a home lane: same row (or column) of an arm, the
+    /// lane square between them. A side kick jumps from one to the other.
+    public struct Across: Sendable, Hashable {
+        public let opposite: Int
+        public let laneOwner: PlayerColor
+        public let depth: Int   // 1…5, the lane square between
+    }
+
+    public static let across: [Int: Across] = {
+        var pairs: [Int: Across] = [:]
+        for owner in PlayerColor.allCases {
+            for (i, laneCell) in lane(owner).enumerated() {
+                // The two track squares either side of this lane square, across the lane's width.
+                let horizontal = laneCell.row == 7   // left or right arm: lane runs along row 7
+                let a = horizontal ? Cell(laneCell.column, 6) : Cell(6, laneCell.row)
+                let b = horizontal ? Cell(laneCell.column, 8) : Cell(8, laneCell.row)
+                guard let ia = track.firstIndex(of: a), let ib = track.firstIndex(of: b) else { continue }
+                pairs[ia] = Across(opposite: ib, laneOwner: owner, depth: i + 1)
+                pairs[ib] = Across(opposite: ia, laneOwner: owner, depth: i + 1)
+            }
+        }
+        return pairs
+    }()
 
     /// The four squares half-way along each arm, marked with a star on most boards (track indices).
     public static let starIndices: Set<Int> = Set(PlayerColor.allCases.map { (startIndex($0) + 8) % trackLength })

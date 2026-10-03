@@ -13,28 +13,64 @@ struct BoardView: View {
                 BoardCanvas(rules: session.state.rules)
                     .frame(width: side, height: side)
                 ForEach(tokens, id: \.id) { t in
-                    TokenView(color: t.color, movable: t.movable, size: layout.cell * 0.82)
+                    TokenView(color: t.color, movable: t.movable, kickChoice: t.kickChoice,
+                              selected: t.color == session.state.toMove && session.selectedToken == t.token, size: layout.cell * 0.82)
                         // At least 44 pt to tap (the HIG minimum), though squares are smaller on a phone.
                         .frame(width: max(44, layout.cell), height: max(44, layout.cell))
                         .contentShape(Rectangle())
-                        .position(t.position(layout))
+                        .position(position(of: t, layout))
                         // Movable tokens on top and the only ones that take taps, so a neighbour's
                         // larger target never swallows the tap meant for the token that can move.
                         .zIndex(t.movable ? 1 : 0)
                         .allowsHitTesting(t.movable)
-                        .onTapGesture { Task { await session.play(token: t.token) } }
+                        .onTapGesture { Task { await session.tap(token: t.token) } }
                         .accessibilityElement()
                         .accessibilityLabel(t.label)
                         .accessibilityAddTraits(t.movable ? .isButton : [])
-                        .accessibilityHint(t.movable ? "Moves \(session.state.pendingRoll ?? 0)" : "")
+                        // The value says what the token can do, for VoiceOver and for UI tests alike.
+                        .accessibilityValue(t.kickChoice ? "Can kick" : (t.movable ? "Can move" : ""))
+                        .accessibilityHint(t.movable ? (t.kickChoice ? "Double tap to choose a move" : "Double tap to move") : "")
                         .accessibilityIdentifier("token-\(t.color.name.lowercased())-\(t.token)")
+                }
+                // The moves of the selected token, each a marker on the square it would end on.
+                if let token = session.selectedToken {
+                    ForEach(Array(session.choices(for: token).enumerated()), id: \.offset) { _, move in
+                        if let end = session.path(for: move).last {
+                            ChoiceMarker(title: Self.title(move), kick: move.kind != .forward && move.kind != .enter)
+                                .position(layout.center(end))
+                                .onTapGesture { Task { await session.play(move) } }
+                                .accessibilityElement()
+                                .accessibilityLabel(Self.title(move))
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityIdentifier("choice-\(move.kind.rawValue)")
+                                .zIndex(3)
+                        }
+                    }
                 }
             }
             .frame(width: side, height: side)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.easeInOut(duration: 0.35), value: session.state)
+            .animation(.linear(duration: 0.12), value: session.motion)   // one square at a time
         }
         .aspectRatio(1, contentMode: .fit)
+    }
+
+    static func title(_ move: Move) -> String {
+        switch move.kind {
+        case .enter: "Come out"
+        case .forward: move.to == Board.home ? "Go home" : "Move \(move.to - move.from)"
+        case .backKick: "Back kick"
+        case .sideKickForward, .sideKickBack: "Side kick"
+        case .homeKick: "Home kick"
+        case .walkOut: "Walk out"
+        }
+    }
+
+    /// Where a token is drawn: on its path while it walks, else where it stands.
+    private func position(of t: Placed, _ layout: BoardLayout) -> CGPoint {
+        if let m = session.motion, m.color == t.color, m.token == t.token { return layout.center(m.cell) }
+        return t.position(layout, cell: session.state.cell(of: t.color, token: t.token))
     }
 
     struct Placed {
@@ -42,11 +78,13 @@ struct BoardView: View {
         let token: Int
         let progress: Int
         let movable: Bool
+        let kickChoice: Bool
         let stackIndex: Int
         var id: String { "\(color.rawValue)-\(token)" }
 
-        func position(_ layout: BoardLayout) -> CGPoint {
-            var p = layout.position(color, token: token, progress: progress)
+        func position(_ layout: BoardLayout, cell: Board.Cell?) -> CGPoint {
+            // Visitors in another colour's lane stand on that lane square.
+            var p = (cell != nil && progress >= 0 && progress < Board.home) ? layout.center(cell!) : layout.position(color, token: token, progress: progress)
             // Tokens sharing a square fan out a little so each can be seen and tapped.
             if progress >= 0 && progress < Board.home && stackIndex > 0 {
                 p.x += CGFloat(stackIndex) * layout.cell * 0.18
@@ -74,13 +112,14 @@ struct BoardView: View {
         for color in session.state.players {
             for (i, p) in session.state.tokens(of: color).enumerated() {
                 var stack = 0
-                if p >= 0 && p < Board.home, let cell = Board.cell(color, progress: p) {
+                if p >= 0 && p < Board.home, let cell = session.state.cell(of: color, token: i) {
                     let key = "\(cell.column),\(cell.row)"
                     stack = seen[key, default: 0]
                     seen[key] = stack + 1
                 }
-                out.append(Placed(color: color, token: i, progress: p,
-                                  movable: color == session.state.toMove && movable.contains(i), stackIndex: stack))
+                let canMove = color == session.state.toMove && movable.contains(i)
+                out.append(Placed(color: color, token: i, progress: p, movable: canMove,
+                                  kickChoice: canMove && session.hasKickChoice(i), stackIndex: stack))
             }
         }
         return out
@@ -91,6 +130,8 @@ struct BoardView: View {
 struct TokenView: View {
     let color: PlayerColor
     let movable: Bool
+    var kickChoice = false
+    var selected = false
     let size: CGFloat
 
     var body: some View {
@@ -102,9 +143,30 @@ struct TokenView: View {
                 .shadow(color: .black.opacity(0.35), radius: 2, y: 1.5)
             Circle().fill(.white.opacity(0.25)).frame(width: size * 0.28).offset(x: -size * 0.14, y: -size * 0.16)
             if movable {
-                Circle().stroke(Palette.brass, lineWidth: 3).frame(width: size * 1.3, height: size * 1.3)
+                // Brass: can move. Red dashes: also has a kick to choose (back, side or home).
+                Circle().stroke(kickChoice ? Palette.color(.red) : Palette.brass,
+                                style: StrokeStyle(lineWidth: selected ? 4 : 3, dash: kickChoice ? [5, 3] : []))
+                    .frame(width: size * 1.3, height: size * 1.3)
             }
         }
         .frame(width: size, height: size)
+    }
+}
+
+
+/// A move the selected token can make, on the square it would end on.
+struct ChoiceMarker: View {
+    let title: String
+    let kick: Bool
+
+    var body: some View {
+        Text(title)
+            .font(.caption.weight(.bold))
+            .padding(.horizontal, 8)
+            .frame(minWidth: 44, minHeight: 44)
+            .background(Capsule().fill(kick ? Palette.color(.red) : Palette.brass))
+            .foregroundStyle(kick ? .white : Palette.night)
+            .overlay(Capsule().stroke(.white.opacity(0.8), lineWidth: 1.5))
+            .shadow(color: .black.opacity(0.4), radius: 3, y: 2)
     }
 }

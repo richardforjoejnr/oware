@@ -35,6 +35,24 @@ final class LeluLudoUITests: XCTestCase {
     }
 
     @MainActor
+    func testABackKickIsOfferedAndChosen() throws {
+        let app = launch(["--scenario=back-kick", "--dice=5,2"])
+        let roll = app.buttons["btn-roll"]
+        XCTAssertTrue(roll.waitForExistence(timeout: 5))
+        roll.tap()
+        let token = app.descendants(matching: .any)["token-red-0"]
+        XCTAssertTrue(token.waitForExistence(timeout: 3))
+        XCTAssertEqual(token.value as? String, "Can kick", "the token shows it has a kick")
+        token.tap()
+        let back = app.descendants(matching: .any)["choice-backKick"]
+        XCTAssertTrue(back.waitForExistence(timeout: 3), "the back kick is offered")
+        XCTAssertTrue(app.descendants(matching: .any)["choice-forward"].exists, "and so is the plain move")
+        back.tap()
+        expectation(for: NSPredicate(format: "label CONTAINS 'back-kicked'"), evaluatedWith: app.staticTexts["commentary"])
+        waitForExpectations(timeout: 10)
+    }
+
+    @MainActor
     func testPassAndPlayFromTheMenu() throws {
         let app = launch(["--dice=3"])
         let play = app.buttons["btn-pass-play"]

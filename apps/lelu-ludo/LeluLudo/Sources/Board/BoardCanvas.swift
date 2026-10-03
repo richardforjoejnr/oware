@@ -46,8 +46,8 @@ struct BoardCanvas: View {
             let mid = CGPoint(x: centre.midX, y: centre.midY)
             let corners = [CGPoint(x: centre.minX, y: centre.minY), CGPoint(x: centre.maxX, y: centre.minY),
                            CGPoint(x: centre.maxX, y: centre.maxY), CGPoint(x: centre.minX, y: centre.maxY)]
-            // Left side → red, top → gold, right → black, bottom → green (each lane's side).
-            let sides: [(PlayerColor, CGPoint, CGPoint)] = [(.red, corners[3], corners[0]), (.gold, corners[0], corners[1]),
+            // Left side → red, top → yellow, right → black, bottom → green (each lane's side).
+            let sides: [(PlayerColor, CGPoint, CGPoint)] = [(.red, corners[3], corners[0]), (.yellow, corners[0], corners[1]),
                                                             (.black, corners[1], corners[2]), (.green, corners[2], corners[3])]
             for (color, a, b) in sides {
                 var p = Path(); p.move(to: a); p.addLine(to: b); p.addLine(to: mid); p.closeSubpath()

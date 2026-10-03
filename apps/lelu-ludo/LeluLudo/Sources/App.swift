@@ -1,3 +1,4 @@
+import LudoEngine
 import SwiftUI
 
 @main
@@ -13,6 +14,7 @@ struct LeluLudoApp: App {
         let session = LudoSession(dice: dice)
         if LaunchOptions.fast { session.computerPause = .zero }
         if LaunchOptions.startGame { session.newGame(GameSetup(seats: [.red: .human, .black: .computer(.novice)])) }
+        if let scenario = LaunchOptions.scenario { session.load(scenario) }
         _session = State(initialValue: session)
     }
 
@@ -26,7 +28,7 @@ struct LeluLudoApp: App {
 }
 
 struct RootView: View {
-    @State private var inGame = LaunchOptions.startGame
+    @State private var inGame = LaunchOptions.startGame || LaunchOptions.scenario != nil
 
     var body: some View {
         if inGame {
@@ -52,6 +54,23 @@ enum LaunchOptions {
     static var dice: [Int]? { arguments.lazy.compactMap(ScriptedDice.parse).first }
     /// `--start-game`: open straight onto a new game, you (red) against a Novice (black).
     static var startGame: Bool { arguments.contains("--start-game") }
+    /// `--scenario=back-kick`: open on an arranged position (UI tests, screenshots).
+    static var scenario: Scenario? { arguments.lazy.compactMap { $0.hasPrefix("--scenario=") ? Scenario(rawValue: String($0.dropFirst(11))) : nil }.first }
     /// `--fast`: computer turns without pauses (UI tests).
     static var fast: Bool { arguments.contains("--fast") }
+}
+
+/// Positions for UI tests and screenshots.
+enum Scenario: String {
+    /// You (red) on track 12, a Black token on track 7: a 5 can move on or back-kick it.
+    case backKick = "back-kick"
+
+    var game: (GameSetup, GameState) {
+        switch self {
+        case .backKick:
+            let black = GameState.progress(of: .black, atTrackIndex: 7)
+            return (GameSetup(seats: [.red: .human, .black: .computer(.novice)]),
+                    GameState.arranged(players: [.red, .black], toMove: .red, tokens: [.red: [12, -1, -1, -1], .black: [black, -1, -1, -1]]))
+        }
+    }
 }

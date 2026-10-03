@@ -41,8 +41,8 @@ public enum Difficulty: Int, Sendable, Codable, CaseIterable, Comparable {
 
 /// A computer opponent. Ludo is a dice game, so it weighs each legal move by what a good player
 /// looks for rather than searching far ahead:
-/// - Novice: progress, kicks and getting home.
-/// - Intermediate: also back kicks, bringing tokens out and reaching the safe lane.
+/// - Novice: progress, forward kicks and getting home.
+/// - Intermediate: also back, side and home kicks, bringing tokens out and reaching the safe lane.
 /// - Strategist: also danger (where opponents could hit with one roll, back kicks included),
 ///   escaping it, and building walls.
 /// - Grandmaster: also the danger to all its tokens after the move, not just the one it moved.
@@ -74,13 +74,18 @@ public struct AIPlayer: Sendable, Hashable, Codable {
         let level = difficulty
         var s = Double(move.to - move.from) * 0.5   // progress (negative for a back kick)
 
-        // Kicks: worth more the further the victim had come.
-        if move.to <= Board.lastTrackProgress {
-            let square = Board.trackIndex(me, progress: move.to)
-            for victim in state.occupants(at: square) where victim.color != me && !state.isSafe(square) {
-                let theirs = state.tokens(of: victim.color)[victim.token]
-                if move.kind == .backKick && level < .intermediate { continue }
-                s += 20 + Double(theirs)
+        // Kicks of every kind (forward, back, side, home): play the move on a copy and see who it
+        // sent home; each is worth more the further it had come.
+        var played = state
+        let events = (try? played.apply(move)) ?? []
+        let fancy: Set<Move.Kind> = [.backKick, .sideKickForward, .sideKickBack, .homeKick]
+        if !(fancy.contains(move.kind) && level < .intermediate) {
+            for event in events {
+                switch event {
+                case let .kicked(color, token, _, _), let .kickedInLane(color, token, _, _, _):
+                    s += 20 + Double(state.tokens(of: color)[token])
+                default: break
+                }
             }
         }
         if move.to == Board.home { s += 30 }

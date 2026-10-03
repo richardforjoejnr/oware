@@ -26,10 +26,20 @@ public struct RuleSet: Sendable, Codable, Hashable {
     public var starSquaresSafe: Bool
     /// Rolls that bring a token out of the yard (6; a gentler game uses 1 and 6).
     public var entryRolls: Set<Int>
+    /// Home kick: an opponent in their own home lane is not safe. With the exact roll a token may turn
+    /// into that lane and kick them; it then walks back out the way it came on later turns.
+    public var homeKick: Bool
+    /// Side kicks: after a legal move forwards (or backwards), a token directly across a home lane
+    /// from an opponent, with the lane square between them clear, may jump across and kick them.
+    public var forwardSideKick: Bool
+    public var backSideKick: Bool
+    /// Labourer: reserved. No behaviour until the owner defines the Ghana house rule exactly.
+    public var labourerEnabled: Bool
 
     public init(kickOrHomeEarnsRoll: Bool = true, threeSixesForfeit: Bool = true, stacking: Stacking = .wall,
                 backKick: Bool = true, startSquaresSafe: Bool = false, starSquaresSafe: Bool = false,
-                entryRolls: Set<Int> = [6]) {
+                entryRolls: Set<Int> = [6], homeKick: Bool = true, forwardSideKick: Bool = true,
+                backSideKick: Bool = true, labourerEnabled: Bool = false) {
         self.kickOrHomeEarnsRoll = kickOrHomeEarnsRoll
         self.threeSixesForfeit = threeSixesForfeit
         self.stacking = stacking
@@ -37,10 +47,38 @@ public struct RuleSet: Sendable, Codable, Hashable {
         self.startSquaresSafe = startSquaresSafe
         self.starSquaresSafe = starSquaresSafe
         self.entryRolls = entryRolls
+        self.homeKick = homeKick
+        self.forwardSideKick = forwardSideKick
+        self.backSideKick = backSideKick
+        self.labourerEnabled = labourerEnabled
     }
 
-    /// Lelu Ludo's defaults.
-    public static let ghana = RuleSet()
+    private enum CodingKeys: String, CodingKey {
+        case kickOrHomeEarnsRoll, threeSixesForfeit, stacking, backKick, startSquaresSafe, starSquaresSafe, entryRolls
+        case homeKick, forwardSideKick, backSideKick, labourerEnabled
+    }
+
+    /// Saves from before a rule existed load with that rule off.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        kickOrHomeEarnsRoll = try c.decode(Bool.self, forKey: .kickOrHomeEarnsRoll)
+        threeSixesForfeit = try c.decode(Bool.self, forKey: .threeSixesForfeit)
+        stacking = try c.decode(Stacking.self, forKey: .stacking)
+        backKick = try c.decode(Bool.self, forKey: .backKick)
+        startSquaresSafe = try c.decode(Bool.self, forKey: .startSquaresSafe)
+        starSquaresSafe = try c.decode(Bool.self, forKey: .starSquaresSafe)
+        entryRolls = try c.decode(Set<Int>.self, forKey: .entryRolls)
+        homeKick = try c.decodeIfPresent(Bool.self, forKey: .homeKick) ?? false
+        forwardSideKick = try c.decodeIfPresent(Bool.self, forKey: .forwardSideKick) ?? false
+        backSideKick = try c.decodeIfPresent(Bool.self, forKey: .backSideKick) ?? false
+        labourerEnabled = try c.decodeIfPresent(Bool.self, forKey: .labourerEnabled) ?? false
+    }
+
+    /// Ghana Classic, Lelu Ludo's defaults (owner, 2026-10-03): forward, back, forward side, back side
+    /// and home kicks on; a 6 rolls again; home needs the exact roll; Labourer off until it is defined.
+    public static let ghanaClassic = RuleSet()
+    public static let ghana = ghanaClassic
     /// Plain Ludo as most printed rule sheets give it, for tests and comparison.
-    public static let classic = RuleSet(kickOrHomeEarnsRoll: false, threeSixesForfeit: false, stacking: .wall, backKick: false)
+    public static let classic = RuleSet(kickOrHomeEarnsRoll: false, threeSixesForfeit: false, stacking: .wall, backKick: false,
+                                        homeKick: false, forwardSideKick: false, backSideKick: false)
 }
