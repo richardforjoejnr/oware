@@ -10,6 +10,8 @@ final class PlayerEvents {
 
     var track: (AnalyticsEvent) -> Void
     var services: GameServices?
+    /// High points for the rating prompt (shown on the game-over screen).
+    let review: ReviewMoments
     private let defaults: UserDefaults
     private static let grandmasterWinsKey = "stats.grandmasterWins"
 
@@ -19,6 +21,7 @@ final class PlayerEvents {
         self.track = track
         self.services = services
         self.defaults = defaults
+        self.review = ReviewMoments(defaults: defaults)
     }
 
     var grandmasterWins: Int { defaults.integer(forKey: Self.grandmasterWinsKey) }
@@ -44,6 +47,7 @@ final class PlayerEvents {
         track(.gameFinished(mode: modeName, level: level.map { "\($0)" }, result: result, rules: rules))
 
         guard result == "win" else { return }
+        review.gameWon()
         services?.unlock(GameCenterID.Achievement.firstWin)
         if level == .grandmaster {
             let wins = grandmasterWins + 1
@@ -61,6 +65,7 @@ final class PlayerEvents {
         services?.submit(totalStars, to: GameCenterID.Leaderboard.journeyStars)
         if let chapter = chapterCompleted {
             track(.journeyChapterCompleted(chapter: chapter + 1))
+            review.chapterCompleted()
             services?.unlock(GameCenterID.Achievement.firstChapter)
         }
     }

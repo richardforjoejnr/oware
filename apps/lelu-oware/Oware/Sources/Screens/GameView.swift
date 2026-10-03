@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 import OwareEngine
 import OwareAI
@@ -492,6 +493,7 @@ struct GameOverOverlay: View {
     @Environment(GameSession.self) private var session
     @Environment(JourneyProgress.self) private var progress
     @Environment(AppSettings.self) private var settings
+    @Environment(\.requestReview) private var requestReview
     let goHome: () -> Void
     var goToJourney: () -> Void = {}
 
@@ -556,6 +558,15 @@ struct GameOverOverlay: View {
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.night.opacity(0.88))
+        .task {
+            // A high point (3rd win, finished chapter): Apple's rating prompt once the result has
+            // sunk in. Never in test launches.
+            guard !settings.testMode, session.events.review.takePending() else { return }
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !Task.isCancelled else { return }
+            requestReview()
+            session.events.review.asked()
+        }
     }
 }
 
