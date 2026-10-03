@@ -1,15 +1,34 @@
 name: Lelu Ludo CI
 
-# Lelu Ludo (apps/lelu-ludo and packages/LudoEngine). Runs only when they or this file change.
+# Lelu Ludo's CI (apps/lelu-ludo, packages/LudoEngine).
+#
+# Shared templates + thin callers: the real steps live in reusable-swift-package.yml (and, once the
+# app has screens, reusable-ios-app.yml), which every app's CI calls. This file only says what Lelu
+# Ludo tests with them.
+#
+# What runs this workflow: changes to Lelu Ludo's app, LudoEngine, this file, or the shared
+# templates it calls (a template change runs every app that calls it, which is intended: it
+# affects them all). Changes to Lelu Oware or its workflows do not run it.
+#
 # The rules engine is pure Swift, so it is tested on Linux in Apple's Swift container: a tenth of
-# the cost of a macOS runner on a private repository. The app job (macOS, simulator) is added in
-# the stage that gives the app its screens (see apps/lelu-ludo/docs/GAME_PLAN.md).
+# the cost of a macOS runner on a private repository. The app (stage 3 on) builds and runs its unit
+# and UI tests on a macOS simulator through reusable-ios-app.yml.
 on:
   pull_request:
-    paths: [apps/lelu-ludo/**, packages/LudoEngine/**, .github/workflows/ludo-ci.yml]
+    paths:
+      - apps/lelu-ludo/**
+      - packages/LudoEngine/**
+      - .github/workflows/ludo-ci.yml
+      - .github/workflows/reusable-swift-package.yml
+      - .github/workflows/reusable-ios-app.yml
   push:
     branches: [main]
-    paths: [apps/lelu-ludo/**, packages/LudoEngine/**, .github/workflows/ludo-ci.yml]
+    paths:
+      - apps/lelu-ludo/**
+      - packages/LudoEngine/**
+      - .github/workflows/ludo-ci.yml
+      - .github/workflows/reusable-swift-package.yml
+      - .github/workflows/reusable-ios-app.yml
 
 permissions:
   contents: read
@@ -20,13 +39,17 @@ concurrency:
 
 jobs:
   engine:
-    name: Ludo engine (swift test, Linux)
-    runs-on: ubuntu-latest
-    container: swift:6.0
-    defaults:
-      run:
-        working-directory: packages/LudoEngine
-    steps:
-      - uses: actions/checkout@v4
-      - name: Rules engine tests
-        run: swift test --parallel
+    name: LudoEngine
+    uses: ./.github/workflows/reusable-swift-package.yml
+    with:
+      package-path: packages/LudoEngine
+      runner: linux
+
+  app:
+    name: iOS app
+    uses: ./.github/workflows/reusable-ios-app.yml
+    with:
+      app-dir: apps/lelu-ludo
+      project: LeluLudo.xcodeproj
+      scheme: LeluLudo
+      artifact-name: LudoTestResults   # named apart from Lelu Oware's TestResults (the site's report)

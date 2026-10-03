@@ -27,6 +27,8 @@ GitHub Release if that is too long.
 """
 from __future__ import annotations
 
+import os
+import pathlib
 import re
 import subprocess
 import sys
@@ -68,10 +70,35 @@ def last_release() -> str | None:
     return tags[0] if tags else None
 
 
-def titles_since(tag: str | None) -> list[tuple[str, str]]:
-    """(title, body) of each change on the main line since `tag`: PR titles for merge commits."""
+# What belongs to each app: its folder and the packages it is built from. A PR counts towards an
+# app's version and notes only if it changed one of these (so a Lelu Ludo feature never bumps Lelu
+# Oware's version or shows in its App Store "What's New").
+APP_PATHS = {
+    "lelu-oware": ["apps/lelu-oware", "packages/OwareEngine", "packages/SupportKit"],
+    "lelu-ludo": ["apps/lelu-ludo", "packages/LudoEngine", "packages/SupportKit"],
+}
+
+
+def current_app(argv: list[str], cwd: str) -> str | None:
+    """`--app=<slug>`, else the app folder the script is run from (the workflows run it from
+    apps/<slug>), else None: the whole repository, as before there were two apps."""
+    for a in argv:
+        if a.startswith("--app="):
+            return a.split("=", 1)[1]
+    parts = pathlib.PurePath(cwd).parts
+    if "apps" in parts and parts.index("apps") + 1 < len(parts):
+        slug = parts[parts.index("apps") + 1]
+        return slug if slug in APP_PATHS else None
+    return None
+
+
+def titles_since(tag: str | None, paths: list[str] | None = None) -> list[tuple[str, str]]:
+    """(title, body) of each change on the main line since `tag`: PR titles for merge commits.
+    With `paths`, only changes that touched them (a merge counts if it changed them compared with
+    the main line before it)."""
     rev = f"{tag}..HEAD" if tag else "HEAD"
-    out = git("log", rev, "--first-parent", "--format=%s%x1f%b%x1e")
+    limit = ["--", *(f":(top){p}" for p in paths)] if paths else []   # from the repo's top, wherever we run
+    out = git("log", rev, "--first-parent", "--format=%s%x1f%b%x1e", *limit)
     changes = []
     for record in filter(None, (r.strip("\n") for r in out.split("\x1e"))):
         subject, _, body = record.partition("\x1f")
@@ -143,7 +170,8 @@ def store_notes(changes: list[tuple[str, str]], limit: int = 3800) -> str:
 
 def main() -> None:
     tag = last_release()
-    changes = titles_since(tag)
+    app = current_app(sys.argv, os.getcwd())
+    changes = titles_since(tag, APP_PATHS[app] if app else None)
     if "--store-notes" in sys.argv:
         print(store_notes(changes))
     elif "--notes" in sys.argv:

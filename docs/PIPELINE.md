@@ -164,6 +164,11 @@ Automatic, from **Conventional Commit PR titles** (checked on every PR by the "P
   the PR title (repository setting: merge commit message = "Pull request title"; a squash merge also
   uses the title), so a `BREAKING CHANGE:` note in the PR description never reaches git. (A
   `BREAKING CHANGE` / `BREAKING-CHANGE` note in a commit body is still honoured if one gets there.)
+- **Per app:** each app's version and notes count only the PRs that changed its own files (its
+  folder and the packages it uses; `APP_PATHS` in `scripts/next_version.py`, chosen from the folder
+  the workflow runs it in, or `--app=<slug>`). A Lelu Ludo feature never bumps Lelu Oware's version or
+  appears in its "What's New". `vX.Y.Z` tags are Lelu Oware's releases; Lelu Ludo will get its own
+  tag prefix when it reaches the App Store (its stage 5).
 - **Release** = a git tag `vX.Y.Z`. `scripts/next_version.py` reads the PR titles merged since the last
   tag and prints the next version (1.0.0 before the first release); `--notes` prints release notes.
 - **Titles from before the convention** (PRs up to #35) are read leniently: `Docs: …` counts as

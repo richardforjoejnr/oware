@@ -1,6 +1,9 @@
 name: E2E (Maestro)
 
-# Lelu Oware's end-to-end flows; runs only when the app, its packages or this file change.
+# Lelu Oware's end-to-end flows (Maestro + Appium). Runs only when Lelu Oware's app, its packages,
+# its docs, the one script it uses (scripts/pick-simulator.sh) or this file change; never for Lelu
+# Ludo or for other scripts. It does not call the shared reusable templates, so editing them does
+# not run it.
 on:
   pull_request:
     paths:
@@ -8,9 +11,7 @@ on:
       - packages/OwareEngine/**
       - packages/SupportKit/**
       - docs/lelu-oware/**
-      - scripts/**
-      - Gemfile
-      - Gemfile.lock
+      - scripts/pick-simulator.sh
       - .github/workflows/e2e.yml
   push:
     branches: [main]
@@ -19,9 +20,7 @@ on:
       - packages/OwareEngine/**
       - packages/SupportKit/**
       - docs/lelu-oware/**
-      - scripts/**
-      - Gemfile
-      - Gemfile.lock
+      - scripts/pick-simulator.sh
       - .github/workflows/e2e.yml
 
 # Read-only: reports go out as artifacts (the Pages workflow reads them), not as checks or PR comments.
