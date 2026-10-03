@@ -6,11 +6,12 @@ set of tooling, CI and release lanes.
 | App | Folder | Notes |
 |---|---|---|
 | **Lelu Oware** | [`apps/lelu-oware`](apps/lelu-oware/README.md) | Ghana's game of Oware, Abapa rules. Ships first. |
+| **Lelu Ludo** | [`apps/lelu-ludo`](apps/lelu-ludo/README.md) | Ludo as it is played in Ghana. Stage 1 (rules engine) of the plan. |
 
 ## Layout
 ```
 apps/<app>/            One iOS app: project.yml (XcodeGen), Sources, tests, e2e, fastlane, docs, art
-packages/<Package>/    Shared Swift packages (OwareEngine: rules + AI; SupportKit: tip jar)
+packages/<Package>/    Shared Swift packages (OwareEngine: rules + AI; LudoEngine: Ludo rules; SupportKit: tip jar)
 templates/ios-app/     Starting point for a new app (make new-app NAME=…)
 scripts/               Shared helpers (simulator picker, bootstrap, scaffolding)
 .github/workflows/     CI / E2E / TestFlight / App Store per app

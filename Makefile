@@ -22,6 +22,7 @@ apps:                 ## List the apps in this repo
 engine-test:          ## Shared package tests (Command Line Tools are enough)
 	cd packages/OwareEngine && swift test --parallel
 	cd packages/SupportKit && swift test
+	cd packages/LudoEngine && swift test --parallel
 	@rm -rf packages/*/.swiftpm   # swift test leaves a workspace here that confuses Xcode's package graph
 
 project family archive test open clean e2e e2e-build e2e-studio e2e-ts:   ## Forwarded to apps/$(APP)

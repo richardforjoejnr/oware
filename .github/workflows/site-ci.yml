@@ -1,0 +1,38 @@
+name: Site CI
+
+# The website's AWS infrastructure (infra/site) and the build step that shapes its URLs. Runs only
+# when they change; deploying is the Site workflow (pages.yml).
+on:
+  pull_request:
+    paths: [infra/site/**, scripts/site_pretty_urls.py, scripts/test_site_pretty_urls.py, .github/workflows/site-ci.yml]
+  push:
+    branches: [main]
+    paths: [infra/site/**, scripts/site_pretty_urls.py, scripts/test_site_pretty_urls.py, .github/workflows/site-ci.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  site-infra:
+    name: Site infrastructure (CDK)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/site
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: infra/site/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Type-check and test the stack
+        run: npm run build && npm test
+      - name: Test the short-URL step
+        working-directory: scripts
+        run: python3 -m unittest test_site_pretty_urls
