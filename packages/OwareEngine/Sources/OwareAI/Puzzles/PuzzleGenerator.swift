@@ -11,14 +11,26 @@ public struct PuzzleGenerator {
         self.rules = rules
     }
 
+    /// The same choice `AIPlayer.chooseMove` makes for a level with this depth and slip rate, with no
+    /// time limit (so the riddles do not depend on how fast the machine is).
+    static func choose<G: RandomNumberGenerator>(_ state: GameState, depth: Int, slips: Double, using rng: inout G) -> Move? {
+        let moves = state.legalMoves()
+        guard !moves.isEmpty else { return nil }
+        if moves.count == 1 { return moves[0] }
+        if Double.random(in: 0..<1, using: &rng) < slips { return moves.randomElement(using: &rng) }
+        return AIPlayer.analyse(state, depth: depth, timeBudget: nil)?.move ?? moves[0]
+    }
+
     /// Generate up to `count` puzzles of each kind. Positions come from games between a mid-level
     /// AI and a noisy one, so they look like real games rather than random scatter.
     public func generate(perKind count: Int, maxGames: Int = 4000) -> PuzzleSet {
         var rng = SeededGenerator(seed: seed)
         var found: [Puzzle.Kind: [Puzzle]] = [:]
         var seenKeys: Set<String> = []
-        let strong = AIPlayer(difficulty: .player)
-        let noisy = AIPlayer(difficulty: .beginner)
+        // Fixed here, not taken from Difficulty: retuning the game's levels must not change which
+        // positions (and so which riddles) the generator finds. These are the 2026-09 levels.
+        let strong = (depth: 4, slips: 0.10)
+        let noisy = (depth: 1, slips: 0.40)
 
         func done() -> Bool { Puzzle.Kind.allCases.allSatisfy { (found[$0]?.count ?? 0) >= count } }
 
@@ -42,7 +54,7 @@ public struct PuzzleGenerator {
                 let mover = (ply % 2 == 0) == (rng.next() % 2 == 0) ? strong : noisy
                 // No time limit: a deadline would make the games (and so the puzzles) depend on
                 // how fast the machine is.
-                guard let move = mover.chooseMove(for: state, using: &rng, timeBudget: nil) else { break }
+                guard let move = Self.choose(state, depth: mover.depth, slips: mover.slips, using: &rng) else { break }
                 _ = try? state.apply(move)
             }
         }
