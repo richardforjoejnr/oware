@@ -1,6 +1,10 @@
 import unittest
 
-from next_version import bump, notes, store_notes
+import os
+import subprocess
+import tempfile
+
+from next_version import APP_PATHS, bump, current_app, notes, store_notes, titles_since
 
 
 class NextVersionTests(unittest.TestCase):
@@ -75,6 +79,44 @@ class NextVersionTests(unittest.TestCase):
         text = store_notes([(f"fix: change number {i} with a fairly long description", "") for i in range(200)])
         self.assertLessEqual(len(text), 4000)
         self.assertTrue(text.endswith("…and more"))
+
+
+class PerAppTests(unittest.TestCase):
+    """Two apps in one repository: each counts only the changes to its own files."""
+
+    def test_the_app_comes_from_the_folder_or_the_flag(self):
+        self.assertEqual(current_app([], "/repo/apps/lelu-oware"), "lelu-oware")
+        self.assertEqual(current_app([], "/repo/apps/lelu-ludo/fastlane"), "lelu-ludo")
+        self.assertEqual(current_app(["--app=lelu-ludo"], "/repo"), "lelu-ludo")
+        self.assertIsNone(current_app([], "/repo"), "the whole repository, as before")
+        self.assertIsNone(current_app([], "/repo/apps/unknown"))
+
+    def test_a_ludo_change_never_counts_for_oware(self):
+        with tempfile.TemporaryDirectory() as repo:
+            def run(*args):
+                subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+            run("init", "-q", "-b", "main")
+            run("config", "user.email", "t@example.com"); run("config", "user.name", "T")
+            for path, title in [("apps/lelu-oware/a.txt", "fix: oware board"),
+                                ("apps/lelu-ludo/b.txt", "feat: ludo dice"),
+                                ("packages/SupportKit/c.txt", "fix: tip jar"),
+                                ("docs/d.txt", "docs: readme")]:
+                os.makedirs(os.path.join(repo, os.path.dirname(path)), exist_ok=True)
+                with open(os.path.join(repo, path), "w") as f:
+                    f.write(title)
+                run("add", path); run("commit", "-q", "-m", title)
+            here = os.getcwd()
+            os.chdir(repo)
+            try:
+                oware = [t for t, _ in titles_since(None, APP_PATHS["lelu-oware"])]
+                ludo = [t for t, _ in titles_since(None, APP_PATHS["lelu-ludo"])]
+                everything = [t for t, _ in titles_since(None)]
+            finally:
+                os.chdir(here)
+            self.assertEqual(oware, ["fix: tip jar", "fix: oware board"])
+            self.assertEqual(ludo, ["fix: tip jar", "feat: ludo dice"], "a shared package counts for both")
+            self.assertEqual(len(everything), 4)
+            self.assertEqual(bump("1.0.0", [(t, "") for t in oware]), "1.0.1", "Ludo's feat does not make Oware 1.1.0")
 
 
 if __name__ == "__main__":
