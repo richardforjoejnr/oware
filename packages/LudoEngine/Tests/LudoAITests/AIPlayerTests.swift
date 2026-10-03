@@ -81,6 +81,23 @@ struct AIChoiceTests {
         #expect(AIPlayer(difficulty: level).chooseMove(g, using: &rng)?.token == 0)
     }
 
+    @Test("Takes a home kick into an opponent's lane (Intermediate and up)", arguments: [Difficulty.intermediate, .strategist, .grandmaster])
+    func takesTheHomeKick(level: Difficulty) {
+        // Red at 8 is 3 short of yellow's entrance; yellow waits 2 into its lane (52). A 5 kicks it.
+        let g = game([.red: [8, 30, -1, -1], .yellow: [52, -1, -1, -1]], roll: 5)
+        var rng = SeededGenerator(seed: 1)
+        #expect(AIPlayer(difficulty: level).chooseMove(g, using: &rng)?.kind == .homeKick)
+    }
+
+    @Test("Takes the side-kick shortcut across its own lane (Intermediate and up)", arguments: [Difficulty.intermediate, .strategist, .grandmaster])
+    func takesTheShortcut(level: Difficulty) {
+        // Red 0 → 1 then across its own lane onto yellow at track 47: 46 squares nearer home.
+        let g = game([.red: [0, 30, -1, -1], .yellow: [yellow(47), -1, -1, -1]], roll: 1)
+        var rng = SeededGenerator(seed: 1)
+        let move = AIPlayer(difficulty: level).chooseMove(g, using: &rng)
+        #expect(move?.kind == .sideKickForward && move?.to == 47)
+    }
+
     @Test("Same position and seed, same move")
     func deterministic() {
         let g = game([.red: [10, 20, 30, -1], .yellow: [yellow(14), yellow(33), -1, -1]], roll: 6)
