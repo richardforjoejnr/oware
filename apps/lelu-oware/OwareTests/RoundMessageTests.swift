@@ -16,8 +16,17 @@ final class RoundMessageTests: XCTestCase {
     func testGainingTwoHouses() {
         XCTAssertEqual(GameSession.describe(r(1, 32, 8), previous: nil, in: vsAI), "Round 1: you 32, them 16 — you gain 2 houses, now 8")
     }
+    /// The case that looks like a bug: a won round that costs a house. The banner says why.
     func testWinningTheRoundButLosingAHouse() {
-        XCTAssertEqual(GameSession.describe(r(2, 26, 7), previous: r(1, 32, 8), in: vsAI), "Round 2: you 26, them 22 — you lose 1 house, now 7")
+        XCTAssertEqual(GameSession.describe(r(2, 26, 7), previous: r(1, 32, 8), in: vsAI),
+                       "Round 2: you 26, them 22 — 8 houses need 32 seeds: now 7")
+    }
+    func testLosingTheRoundButGainingHouses() {
+        XCTAssertEqual(GameSession.describe(r(3, 20, 5), previous: r(2, 12, 3), in: vsAI),
+                       "Round 3: you 20, them 28 — 3 houses need only 12: now 5")
+    }
+    func testLosingTheRoundAndHouses() {
+        XCTAssertEqual(GameSession.describe(r(2, 20, 5), previous: r(1, 28, 7), in: vsAI), "Round 2: you 20, them 28 — you lose 2 houses, now 5")
     }
     func testKeepingHouses() {
         XCTAssertEqual(GameSession.describe(r(2, 28, 7), previous: r(1, 28, 7), in: vsAI), "Round 2: you 28, them 20 — you keep 7 houses")

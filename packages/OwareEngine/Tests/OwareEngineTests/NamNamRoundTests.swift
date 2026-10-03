@@ -61,6 +61,23 @@ struct NamNamRoundTests {
         }
     }
 
+    /// Every possible end of a round, worked out by hand: a house for each four seeds won (the
+    /// Ba-awa rule Nam-Nam follows), the one spare house when both have three over going to whoever
+    /// won more, twelve in all. A won round costs houses exactly when it brought in fewer seeds than
+    /// four for each house held.
+    @Test("Every split of the 48 seeds gives the houses the rule says")
+    func everySplit() {
+        for south in 0...48 {
+            let north = 48 - south
+            var expectedSouth = south / 4, expectedNorth = north / 4
+            if expectedSouth + expectedNorth == 11 { if south > north { expectedSouth += 1 } else { expectedNorth += 1 } }
+            let r = afterRound(south: south, north: north).roundHistory.last!
+            #expect(r.southHouses == expectedSouth && r.northHouses == expectedNorth, "\(south)–\(north)")
+            #expect(r.southHouses + r.northHouses == 12, "\(south)–\(north)")
+            #expect(r.southHouses * 4 <= south + 3, "never more than the seeds pay for (plus the spare): \(south)–\(north)")
+        }
+    }
+
     // MARK: Rings (houses held across the row)
 
     @Test("Winning round one by a house puts exactly one ring on B1, in South's hands")

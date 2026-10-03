@@ -64,7 +64,7 @@ struct GameView: View {
             }
         }
         .onChange(of: session.roundMessage) { _, message in
-            if let message { showHint(message, seconds: 4.5) }
+            if let message { showHint(message, seconds: 6) }
         }
         .onChange(of: session.puzzleAttempt) { _, attempt in
             if attempt == .solved, let puzzle = session.currentPuzzle {
