@@ -21,6 +21,22 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.animationSpeed, .normal, "the player's own preference is untouched")
     }
 
+    /// House names and per-house counts: off in ordinary games unless switched on, always in lessons
+    /// and riddles (their text names houses). The stores' score is not part of this setting.
+    func testHouseLabelsAreOffInGamesButAlwaysInLessonsAndRiddles() {
+        let settings = AppSettings(defaults: freshDefaults(), testMode: false)
+        XCTAssertFalse(settings.showHouseLabels, "off by default")
+        let session = TestSupport.session()
+        session.newGame(.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south))
+        XCTAssertFalse(settings.labelsHouses(namesHouses: session.namesHouses), "a game shows no labels")
+        session.startTutorial(step: 0, variant: .abapa)
+        XCTAssertTrue(settings.labelsHouses(namesHouses: session.namesHouses), "the lesson always does")
+        settings.showHouseLabels = true
+        XCTAssertTrue(AppSettings(defaults: settings.defaultsForTesting, testMode: false).showHouseLabels, "the choice persists")
+        session.newGame(.passAndPlay)
+        XCTAssertTrue(settings.labelsHouses(namesHouses: session.namesHouses), "switched on, games show them")
+    }
+
     func testNamNamIsTheDefaultRuleSetForNewGames() {
         let settings = AppSettings(defaults: freshDefaults(), testMode: false)
         XCTAssertEqual(settings.variant, .namNam)

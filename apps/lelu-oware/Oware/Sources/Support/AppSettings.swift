@@ -29,13 +29,14 @@ final class AppSettings {
     var soundEnabled: Bool {
         didSet { defaults.set(soundEnabled, forKey: "soundEnabled") }
     }
-    var showSeedCounts: Bool {
-        didSet { defaults.set(showSeedCounts, forKey: "showSeedCounts") }
+    /// House names (A1…B6) and the seed count by each house, in ordinary games. Off by default: the
+    /// seeds themselves show the count, and VoiceOver reads each house's name and count either way.
+    /// Lessons and riddles always show both (their text names houses); the stores always show the score.
+    var showHouseLabels: Bool {
+        didSet { defaults.set(showHouseLabels, forKey: "showHouseLabels") }
     }
-    /// House names (A1…B6) on the board in ordinary games. Lessons and riddles always show them.
-    var showHouseNames: Bool {
-        didSet { defaults.set(showHouseNames, forKey: "showHouseNames") }
-    }
+    /// Whether the board labels its houses: the setting, or always in lessons and riddles.
+    func labelsHouses(namesHouses: Bool) -> Bool { showHouseLabels || namesHouses }
     /// Grand-slam convention for new games (Abapa forfeit by default).
     var grandSlamRule: RuleSet.GrandSlamRule {
         didSet { defaults.set(grandSlamRule.rawValue, forKey: "grandSlamRule") }
@@ -104,8 +105,7 @@ final class AppSettings {
         animationSpeed = AnimationSpeed(rawValue: speed ?? 1.0) ?? .normal
         hapticsEnabled = defaults.object(forKey: "hapticsEnabled") as? Bool ?? true
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
-        showSeedCounts = defaults.object(forKey: "showSeedCounts") as? Bool ?? true
-        showHouseNames = defaults.object(forKey: "showHouseNames") as? Bool ?? false
+        showHouseLabels = defaults.object(forKey: "showHouseLabels") as? Bool ?? false
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id

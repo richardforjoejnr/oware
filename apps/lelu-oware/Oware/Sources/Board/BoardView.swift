@@ -43,8 +43,7 @@ struct BoardView: View {
             .onDisappear { scene.finishAnimation() }
             .onChange(of: geo.size) { _, newSize in scene.size = newSize }
             .onChange(of: settings.animationSpeed) { _, _ in configureScene() }
-            .onChange(of: settings.showSeedCounts) { _, _ in configureScene() }
-            .onChange(of: settings.showHouseNames) { _, _ in configureScene() }
+            .onChange(of: settings.showHouseLabels) { _, _ in configureScene() }
             .onChange(of: session.mode) { _, _ in configureScene() }
             .onChange(of: settings.soundEnabled) { _, _ in configureScene() }
             .onChange(of: settings.hapticsEnabled) { _, _ in configureScene() }
@@ -61,8 +60,9 @@ struct BoardView: View {
         scene.setHighlight(house: session.highlightedHouse)
         scene.animationSpeed = settings.effectiveSpeed
         scene.calmMotion = settings.calmMotion
-        scene.showCounts = settings.showSeedCounts
-        scene.showHouseNames = settings.showHouseNames || session.namesHouses
+        let labelled = settings.labelsHouses(namesHouses: session.namesHouses)
+        scene.showCounts = labelled
+        scene.showHouseNames = labelled
         SoundPlayer.shared.enabled = settings.effectiveSound
         Haptics.shared.enabled = settings.effectiveHaptics
     }
