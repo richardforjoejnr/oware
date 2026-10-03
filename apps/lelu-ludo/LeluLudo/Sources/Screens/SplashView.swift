@@ -21,8 +21,9 @@ struct SplashView: View {
             }
             .accessibilityElement(children: .combine)
             .accessibilityIdentifier("splash")
-            BoardFrame { BoardCanvas(rules: .ghanaClassic) }
-                .padding(.horizontal, 28)
+            Image(Art.boardBox).resizable().scaledToFit()
+                .shadow(color: .black.opacity(0.6), radius: 16, y: 12)
+                .padding(.horizontal, 20)
                 .accessibilityHidden(true)
             Spacer(minLength: 20)
         }

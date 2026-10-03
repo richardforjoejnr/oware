@@ -63,8 +63,8 @@ def pawns() -> None:
         imageset(f"Pawn-{name}", fit(pawn, 240))
 
 
-# The dice sheet's front faces: (row, column) of each value; the 6 is the black star. The 2 is made
-# from the 1 (see two_from_one).
+# The dice sheet's front faces: (row, column) of each value; the 6 is the black star. The 2 is its own
+# image (die-2.png).
 DIE_FACES = {1: (0, 1), 3: (0, 2), 4: (1, 2), 5: (0, 3), 6: (1, 0), "flag": (0, 0)}
 
 
@@ -76,8 +76,9 @@ def dice() -> None:
         die = clean_cutout(src.crop((xs[c], ys[r], xs[c + 1], ys[r + 1])), erode=3)
         die = fit(die, 240)
         imageset(f"Die-{value}", die)
-        if value == 1:
-            imageset("Die-2", two_from_one(die))
+
+    # The sheet had no die showing 2 in front; the owner made one to match (die-2.png).
+    imageset("Die-2", fit(clean_cutout(Image.open(SRC / "die-2.png").convert("RGBA"), erode=3), 240))
     imageset("DiceCup", fit(clean_cutout(src.crop((10, 40, 510, 1030))), 360))
     return src
 
@@ -120,6 +121,15 @@ def maple() -> None:
     imageset("Maple", grain(512, (238, 224, 194), (214, 191, 150), seed=7), scale="")
     # Behind the screens: dark mahogany, seamless both ways (the rail crop shows a seam when repeated).
     imageset("DarkWood", grain(512, (96, 52, 30), (34, 16, 9), seed=5), scale="")
+    # The frame's top and bottom rails: the same mahogany with its grain running along them.
+    imageset("DarkWoodAcross", grain(512, (104, 56, 32), (38, 18, 10), seed=6).rotate(90), scale="")
+    # The table: woven sand cloth, seamless both ways.
+    rng = np.random.default_rng(3)
+    weave = (ndimage.gaussian_filter(rng.normal(size=(256, 256)), (0.5, 3), mode="wrap")
+             + ndimage.gaussian_filter(rng.normal(size=(256, 256)), (3, 0.5), mode="wrap"))
+    weave = (weave - weave.min()) / (weave.max() - weave.min())
+    sand = np.array([222, 199, 166])[None, None, :] * (0.9 + 0.14 * weave[..., None])
+    imageset("Linen", Image.fromarray(sand.clip(0, 255).astype("uint8")), scale="")
 
 
 def menu() -> None:
@@ -154,31 +164,51 @@ def app_icon() -> None:
         "info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
 
 
-def two_from_one(one: Image.Image) -> Image.Image:
-    """The sheet has no die showing 2 on its front (the one at row 1, column 1 shows 1 in front and 2
-    on its side), so the 2 is made from the 1: the centre pip is covered with wood from the same face
-    and the pip is set down twice on the diagonal."""
-    a = np.array(one).astype(float)
-    dark = (a[:, :, :3].sum(2) < 150) & (a[:, :, 3] > 200)
-    labels, n = ndimage.label(dark)
-    boxes = ndimage.find_objects(labels)
-    front = min(range(n), key=lambda i: boxes[i][1].start)        # the leftmost pip is the front face's
-    ys, xs = boxes[front]
-    cy, cx = (ys.start + ys.stop) // 2, (xs.start + xs.stop) // 2
-    h, w = ys.stop - ys.start + 10, xs.stop - xs.start + 10
-    pip = a[cy - h // 2:cy + h // 2, cx - w // 2:cx + w // 2].copy()
-    wood = a[cy - h // 2:cy + h // 2, cx + w - w // 2:cx + w + w // 2].copy()
-    yy, xx = np.mgrid[0:h // 2 * 2, 0:w // 2 * 2]
-    soft = np.clip(1.6 - (((yy - h / 2) / (h / 2)) ** 2 + ((xx - w / 2) / (w / 2)) ** 2), 0, 1)[..., None]
-    region = a[cy - h // 2:cy + h // 2, cx - w // 2:cx + w // 2]
-    region[:, :, :3] = region[:, :, :3] * (1 - soft) + wood[:, :, :3] * soft
-    pip_mask = (pip[:, :, :3].sum(2) < 260)[..., None] * 1.0
-    pip_mask = ndimage.gaussian_filter(pip_mask, (0.8, 0.8, 0))
-    for dy, dx in ((-int(h * 0.8), -int(w * 0.85)), (int(h * 0.8), int(w * 0.85))):
-        y0, x0 = cy + dy - h // 2, cx + dx - w // 2
-        target = a[y0:y0 + pip.shape[0], x0:x0 + pip.shape[1]]
-        target[:, :, :3] = target[:, :, :3] * (1 - pip_mask) + pip[:, :, :3] * pip_mask
-    return Image.fromarray(a.astype("uint8"))
+def cut_from_table(rgb: np.ndarray) -> np.ndarray:
+    """Alpha for an object photographed on a plain light table: the table is the light, unsaturated
+    pixels joined to the picture's edge."""
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    mx, mn = np.maximum(np.maximum(r, g), b), np.minimum(np.minimum(r, g), b)
+    # The table and the soft shadow on it: unsaturated, from light down to mid grey-brown.
+    tableish = (mx > 85) & ((mx - mn) / np.maximum(mx, 1) < 0.34)
+    labels, _ = ndimage.label(tableish)
+    edge = set(np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))) - {0}
+    thing = ndimage.binary_fill_holes(ndimage.binary_opening(~np.isin(labels, list(edge)), iterations=2))
+    thing = ndimage.binary_erosion(thing, iterations=2)   # no rim of table left on the edge
+    return np.array(Image.fromarray((thing * 255).astype("uint8")).filter(ImageFilter.GaussianBlur(1.2)))
+
+
+def support_tile() -> None:
+    """The Support tile (for the tip jar), made by the owner to match the menu tiles."""
+    rgb = np.array(Image.open(SRC / "tile-support.png").convert("RGB")).astype(int)
+    tile = Image.fromarray(np.dstack([rgb, cut_from_table(rgb)]).astype("uint8"))
+    tile = tile.crop(tile.getbbox())
+    imageset("Tile-support", tile.resize((300, round(tile.height * 300 / tile.width)), Image.LANCZOS))
+
+
+def blue_to_black(rgb: np.ndarray) -> np.ndarray:
+    """Repaints blue (paint and pawns) as Lelu's ebony black, keeping the light and grain."""
+    a = rgb.astype(float)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    mx, mn = np.maximum(np.maximum(r, g), b), np.minimum(np.minimum(r, g), b)
+    blue = (b == mx) & (b - np.maximum(r, g) > 18) & ((mx - mn) / np.maximum(mx, 1) > 0.28)
+    blue = ndimage.binary_closing(blue, iterations=1)
+    weight = ndimage.gaussian_filter(blue.astype(float), 0.8)[..., None]
+    lum = 0.3 * r + 0.59 * g + 0.11 * b
+    l = np.clip((lum - 10) / 170, 0, 1) ** 1.25
+    ebony = np.stack([22 + l * 135, 19 + l * 122, 17 + l * 108], -1)
+    return a * (1 - weight) + ebony * weight
+
+
+def board_perspective() -> None:
+    """The boxed board in three-quarter view (the menu's centrepiece): blue repainted black, the table
+    round it made transparent (light, unsaturated pixels joined to the picture's edge)."""
+    rgb = np.array(Image.open(SRC / "board-perspective.png").convert("RGB")).astype(int)
+    alpha = cut_from_table(rgb)
+    out = np.dstack([blue_to_black(rgb).clip(0, 255), alpha]).astype("uint8")
+    image = Image.fromarray(out)
+    image = image.crop(image.getbbox())
+    imageset("BoardBox", image.resize((image.width * 2 // 3, image.height * 2 // 3), Image.LANCZOS))
 
 
 if __name__ == "__main__":
@@ -187,6 +217,8 @@ if __name__ == "__main__":
     pawns()
     dice()
     board_parts()
+    board_perspective()
+    support_tile()
     maple()
     menu()
     app_icon()

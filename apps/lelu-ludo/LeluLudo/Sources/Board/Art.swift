@@ -13,13 +13,19 @@ enum Art {
     static let woodGrain = "WoodGrain"
     static let maple = "Maple"
     static let darkWood = "DarkWood"
+    static let darkWoodAcross = "DarkWoodAcross"
+    static let linen = "Linen"
+    /// The boxed board in three-quarter view, the menu's centrepiece.
+    static let boardBox = "BoardBox"
     static let menuTitle = "MenuTitle"
     static let tileStart = "Tile-start"
     static let tileFriends = "Tile-friends"
     static let tileSettings = "Tile-settings"
+    /// For the tip jar (release stage).
+    static let tileSupport = "Tile-support"
 
     static var all: [String] {
         PlayerColor.allCases.map(pawn) + (1...6).map(die)
-            + [dieFlag, diceCup, boardPlaque, woodGrain, maple, darkWood, menuTitle, tileStart, tileFriends, tileSettings]
+            + [dieFlag, diceCup, boardPlaque, woodGrain, maple, darkWood, darkWoodAcross, linen, boardBox, menuTitle, tileStart, tileFriends, tileSettings, tileSupport]
     }
 }

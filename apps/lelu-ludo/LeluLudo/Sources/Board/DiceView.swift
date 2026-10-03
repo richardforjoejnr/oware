@@ -17,7 +17,7 @@ struct DiceView: View {
                 VStack(spacing: 4) {
                     Image(value.map(Art.die) ?? Art.dieFlag)
                         .resizable().scaledToFit()
-                        .frame(width: 62, height: 62)
+                        .frame(width: 70, height: 70)
                         .shadow(color: .black.opacity(0.45), radius: 3, y: 2)
                         .id(value.map { "\($0)-\(shakes)" } ?? "flag")
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
@@ -25,9 +25,10 @@ struct DiceView: View {
                         .overlay(Capsule().stroke(Palette.brass, lineWidth: session.lastRoll?.color == .black ? 1 : 0))
                         .frame(width: 40, height: 5)
                 }
+                VStack(spacing: 2) {
                 Image(Art.diceCup)
                     .resizable().scaledToFit()
-                    .frame(height: 78)
+                    .frame(height: 92)
                     .rotationEffect(.degrees(shakes % 2 == 0 ? 0 : 0.001))
                     .keyframeAnimator(initialValue: 0.0, trigger: shakes) { cup, angle in
                         cup.rotationEffect(.degrees(angle), anchor: .bottom)
@@ -41,8 +42,12 @@ struct DiceView: View {
                     }
                     // Glows when it is your roll.
                     .shadow(color: session.canRoll ? Palette.brass.opacity(0.9) : .clear, radius: 10)
+                    Text(session.canRoll ? "Tap to roll" : " ")
+                        .font(.system(.caption2, design: .serif).weight(.semibold))
+                        .foregroundStyle(Palette.ivory)
+                }
             }
-            .frame(minHeight: 80)
+            .frame(minHeight: 100)
             .animation(.spring(duration: 0.35), value: value)
         }
         .buttonStyle(.plain)

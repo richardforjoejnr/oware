@@ -55,6 +55,14 @@ struct BoardCanvas: View {
                     ctx.stroke(Path(rect), with: .color(Palette.line), lineWidth: 1)
                 }
             }
+            // Arrows, as painted on the owner's board: out of each start square along the way round,
+            // and at each lane's mouth, into the lane.
+            for color in PlayerColor.allCases {
+                let start = Board.track[Board.startIndex(color)], next = Board.track[Board.startIndex(color) + 1]
+                arrow(ctx, at: start, towards: next, cell: cell, color: .white.opacity(0.9))
+                let mouth = Board.track[Board.entranceIndex(color)], first = Board.lane(color)[0]
+                arrow(ctx, at: mouth, towards: first, cell: cell, color: Palette.line.opacity(0.8))
+            }
             // Centre: four triangles towards each colour's lane, and the black star.
             let centre = CGRect(x: 6 * cell, y: 6 * cell, width: 3 * cell, height: 3 * cell)
             let mid = CGPoint(x: centre.midX, y: centre.midY)
@@ -68,11 +76,30 @@ struct BoardCanvas: View {
                 paint(p, Palette.paint(color))
                 ctx.stroke(p, with: .color(Palette.line), lineWidth: 1)
             }
-            ctx.fill(star(in: centre.insetBy(dx: cell * 0.75, dy: cell * 0.75)), with: .color(.black))
-            ctx.stroke(star(in: centre.insetBy(dx: cell * 0.75, dy: cell * 0.75)), with: .color(Palette.brass), lineWidth: 1)
+            // The black star of the flag, on a gold square as on the owner's board.
+            let gold = centre.insetBy(dx: cell * 0.85, dy: cell * 0.85)
+            paint(Path(gold), Palette.paint(.yellow))
+            ctx.stroke(Path(gold), with: .color(Palette.line), lineWidth: 1)
+            ctx.fill(star(in: centre.insetBy(dx: cell * 0.55, dy: cell * 0.55)), with: .color(Color(red: 0.06, green: 0.05, blue: 0.04)))
+            ctx.stroke(star(in: centre.insetBy(dx: cell * 0.55, dy: cell * 0.55)), with: .color(Palette.brass), lineWidth: 1)
         }
         .aspectRatio(1, contentMode: .fit)
         .accessibilityHidden(true)
+    }
+
+    /// A small arrow in a square, pointing at the neighbouring square.
+    private func arrow(_ ctx: GraphicsContext, at c: Board.Cell, towards n: Board.Cell, cell: CGFloat, color: Color) {
+        let mid = CGPoint(x: (CGFloat(c.column) + 0.5) * cell, y: (CGFloat(c.row) + 0.5) * cell)
+        let dx = CGFloat(n.column - c.column), dy = CGFloat(n.row - c.row)
+        let len = max(1, hypot(dx, dy)), ux = dx / len, uy = dy / len
+        let s = cell * 0.28
+        var p = Path()
+        p.move(to: CGPoint(x: mid.x - ux * s, y: mid.y - uy * s))
+        p.addLine(to: CGPoint(x: mid.x + ux * s, y: mid.y + uy * s))
+        p.move(to: CGPoint(x: mid.x + ux * s - (ux + uy) * s * 0.55, y: mid.y + uy * s - (uy - ux) * s * 0.55))
+        p.addLine(to: CGPoint(x: mid.x + ux * s, y: mid.y + uy * s))
+        p.addLine(to: CGPoint(x: mid.x + ux * s - (ux - uy) * s * 0.55, y: mid.y + uy * s - (uy + ux) * s * 0.55))
+        ctx.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: max(1.5, cell * 0.08), lineCap: .round, lineJoin: .round))
     }
 
     /// A five-pointed star, point up.

@@ -14,7 +14,8 @@ struct BoardView: View {
                     .frame(width: side, height: side)
                 ForEach(tokens, id: \.id) { t in
                     TokenView(color: t.color, movable: t.movable, kickChoice: t.kickChoice,
-                              selected: t.color == session.state.toMove && session.selectedToken == t.token, size: layout.cell * 0.82)
+                              selected: t.color == session.state.toMove && session.selectedToken == t.token,
+                              size: layout.cell * (t.progress == Board.yard ? 1.15 : 0.82))
                         // At least 44 pt to tap (the HIG minimum), though squares are smaller on a phone.
                         .frame(width: max(44, layout.cell), height: max(44, layout.cell))
                         .contentShape(Rectangle())

@@ -28,13 +28,13 @@ struct HomeView: View {
 
                 if session.hasGame {
                     Button { startGame() } label: {
-                        Text("Continue")
+                        Label("Continue your game", systemImage: "play.fill")
                             .font(.system(.title3, design: .serif).weight(.semibold))
                             .foregroundStyle(Palette.ivory)
-                            .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Capsule().fill(Palette.wood))
-                            .overlay(Capsule().stroke(Palette.brass, lineWidth: 2))
+                            .frame(maxWidth: .infinity, minHeight: 54)
+                            .woodPanel(corner: 27)
                     }
+                    .buttonStyle(.plain)
                     .accessibilityIdentifier("btn-continue")
                 }
 
@@ -44,17 +44,20 @@ struct HomeView: View {
                     tile(Art.tileSettings, label: "Settings. Rules: \(settings.preset.title)", id: "btn-settings") { sheet = .settings }
                 }
 
-                BoardFrame { BoardCanvas(rules: settings.rules) }
-                    .padding(.horizontal, 8)
+                Image(Art.boardBox)
+                    .resizable().scaledToFit()
+                    .shadow(color: .black.opacity(0.35), radius: 12, y: 10)
                     .accessibilityHidden(true)
 
                 Text("\(settings.preset.title) rules")
                     .font(.system(.footnote, design: .serif).weight(.semibold))
                     .foregroundStyle(Palette.wood)
+                    .padding(.horizontal, 14).padding(.vertical, 6)
+                    .background(Capsule().fill(Palette.ivory.opacity(0.55)))
             }
             .padding()
         }
-        .background(Self.table.ignoresSafeArea())
+        .background(Table())
         .sheet(item: $sheet) { which in
             switch which {
             case .computer: ComputerGameSheet(startGame: startGame)
@@ -62,11 +65,6 @@ struct HomeView: View {
             case .settings: SettingsView()
             }
         }
-    }
-
-    /// Warm sand cloth, darker towards the edges.
-    static var table: some View {
-        RadialGradient(colors: [Palette.sand, Palette.sandDeep], center: .center, startRadius: 80, endRadius: 600)
     }
 
     private func tile(_ image: String, label: String, id: String, action: @escaping () -> Void) -> some View {
