@@ -107,6 +107,21 @@ struct SettingsView: View {
             }
             Toggle("Haptics", isOn: $settings.hapticsEnabled)
                 .accessibilityIdentifier("setting-haptics")
+            Toggle("Show house names (A1…B6)", isOn: $settings.showHouseNames)
+                .accessibilityIdentifier("setting-house-names")
+            Toggle("Show seed counts", isOn: $settings.showSeedCounts)
+                .accessibilityIdentifier("setting-counts")
+
+            VStack(alignment: .leading, spacing: 4) {
+                // Changing the switch is an answer too, so the one-time question is not asked again.
+                Toggle("Share anonymous usage stats", isOn: Binding(get: { settings.shareUsageStats },
+                                                                     set: { settings.answerUsageStats($0) }))
+                    .accessibilityIdentifier("setting-usage-stats")
+                Text("Which modes are played and how games end, never who you are. It helps decide what to make next.")
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Daily riddle reminder", isOn: Binding(get: { reminder.isOn }, set: { on in
                     if on {
@@ -119,21 +134,6 @@ struct SettingsView: View {
                 Text(reminder.denied
                      ? "Notifications are off for Lelu Oware. Turn them on in the iPhone Settings app, under Notifications."
                      : "A note at 9 am when today's riddle is ready, skipped once you've solved it.")
-                    .font(Theme.caption(12))
-                    .foregroundStyle(Theme.ivoryDim)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Toggle("Show house names (A1…B6)", isOn: $settings.showHouseNames)
-                .accessibilityIdentifier("setting-house-names")
-            Toggle("Show seed counts", isOn: $settings.showSeedCounts)
-                .accessibilityIdentifier("setting-counts")
-
-            VStack(alignment: .leading, spacing: 4) {
-                // Changing the switch is an answer too, so the one-time question is not asked again.
-                Toggle("Share anonymous usage stats", isOn: Binding(get: { settings.shareUsageStats },
-                                                                     set: { settings.answerUsageStats($0) }))
-                    .accessibilityIdentifier("setting-usage-stats")
-                Text("Which modes are played and how games end, never who you are. It helps decide what to make next.")
                     .font(Theme.caption(12))
                     .foregroundStyle(Theme.ivoryDim)
                     .fixedSize(horizontal: false, vertical: true)
