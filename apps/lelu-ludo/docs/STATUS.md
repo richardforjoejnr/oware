@@ -21,5 +21,16 @@ heuristic choice per level (Novice to Grandmaster): kicks by the victim's progre
 entering, danger at the landing square (forward, entry and back-kick reach), escaping, walls;
 Grandmaster also weighs all its tokens' exposure after the move. Slips 50/20/5/0%. 8 tests.
 
-**Next: stage 3, the playable app** (see the plan). Waiting on the owner: answers on home kick, side
+**Stage 3, the playable app: first part built** (branch `feat/lelu-ludo-app`): `LudoSession` (seats,
+dice, computer turns, pass & play, saves), the board drawn from the grid in flag colours, tokens with
+44 pt targets and VoiceOver labels, the die, a home menu (computer 1–3 opponents at a level, pass &
+play 2–4). Launch flags `--reset-state --dice=6,4 --start-game --fast`. 8 unit + 3 UI tests including
+the accessibility audit.
+Still to do in stage 3: move animation along the path, choosing a back kick when a forward move is
+also possible (today a token tap plays the forward move), sounds and haptics, house-rule settings,
+a casual-player balance test (as Oware's), the macOS app job in `ludo-ci.yml` (commented out there).
+
+**PR order:** #62 (stage 1 + shared pipelines) → stage 2 (`feat/lelu-ludo-ai`) → stage 3
+(`feat/lelu-ludo-app`); each PR is opened against `main` once the one before is merged, so none is
+closed when its base branch is deleted. Waiting on the owner: answers on home kick, side
 kick and Labourer; art per `ART_DIRECTION.md`; confirm black (not blue) tokens and the star-as-6 die.
