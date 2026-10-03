@@ -1,11 +1,31 @@
 name: CI
 
-# Monorepo: one CI workflow per app. This one covers apps/lelu-oware; copy it (with new job names
-# and APP_DIR) when adding another app, and add its job names to the branch protection rules.
+# Monorepo: one CI workflow per app. This one covers Lelu Oware (apps/lelu-oware and the packages it
+# uses) and runs only when they, the shared scripts or this file change. Lelu Ludo has ludo-ci.yml;
+# the website's infrastructure has site-ci.yml. (The name stays "CI": the Site workflow and the
+# test-report builder look it up by name.)
 on:
   pull_request:
+    paths:
+      - apps/lelu-oware/**
+      - packages/OwareEngine/**
+      - packages/SupportKit/**
+      - docs/lelu-oware/**
+      - scripts/**
+      - Gemfile
+      - Gemfile.lock
+      - .github/workflows/ci.yml
   push:
     branches: [main]
+    paths:
+      - apps/lelu-oware/**
+      - packages/OwareEngine/**
+      - packages/SupportKit/**
+      - docs/lelu-oware/**
+      - scripts/**
+      - Gemfile
+      - Gemfile.lock
+      - .github/workflows/ci.yml
 
 # Read-only: results go out as artifacts, not as checks or PR comments.
 permissions:
@@ -29,23 +49,6 @@ jobs:
       - name: Test the version calculator
         working-directory: scripts
         run: python3 -m unittest test_next_version test_build_release_notes test_site_pretty_urls
-
-  site-infra:
-    name: Site infrastructure (CDK)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: infra/site
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: infra/site/package-lock.json
-      - run: npm ci --no-audit --no-fund
-      - name: Type-check and test the stack
-        run: npm run build && npm test
 
   engine:
     name: Engine (swift test)

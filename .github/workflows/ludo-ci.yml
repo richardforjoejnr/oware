@@ -1,0 +1,32 @@
+name: Lelu Ludo CI
+
+# Lelu Ludo (apps/lelu-ludo and packages/LudoEngine). Runs only when they or this file change.
+# The rules engine is pure Swift, so it is tested on Linux in Apple's Swift container: a tenth of
+# the cost of a macOS runner on a private repository. The app job (macOS, simulator) is added in
+# the stage that gives the app its screens (see apps/lelu-ludo/docs/GAME_PLAN.md).
+on:
+  pull_request:
+    paths: [apps/lelu-ludo/**, packages/LudoEngine/**, .github/workflows/ludo-ci.yml]
+  push:
+    branches: [main]
+    paths: [apps/lelu-ludo/**, packages/LudoEngine/**, .github/workflows/ludo-ci.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ludo-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engine:
+    name: Ludo engine (swift test, Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.0
+    defaults:
+      run:
+        working-directory: packages/LudoEngine
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rules engine tests
+        run: swift test --parallel

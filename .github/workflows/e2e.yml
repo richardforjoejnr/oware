@@ -1,9 +1,28 @@
 name: E2E (Maestro)
 
+# Lelu Oware's end-to-end flows; runs only when the app, its packages or this file change.
 on:
   pull_request:
+    paths:
+      - apps/lelu-oware/**
+      - packages/OwareEngine/**
+      - packages/SupportKit/**
+      - docs/lelu-oware/**
+      - scripts/**
+      - Gemfile
+      - Gemfile.lock
+      - .github/workflows/e2e.yml
   push:
     branches: [main]
+    paths:
+      - apps/lelu-oware/**
+      - packages/OwareEngine/**
+      - packages/SupportKit/**
+      - docs/lelu-oware/**
+      - scripts/**
+      - Gemfile
+      - Gemfile.lock
+      - .github/workflows/e2e.yml
 
 # Read-only: reports go out as artifacts (the Pages workflow reads them), not as checks or PR comments.
 permissions:
