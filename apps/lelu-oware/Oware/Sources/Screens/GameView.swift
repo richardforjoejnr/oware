@@ -6,6 +6,7 @@ import OwareAI
 struct GameView: View {
     @Environment(GameSession.self) private var session
     @Environment(PuzzleLibrary.self) private var library
+    @Environment(RiddleReminder.self) private var reminder
     @Environment(AppSettings.self) private var settings
     let goHome: () -> Void
     var goToPuzzles: () -> Void = {}
@@ -70,6 +71,10 @@ struct GameView: View {
                 let daily = library.isDaily(puzzle)
                 library.markSolved(puzzle)
                 PlayerEvents.shared.riddleSolved(puzzle, daily: daily, streak: library.currentStreak())
+                if daily {
+                    reminder.dailySolved(day: PuzzleLibrary.dayNumber())
+                    Task { await reminder.reschedule(solvedToday: true, streak: library.currentStreak()) }
+                }
             }
         }
         .sheet(isPresented: $showRiddle) {
@@ -398,6 +403,7 @@ struct GameView: View {
     @ViewBuilder
     private var modeControls: some View {
         if let puzzle = session.currentPuzzle {
+            VStack(spacing: 6) {
             HStack(spacing: 28) {
                 if session.puzzleAttempt == .solved {
                     // Offered once the answer has finished sowing.
@@ -418,6 +424,18 @@ struct GameView: View {
                 }
             }
             .frame(minHeight: 32)
+            // Once, after daily riddles on two different days: a morning note, if they want one.
+            if session.puzzleAttempt == .solved, !session.isAnimating, library.isDaily(puzzle), reminder.shouldOffer {
+                smallButton("Remind me each morning", id: "btn-riddle-reminder") {
+                    Task {
+                        await reminder.turnOn(solvedToday: true, streak: library.currentStreak())
+                        if reminder.isOn { showHint("A note at 9 am when the next riddle is ready.", seconds: 3) }
+                    }
+                }
+                // Offered once: when it goes (tapped, next riddle, or leaving), it is not offered again.
+                .onDisappear { reminder.offerShown() }
+            }
+            }
         } else if let step = session.currentTutorialStep, case let .tutorial(index) = session.mode {
             VStack(spacing: 8) {
                 // The lesson's words in full, above the dots: what to do, then what happened.

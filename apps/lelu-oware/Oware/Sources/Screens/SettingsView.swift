@@ -6,6 +6,8 @@ struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.dismiss) private var dismiss
     @Environment(TipJar.self) private var tipJar
+    @Environment(RiddleReminder.self) private var reminder
+    @Environment(PuzzleLibrary.self) private var library
     @State private var showTipJar = false
     @State private var channel: AppChannel = .appStore
     @Environment(\.openURL) private var openURL
@@ -120,6 +122,22 @@ struct SettingsView: View {
                                                                      set: { settings.answerUsageStats($0) }))
                     .accessibilityIdentifier("setting-usage-stats")
                 Text("Which modes are played and how games end, never who you are. It helps decide what to make next.")
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Daily riddle reminder", isOn: Binding(get: { reminder.isOn }, set: { on in
+                    if on {
+                        Task { await reminder.turnOn(solvedToday: library.dailySolved, streak: library.currentStreak()) }
+                    } else {
+                        reminder.turnOff()
+                    }
+                }))
+                .accessibilityIdentifier("setting-riddle-reminder")
+                Text(reminder.denied
+                     ? "Notifications are off for Lelu Oware. Turn them on in the iPhone Settings app, under Notifications."
+                     : "A note at 9 am when today's riddle is ready, skipped once you've solved it.")
                     .font(Theme.caption(12))
                     .foregroundStyle(Theme.ivoryDim)
                     .fixedSize(horizontal: false, vertical: true)
