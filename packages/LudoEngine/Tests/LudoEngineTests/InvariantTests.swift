@@ -43,6 +43,21 @@ struct InvariantTests {
         }
     }
 
+    @Test("Visitors stand only in other players' lanes, at those lanes' entrances on their own journey", arguments: ruleSets.filter(\.homeKick))
+    func visitors(rules: RuleSet) throws {
+        try Self.play(rules) { _, _, after, _ in
+            for c in after.players {
+                for i in 0..<4 {
+                    guard let v = after.visit(of: c, token: i) else { continue }
+                    try #require(v.owner != c && after.players.contains(v.owner) && (1...5).contains(v.depth))
+                    try #require(after.tokens(of: c)[i] == GameState.progress(of: c, atTrackIndex: Board.entranceIndex(v.owner)))
+                    try #require(!after.occupants(at: Board.entranceIndex(v.owner)).contains { $0.color == c && $0.token == i },
+                                 "a visitor is in the lane, not on the track")
+                }
+            }
+        }
+    }
+
     @Test("No two colours ever share an unsafe track square", arguments: ruleSets)
     func noSharedSquares(rules: RuleSet) throws {
         try Self.play(rules) { _, _, after, _ in
@@ -74,9 +89,17 @@ struct InvariantTests {
                 let was = before.tokens(of: c)[token]
                 try #require(was >= 0 && was <= Board.lastTrackProgress && Board.trackIndex(c, progress: was) == at)
             }
+            for case let .kickedInLane(c, token, lane, depth, by) in events {
+                try #require(by == me && c != me && after.tokens(of: c)[token] == Board.yard && after.visit(of: c, token: token) == nil)
+                try #require(before.laneOccupants(lane, depth: depth).contains { $0.color == c && $0.token == token })
+            }
             // Nothing else changed.
             for c in PlayerColor.allCases where c != me {
-                let kicked = Set(events.compactMap { if case let .kicked(k, t, _, _) = $0, k == c { t } else { nil } })
+                let kicked = Set(events.compactMap { e -> Int? in
+                    if case let .kicked(k, t, _, _) = e, k == c { return t }
+                    if case let .kickedInLane(k, t, _, _, _) = e, k == c { return t }
+                    return nil
+                })
                 for i in 0..<4 where !kicked.contains(i) { try #require(after.tokens(of: c)[i] == before.tokens(of: c)[i]) }
             }
             for i in 0..<4 where i != move.token { try #require(after.tokens(of: me)[i] == before.tokens(of: me)[i]) }
