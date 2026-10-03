@@ -105,10 +105,14 @@ struct SettingsView: View {
             }
             Toggle("Haptics", isOn: $settings.hapticsEnabled)
                 .accessibilityIdentifier("setting-haptics")
-            Toggle("Show house names (A1…B6)", isOn: $settings.showHouseNames)
-                .accessibilityIdentifier("setting-house-names")
-            Toggle("Show seed counts", isOn: $settings.showSeedCounts)
-                .accessibilityIdentifier("setting-counts")
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("House names and seed counts", isOn: $settings.showHouseLabels)
+                    .accessibilityIdentifier("setting-house-labels")
+                Text("A1…B6 and the number by each house. Always shown in the lesson and riddles; the stores always show the score.")
+                    .font(Theme.caption(12))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 // Changing the switch is an answer too, so the one-time question is not asked again.
