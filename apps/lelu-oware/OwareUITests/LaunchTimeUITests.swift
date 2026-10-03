@@ -26,7 +26,8 @@ final class LaunchTimeUITests: XCTestCase {
         }
         let median = app.sorted()[1]
         let line = { (xs: [TimeInterval]) in xs.map { String(format: "%.2f", $0) }.joined(separator: ", ") }
-        print("Launch: app's own work \(line(app)) s (median \(String(format: "%.2f", median)), budget \(Self.budget)); since process start \(line(total)) s")
+        // Recorded as an activity so the numbers are in the result bundle (CI uploads it), not just stdout.
+        XCTContext.runActivity(named: "Launch: app's own work \(line(app)) s (median \(String(format: "%.2f", median)), budget \(Self.budget)); since process start \(line(total)) s") { _ in }
         XCTAssertLessThanOrEqual(median, Self.budget, "from the app's first code to the home menu took \(line(app)) s")
     }
 }
