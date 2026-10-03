@@ -13,7 +13,7 @@ enum Palette {
     static func color(_ c: PlayerColor) -> Color {
         switch c {
         case .red: Color(red: 0xCE / 255, green: 0x11 / 255, blue: 0x26 / 255)
-        case .gold: Color(red: 0xFC / 255, green: 0xD1 / 255, blue: 0x16 / 255)
+        case .yellow: Color(red: 0xFC / 255, green: 0xD1 / 255, blue: 0x16 / 255)
         case .green: Color(red: 0x00 / 255, green: 0x6B / 255, blue: 0x3F / 255)
         case .black: Color(red: 0.08, green: 0.07, blue: 0.06)
         }

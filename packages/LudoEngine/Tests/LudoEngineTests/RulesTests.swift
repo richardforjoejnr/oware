@@ -2,7 +2,7 @@ import Testing
 @testable import LudoEngine
 
 /// A game with tokens placed by hand. Progress per colour; omitted colours stay in the yard.
-private func game(_ placed: [PlayerColor: [Int]], rules: RuleSet = .ghana, players: [PlayerColor] = [.red, .gold], toMove: PlayerColor = .red) -> GameState {
+private func game(_ placed: [PlayerColor: [Int]], rules: RuleSet = .ghana, players: [PlayerColor] = [.red, .yellow], toMove: PlayerColor = .red) -> GameState {
     var g = GameState(players: players, rules: rules, first: toMove)
     g.place(placed)
     return g
@@ -12,20 +12,20 @@ private func game(_ placed: [PlayerColor: [Int]], rules: RuleSet = .ghana, playe
 struct CoreRulesTests {
     @Test("Only a 6 brings a token out of the yard, onto the start square")
     func enterOnSix() throws {
-        var g = GameState(players: [.red, .gold])
+        var g = GameState(players: [.red, .yellow])
         g.roll(5)
-        #expect(g.toMove == .gold, "nothing to move: the turn passes")
+        #expect(g.toMove == .yellow, "nothing to move: the turn passes")
         g.roll(6)
         let moves = g.legalMoves()
         #expect(moves.count == 4 && moves.allSatisfy { $0.kind == .enter && $0.to == 0 })
         try g.apply(moves[0])
-        #expect(g.tokens(of: .gold)[0] == 0)
-        #expect(g.toMove == .gold && g.pendingRoll == nil, "a 6 rolls again")
+        #expect(g.tokens(of: .yellow)[0] == 0)
+        #expect(g.toMove == .yellow && g.pendingRoll == nil, "a 6 rolls again")
     }
 
     @Test("A gentler game can let 1 and 6 bring tokens out")
     func gentleEntry() {
-        var g = GameState(players: [.red, .gold], rules: RuleSet(entryRolls: [1, 6]))
+        var g = GameState(players: [.red, .yellow], rules: RuleSet(entryRolls: [1, 6]))
         g.roll(1)
         #expect(!g.legalMoves().isEmpty)
     }
@@ -36,26 +36,26 @@ struct CoreRulesTests {
         g.roll(4)
         try g.apply(try #require(g.legalMoves().first { $0.kind == .forward }))
         #expect(g.tokens(of: .red)[0] == 14)
-        #expect(g.toMove == .gold)
+        #expect(g.toMove == .yellow)
     }
 
     @Test("Landing on a lone opponent kicks it back to its yard, and earns a roll")
     func forwardKick() throws {
-        var g = game([.red: [10, -1, -1, -1], .gold: [Self.goldProgress(atTrack: 14), -1, -1, -1]])
+        var g = game([.red: [10, -1, -1, -1], .yellow: [Self.yellowProgress(atTrack: 14), -1, -1, -1]])
         g.roll(4)
         let events = try g.apply(try #require(g.legalMoves().first { $0.kind == .forward }))
-        #expect(g.tokens(of: .gold)[0] == Board.yard)
-        #expect(events.contains(.kicked(.gold, token: 0, at: 14, by: .red)))
+        #expect(g.tokens(of: .yellow)[0] == Board.yard)
+        #expect(events.contains(.kicked(.yellow, token: 0, at: 14, by: .red)))
         #expect(g.toMove == .red, "a kick earns another roll")
     }
 
-    static func goldProgress(atTrack t: Int) -> Int { (t - Board.startIndex(.gold) + Board.trackLength) % Board.trackLength }
+    static func yellowProgress(atTrack t: Int) -> Int { (t - Board.startIndex(.yellow) + Board.trackLength) % Board.trackLength }
 
     @Test("The home lane is private and home needs the exact roll")
     func exactHome() {
         var g = game([.red: [53, -1, -1, -1]])
         g.roll(4)   // 57 would overshoot
-        #expect(g.toMove == .gold, "no legal move: passed")
+        #expect(g.toMove == .yellow, "no legal move: passed")
         var h = game([.red: [53, -1, -1, -1]])
         h.roll(3)
         #expect(h.legalMoves().contains { $0.to == Board.home })
@@ -82,13 +82,13 @@ struct CoreRulesTests {
 struct HouseRulesTests {
     @Test("Back kick: an opponent exactly the roll behind can be kicked by moving back")
     func backKick() throws {
-        let behind = CoreRulesTests.goldProgress(atTrack: 7)   // red token on track 12, gold on 7
-        var g = game([.red: [12, -1, -1, -1], .gold: [behind, -1, -1, -1]])
+        let behind = CoreRulesTests.yellowProgress(atTrack: 7)   // red token on track 12, yellow on 7
+        var g = game([.red: [12, -1, -1, -1], .yellow: [behind, -1, -1, -1]])
         g.roll(5)
         let back = try #require(g.legalMoves().first { $0.kind == .backKick })
         #expect(back.to == 7)
         try g.apply(back)
-        #expect(g.tokens(of: .gold)[0] == Board.yard)
+        #expect(g.tokens(of: .yellow)[0] == Board.yard)
         #expect(g.tokens(of: .red)[0] == 7)
     }
 
@@ -97,32 +97,32 @@ struct HouseRulesTests {
         var g = game([.red: [12, -1, -1, -1]])
         g.roll(5)
         #expect(!g.legalMoves().contains { $0.kind == .backKick }, "nobody there")
-        var h = game([.red: [3, -1, -1, -1], .gold: [CoreRulesTests.goldProgress(atTrack: 50), -1, -1, -1]])
+        var h = game([.red: [3, -1, -1, -1], .yellow: [CoreRulesTests.yellowProgress(atTrack: 50), -1, -1, -1]])
         h.roll(5)
         #expect(!h.legalMoves().contains { $0.kind == .backKick }, "never back past your own start")
-        var off = game([.red: [12, -1, -1, -1], .gold: [CoreRulesTests.goldProgress(atTrack: 7), -1, -1, -1]], rules: .classic)
+        var off = game([.red: [12, -1, -1, -1], .yellow: [CoreRulesTests.yellowProgress(atTrack: 7), -1, -1, -1]], rules: .classic)
         off.roll(5)
         #expect(!off.legalMoves().contains { $0.kind == .backKick })
     }
 
     @Test("Wall: two of a colour on a square cannot be passed, landed on or kicked")
     func wall() {
-        let g7 = CoreRulesTests.goldProgress(atTrack: 7)
-        var g = game([.red: [5, -1, -1, -1], .gold: [g7, g7, -1, -1]])
+        let g7 = CoreRulesTests.yellowProgress(atTrack: 7)
+        var g = game([.red: [5, -1, -1, -1], .yellow: [g7, g7, -1, -1]])
         g.roll(4)   // red 5 → 9 would pass the wall on 7
-        #expect(g.toMove == .gold, "blocked: passed")
-        var land = game([.red: [5, -1, -1, -1], .gold: [g7, g7, -1, -1]])
+        #expect(g.toMove == .yellow, "blocked: passed")
+        var land = game([.red: [5, -1, -1, -1], .yellow: [g7, g7, -1, -1]])
         land.roll(2)
         #expect(!land.legalMoves().contains { $0.to == 7 }, "a wall cannot be landed on")
     }
 
     @Test("Safe stacks can be passed but not kicked")
     func safeStack() throws {
-        let g7 = CoreRulesTests.goldProgress(atTrack: 7)
-        var g = game([.red: [5, -1, -1, -1], .gold: [g7, g7, -1, -1]], rules: RuleSet(stacking: .safe))
+        let g7 = CoreRulesTests.yellowProgress(atTrack: 7)
+        var g = game([.red: [5, -1, -1, -1], .yellow: [g7, g7, -1, -1]], rules: RuleSet(stacking: .safe))
         g.roll(4)
         #expect(g.legalMoves().contains { $0.kind == .forward && $0.to == 9 }, "passing is fine")
-        var land = game([.red: [5, -1, -1, -1], .gold: [g7, g7, -1, -1]], rules: RuleSet(stacking: .safe))
+        var land = game([.red: [5, -1, -1, -1], .yellow: [g7, g7, -1, -1]], rules: RuleSet(stacking: .safe))
         land.roll(2)
         #expect(!land.legalMoves().contains { $0.to == 7 })
     }
@@ -142,7 +142,7 @@ struct HouseRulesTests {
         let events = g.roll(6)
         #expect(events.contains(.threeSixes(.red)))
         #expect(g.tokens(of: .red) == [10, 20, -1, -1], "the turn's moves are undone")
-        #expect(g.toMove == .gold)
+        #expect(g.toMove == .yellow)
         var classic = game([.red: [10, 20, -1, -1]], rules: .classic)
         classic.roll(6); try classic.apply(classic.legalMoves().first!)
         classic.roll(6); try classic.apply(classic.legalMoves().first!)
@@ -152,21 +152,21 @@ struct HouseRulesTests {
 
     @Test("With the rule off a kick does not earn a roll")
     func noKickBonus() throws {
-        var g = game([.red: [10, -1, -1, -1], .gold: [CoreRulesTests.goldProgress(atTrack: 14), -1, -1, -1]], rules: .classic)
+        var g = game([.red: [10, -1, -1, -1], .yellow: [CoreRulesTests.yellowProgress(atTrack: 14), -1, -1, -1]], rules: .classic)
         g.roll(4)
         try g.apply(try #require(g.legalMoves().first))
-        #expect(g.toMove == .gold)
+        #expect(g.toMove == .yellow)
     }
 
     @Test("Safe start squares protect any token on them")
     func safeStart() {
-        let onGoldStart = Board.startIndex(.gold)   // track 13
-        var g = game([.red: [onGoldStart - 3, -1, -1, -1], .gold: [0, -1, -1, -1]], rules: RuleSet(startSquaresSafe: true))
+        let onYellowStart = Board.startIndex(.yellow)   // track 13
+        var g = game([.red: [onYellowStart - 3, -1, -1, -1], .yellow: [0, -1, -1, -1]], rules: RuleSet(startSquaresSafe: true))
         g.roll(3)
-        #expect(g.legalMoves().contains { $0.to == onGoldStart })
+        #expect(g.legalMoves().contains { $0.to == onYellowStart })
         var h = g
-        _ = try? h.apply(g.legalMoves().first { $0.to == onGoldStart }!)
-        #expect(h.tokens(of: .gold)[0] == 0, "not kicked on a safe square")
+        _ = try? h.apply(g.legalMoves().first { $0.to == onYellowStart }!)
+        #expect(h.tokens(of: .yellow)[0] == 0, "not kicked on a safe square")
     }
 }
 

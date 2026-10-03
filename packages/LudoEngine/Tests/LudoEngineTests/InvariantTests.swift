@@ -118,12 +118,12 @@ struct InvariantTests {
     @Test("With the rule on, three sixes never change the board", arguments: ruleSets.filter(\.threeSixesForfeit))
     func threeSixesUndo(rules: RuleSet) throws {
         // Script: a third 6 must leave the board as the turn found it.
-        var g = GameState(players: [.red, .gold], rules: rules)
+        var g = GameState(players: [.red, .yellow], rules: rules)
         g.roll(6); if let m = g.legalMoves().first { try g.apply(m) }
         g.roll(6); if let m = g.legalMoves().first { try g.apply(m) }
         #expect(g.tokens(of: .red).contains { $0 != Board.yard }, "two sixes have moved something")
         g.roll(6)
-        #expect(g.toMove == .gold)
+        #expect(g.toMove == .yellow)
         #expect(g.tokens(of: .red).allSatisfy { $0 == Board.yard }, "every move of the turn undone")
     }
 
@@ -177,14 +177,14 @@ struct CorruptSaveTests {
 
     @Test("A good save loads")
     func good() throws {
-        var g = GameState(players: [.red, .gold, .black])
+        var g = GameState(players: [.red, .yellow, .black])
         g.roll(6)
         #expect(decodes(try json(g)))
     }
 
     @Test("Damaged saves are refused, not loaded")
     func damaged() throws {
-        let good = try json(GameState(players: [.red, .gold]))
+        let good = try json(GameState(players: [.red, .yellow]))
         var cases: [(String, [String: Any])] = []
         func with(_ key: String, _ value: Any) -> [String: Any] { var d = good; d[key] = value; return d }
         cases.append(("token off the board", with("progress", [[57, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1], [-1, -1, -1, -1]])))

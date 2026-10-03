@@ -26,26 +26,37 @@ struct DiceView: View {
         .buttonStyle(.plain)
         .disabled(!session.canRoll)
         .opacity(session.canRoll || session.isComputerPlaying || value != nil ? 1 : 0.5)
-        .accessibilityLabel(value.map { "Die showing \($0)" } ?? "Die")
+        // Spoken as a number: the star on the 6 is Lelu's branding, not a different result.
+        .accessibilityLabel(value.map { "Die showing \(Pips.spoken($0))" } ?? "Die")
         .accessibilityHint(session.canRoll ? "Double tap to roll" : "")
         .accessibilityIdentifier("btn-roll")
     }
 }
 
-/// Pips for 1…6. (The owner's art proposes the black star for the 6; until that is confirmed the 6
-/// keeps its pips.)
+/// Pips for 1…5; the 6 is the Ghana black star (owner, 2026-10-03). It is simply a 6: it brings a
+/// token out, moves six and rolls again.
 struct Pips: View {
     let value: Int
 
+    static func spoken(_ value: Int) -> String {
+        ["one", "two", "three", "four", "five", "six"][max(1, min(6, value)) - 1]
+    }
+
     var body: some View {
-        let spots: [Int: [(CGFloat, CGFloat)]] = [
-            1: [(0, 0)], 2: [(-1, -1), (1, 1)], 3: [(-1, -1), (0, 0), (1, 1)],
-            4: [(-1, -1), (1, -1), (-1, 1), (1, 1)], 5: [(-1, -1), (1, -1), (0, 0), (-1, 1), (1, 1)],
-            6: [(-1, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (1, 1)],
-        ]
-        ZStack {
-            ForEach(Array((spots[value] ?? []).enumerated()), id: \.offset) { _, s in
-                Circle().fill(.black).frame(width: 11, height: 11).offset(x: s.0 * 18, y: s.1 * 18)
+        if value == 6 {
+            Image(systemName: "star.fill")
+                .font(.system(size: 36))
+                .foregroundStyle(.black)
+                .accessibilityHidden(true)
+        } else {
+            let spots: [Int: [(CGFloat, CGFloat)]] = [
+                1: [(0, 0)], 2: [(-1, -1), (1, 1)], 3: [(-1, -1), (0, 0), (1, 1)],
+                4: [(-1, -1), (1, -1), (-1, 1), (1, 1)], 5: [(-1, -1), (1, -1), (0, 0), (-1, 1), (1, 1)],
+            ]
+            ZStack {
+                ForEach(Array((spots[value] ?? []).enumerated()), id: \.offset) { _, s in
+                    Circle().fill(.black).frame(width: 11, height: 11).offset(x: s.0 * 18, y: s.1 * 18)
+                }
             }
         }
     }

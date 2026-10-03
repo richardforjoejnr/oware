@@ -1,6 +1,6 @@
 /// The standard Ludo cross on a 15×15 grid (columns and rows counted from the top left).
 ///
-/// Each colour's yard is a corner (red top left, then clockwise gold, black, green). The shared track
+/// Each colour's yard is a corner (red top left, then clockwise yellow, black, green). The shared track
 /// is 52 squares around the cross; each colour enters it on its own start square and, after 51
 /// squares, turns into its own 5-square home lane towards the centre, where its tokens finish.
 ///

@@ -3,15 +3,15 @@ import Testing
 @testable import LudoAI
 @testable import LudoEngine
 
-private func game(_ placed: [PlayerColor: [Int]], rules: RuleSet = .ghana, players: [PlayerColor] = [.red, .gold], roll: Int) -> GameState {
+private func game(_ placed: [PlayerColor: [Int]], rules: RuleSet = .ghana, players: [PlayerColor] = [.red, .yellow], roll: Int) -> GameState {
     var g = GameState(players: players, rules: rules, first: .red)
     g.place(placed)
     g.roll(roll)
     return g
 }
 
-/// Gold's progress that puts a gold token on track square `t`.
-private func gold(_ t: Int) -> Int { (t - Board.startIndex(.gold) + Board.trackLength) % Board.trackLength }
+/// Yellow's progress that puts a yellow token on track square `t`.
+private func yellow(_ t: Int) -> Int { (t - Board.startIndex(.yellow) + Board.trackLength) % Board.trackLength }
 
 @Suite("Computer opponent: choices")
 struct AIChoiceTests {
@@ -40,15 +40,15 @@ struct AIChoiceTests {
 
     @Test("Takes a kick when one is there (Intermediate and up)", arguments: [Difficulty.intermediate, .strategist, .grandmaster])
     func takesTheKick(level: Difficulty) {
-        // Red 10 can kick gold on 14 with a 4; red's other token at 30 could just walk on.
-        let g = game([.red: [10, 30, -1, -1], .gold: [gold(14), -1, -1, -1]], roll: 4)
+        // Red 10 can kick yellow on 14 with a 4; red's other token at 30 could just walk on.
+        let g = game([.red: [10, 30, -1, -1], .yellow: [yellow(14), -1, -1, -1]], roll: 4)
         var rng = SeededGenerator(seed: 1)
         #expect(AIPlayer(difficulty: level).chooseMove(g, using: &rng)?.token == 0)
     }
 
     @Test("Takes a back kick when it is the only kick (Intermediate and up)", arguments: [Difficulty.intermediate, .strategist, .grandmaster])
     func takesTheBackKick(level: Difficulty) {
-        let g = game([.red: [12, 30, -1, -1], .gold: [gold(7), -1, -1, -1]], roll: 5)
+        let g = game([.red: [12, 30, -1, -1], .yellow: [yellow(7), -1, -1, -1]], roll: 5)
         var rng = SeededGenerator(seed: 1)
         let move = AIPlayer(difficulty: level).chooseMove(g, using: &rng)
         #expect(move?.kind == .backKick)
@@ -64,26 +64,26 @@ struct AIChoiceTests {
     @Test("Does not stop just in front of an opponent when a safe move exists (Strategist and up)",
           arguments: [Difficulty.strategist, .grandmaster])
     func avoidsDanger(level: Difficulty) {
-        // Gold sits on track 20. Red token 0 at 18 with a 4 would land on 22: two squares ahead of
-        // gold, easy prey. Red token 1 at 40 with a 4 lands on 44, nobody near.
-        // (Back kick off: otherwise red's token 2 behind gold would already be in danger.)
-        let g = game([.red: [18, 40, -1, -1], .gold: [gold(20), -1, -1, -1]], rules: RuleSet(backKick: false), roll: 4)
+        // Yellow sits on track 20. Red token 0 at 18 with a 4 would land on 22: two squares ahead of
+        // yellow, easy prey. Red token 1 at 40 with a 4 lands on 44, nobody near.
+        // (Back kick off: otherwise red's token 2 behind yellow would already be in danger.)
+        let g = game([.red: [18, 40, -1, -1], .yellow: [yellow(20), -1, -1, -1]], rules: RuleSet(backKick: false), roll: 4)
         var rng = SeededGenerator(seed: 1)
         #expect(AIPlayer(difficulty: level).chooseMove(g, using: &rng)?.token == 1)
     }
 
     @Test("Runs a token out of danger (Strategist and up)", arguments: [Difficulty.strategist, .grandmaster])
     func escapes(level: Difficulty) {
-        // Red token 0 on 22 is 2 ahead of gold on 20; token 1 at 40 is safe. A 5 takes token 0 to 27,
-        // 7 clear of gold: out of reach.
-        let g = game([.red: [22, 40, -1, -1], .gold: [gold(20), -1, -1, -1]], rules: RuleSet(backKick: false), roll: 5)
+        // Red token 0 on 22 is 2 ahead of yellow on 20; token 1 at 40 is safe. A 5 takes token 0 to 27,
+        // 7 clear of yellow: out of reach.
+        let g = game([.red: [22, 40, -1, -1], .yellow: [yellow(20), -1, -1, -1]], rules: RuleSet(backKick: false), roll: 5)
         var rng = SeededGenerator(seed: 1)
         #expect(AIPlayer(difficulty: level).chooseMove(g, using: &rng)?.token == 0)
     }
 
     @Test("Same position and seed, same move")
     func deterministic() {
-        let g = game([.red: [10, 20, 30, -1], .gold: [gold(14), gold(33), -1, -1]], roll: 6)
+        let g = game([.red: [10, 20, 30, -1], .yellow: [yellow(14), yellow(33), -1, -1]], roll: 6)
         for level in Difficulty.allCases {
             var a = SeededGenerator(seed: 77), b = SeededGenerator(seed: 77)
             #expect(AIPlayer(difficulty: level).chooseMove(g, using: &a) == AIPlayer(difficulty: level).chooseMove(g, using: &b))

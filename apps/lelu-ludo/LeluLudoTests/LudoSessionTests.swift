@@ -43,10 +43,10 @@ final class LudoSessionTests: XCTestCase {
 
     func testPassAndPlayNeverMovesForAnyone() async {
         let session = TestSupport.session(dice: [3, 6])
-        session.newGame(GameSetup(seats: [.red: .human, .gold: .human]))
+        session.newGame(GameSetup(seats: [.red: .human, .yellow: .human]))
         await session.roll()
-        XCTAssertEqual(session.state.toMove, .gold)
-        XCTAssertTrue(session.canRoll, "gold rolls for themselves")
+        XCTAssertEqual(session.state.toMove, .yellow)
+        XCTAssertTrue(session.canRoll, "yellow rolls for themselves")
         await session.roll()
         XCTAssertEqual(session.state.pendingRoll, 6, "and chooses for themselves")
     }
@@ -76,7 +76,7 @@ final class LudoSessionTests: XCTestCase {
         var rng = SeededGenerator(seed: 5)
         for _ in 0..<4000 { dice.append(Int.random(in: 1...6, using: &rng)) }
         let session = TestSupport.session(dice: dice)
-        session.newGame(GameSetup(seats: [.red: .computer(.novice), .gold: .computer(.grandmaster), .green: .computer(.strategist)]))
+        session.newGame(GameSetup(seats: [.red: .computer(.novice), .yellow: .computer(.grandmaster), .green: .computer(.strategist)]))
         await session.runComputerTurns()
         XCTAssertNotNil(session.state.winner)
         XCTAssertFalse(session.canRoll)
@@ -86,5 +86,13 @@ final class LudoSessionTests: XCTestCase {
         XCTAssertEqual(ScriptedDice.parse("--dice=6,4,3"), [6, 4, 3])
         XCTAssertNil(ScriptedDice.parse("--dice=6,9"), "faces are 1…6")
         XCTAssertNil(ScriptedDice.parse("--other"))
+    }
+}
+
+/// The die's sixth face is the black star, but it is announced as a number.
+@MainActor
+final class DiceFaceTests: XCTestCase {
+    func testEveryFaceIsSpokenAsANumber() {
+        XCTAssertEqual((1...6).map(Pips.spoken), ["one", "two", "three", "four", "five", "six"])
     }
 }

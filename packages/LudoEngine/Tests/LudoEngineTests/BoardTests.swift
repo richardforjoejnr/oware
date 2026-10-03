@@ -19,7 +19,7 @@ struct BoardTests {
     @Test("Starts are a quarter of the way round from each other, on the arm beside each yard")
     func starts() {
         #expect(Board.track[Board.startIndex(.red)] == Board.Cell(1, 6))
-        #expect(Board.track[Board.startIndex(.gold)] == Board.Cell(8, 1))
+        #expect(Board.track[Board.startIndex(.yellow)] == Board.Cell(8, 1))
         #expect(Board.track[Board.startIndex(.black)] == Board.Cell(13, 8))
         #expect(Board.track[Board.startIndex(.green)] == Board.Cell(6, 13))
     }
