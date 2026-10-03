@@ -23,8 +23,16 @@ struct HomeView: View {
 
     private var difficulty: Difficulty { (Difficulty(rawValue: preferredDifficulty) ?? .beginner).menuLevel }
 
+    @State private var launchTime: (app: TimeInterval, total: TimeInterval)?
+
     var body: some View {
         ZStack {
+            if LaunchOptions.reportLaunchTime, let launchTime {
+                // Test launches only: read by LaunchTimeUITests ("app total", in seconds).
+                Text(String(format: "%.3f %.3f", launchTime.app, launchTime.total))
+                    .opacity(0.01)
+                    .accessibilityIdentifier("launch-time")
+            }
             GeometryReader { geo in
                 Image("ground")
                     .resizable()
@@ -34,6 +42,10 @@ struct HomeView: View {
             }
             .ignoresSafeArea()
             .accessibilityHidden(true)
+            .onAppear {
+                LaunchClock.homeAppeared()
+                launchTime = LaunchClock.reading
+            }
             RadialGradient(colors: [.clear, Theme.night.opacity(0.7)], center: .center, startRadius: 120, endRadius: 620)
                 .ignoresSafeArea()
                 .accessibilityHidden(true)

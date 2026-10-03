@@ -12,6 +12,7 @@ struct OwareApp: App {
     @State private var reminder = RiddleReminder()
 
     init() {
+        LaunchClock.appStarted()
         // Launch options used by UI tests: `--reset-state` / `-resetState YES` start from a clean
         // install (saved game, progress and every setting), so no test depends on one before it;
         // `--fast-animations` / `-fastAnimations YES` make everything instant and silent.
@@ -88,6 +89,8 @@ enum LaunchOptions {
     static var realSpeed: Bool { flag("--real-speed") }
     /// `--ask-usage-stats`: show the one-time usage-stats question even in a test launch.
     static var askUsageStats: Bool { flag("--ask-usage-stats") }
+    /// `--report-launch-time`: the home menu reports how long launch took (LaunchTimeUITests).
+    static var reportLaunchTime: Bool { flag("--report-launch-time") }
     /// `--start-game` / `-startGame YES`: open straight onto a new game at Casual level.
     static var startGame: Bool { flag("--start-game", defaultsKey: "startGame") }
     /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (animation checks).
