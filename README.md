@@ -14,7 +14,9 @@ packages/<Package>/    Shared Swift packages (OwareEngine: rules + AI; SupportKi
 templates/ios-app/     Starting point for a new app (make new-app NAME=…)
 scripts/               Shared helpers (simulator picker, bootstrap, scaffolding)
 .github/workflows/     CI / E2E / TestFlight / App Store per app
-docs/                  Repo-wide docs: PIPELINE.md (credentials + release), MONOREPO.md (conventions)
+docs/                  Repo-wide docs: PIPELINE.md (credentials + release), MONOREPO.md (conventions),
+                       WEBSITE_ON_AWS.md (public site on AWS); also the website's source pages
+infra/site/            CDK app for the public website (S3 + CloudFront + domain)
 Gemfile                fastlane for every app (BUNDLE_GEMFILE points here)
 ```
 
@@ -32,3 +34,6 @@ Each app also has its own Makefile, so `cd apps/lelu-oware && make test` works t
 ## Adding an app
 See [docs/MONOREPO.md](docs/MONOREPO.md): scaffold, bundle id, a copy of `ci.yml` with its own job
 names, and branch-protection checks.
+
+Its website (privacy, support, What's new): [docs/WEBSITE_ON_AWS.md](docs/WEBSITE_ON_AWS.md), or run
+`scripts/setup-site.sh --help`.

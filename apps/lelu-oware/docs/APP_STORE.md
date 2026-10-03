@@ -12,7 +12,7 @@ bracketed items.
 - **Price:** Free, no ads. Three optional **tip** in-app purchases (consumable; they unlock nothing).
 - **Availability:** all countries (for anyone who likes Oware). Online play, later, is planned as a
   paid one-time unlock; see [SERVICES.md](SERVICES.md).
-- **Privacy policy URL:** https://richardforjoejnr.github.io/oware/lelu-oware/privacy · **Support URL:** https://richardforjoejnr.github.io/oware/lelu-oware/support (GitHub Pages, main branch, /docs folder; source files `docs/lelu-oware/*.md`)
+- **Privacy policy URL:** https://leluoware.com/lelu-oware/privacy · **Support URL:** https://leluoware.com/lelu-oware/support (AWS S3 + CloudFront, built from `docs/lelu-oware/*.md` by the Site workflow)
 
 ## Promotional text (170)
 Oware as it is played in Ghana, on a hand-finished board. Nam-Nam or tournament Abapa, four computer levels, daily riddles and a Journey across Ghana. Free, no ads.
@@ -48,7 +48,7 @@ awale,mancala,ayo,warri,nam-nam,abapa,board game,strategy,seeds,african,ghana,ri
 (The app name is already searched, so "Lelu" and "Oware" are not repeated here.)
 
 ## URLs, version and copyright
-- **Support URL:** https://richardforjoejnr.github.io/oware/lelu-oware/support
+- **Support URL:** https://leluoware.com/lelu-oware/support
 - **Marketing URL:** leave empty for now (optional).
 - **Version:** 1.0 · **Copyright:** 2026 Richard Forjoe
 - **Routing App Coverage File:** leave empty (only for navigation apps).

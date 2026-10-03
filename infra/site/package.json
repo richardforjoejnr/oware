@@ -1,0 +1,28 @@
+{
+  "name": "oware-site",
+  "version": "0.1.0",
+  "description": "Public website (privacy, support, What's new, test reports) on S3 + CloudFront, CDK",
+  "type": "module",
+  "private": true,
+  "bin": { "oware-site": "bin/app.ts" },
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "./scripts/deploy.sh"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.160.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.14.0",
+    "aws-cdk": "^2.160.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
