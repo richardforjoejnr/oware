@@ -65,6 +65,8 @@ and used only to send Lelu Oware news. Every email has an unsubscribe link.
 
 - Your current game, riddle progress and streak, Journey stars and settings are saved only on your
   device (and in your device backups, if you have those enabled).
+- The daily riddle reminder, if you turn it on, is a notification your device schedules for itself;
+  nothing is sent to us or anyone else.
 - Tips are optional in-app purchases handled entirely by Apple. We receive no payment details and
   keep only a count of tips on your device so the app can say thank you.
 

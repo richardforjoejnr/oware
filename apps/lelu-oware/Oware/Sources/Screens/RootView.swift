@@ -14,6 +14,8 @@ struct RootView: View {
     @Environment(JourneyProgress.self) private var progress
     @Environment(AppSettings.self) private var settings
     @Environment(PuzzleLibrary.self) private var library
+    @Environment(RiddleReminder.self) private var reminder
+    @Environment(\.scenePhase) private var scenePhase
     @State private var screen: Screen = .home
     @State private var showSettings = false
     /// The carved-map opening; skipped for test launches so suites are not slowed.
@@ -68,6 +70,11 @@ struct RootView: View {
         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
         // Riddles follow the rules chosen in Settings.
         .onChange(of: settings.variant) { library.variant = settings.rules.variant }
+        // The reminder is rescheduled each time the app comes forward, so it skips a day already done.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await reminder.reschedule(solvedToday: library.dailySolved, streak: library.currentStreak()) }
+        }
         .onAppear {
             library.variant = settings.rules.variant
             switch LaunchOptions.startScreen {

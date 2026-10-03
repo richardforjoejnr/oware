@@ -9,6 +9,7 @@ struct OwareApp: App {
     @State private var library = PuzzleLibrary()
     @State private var progress: JourneyProgress
     @State private var tipJar: TipJar
+    @State private var reminder = RiddleReminder()
 
     init() {
         // Launch options used by UI tests: `--reset-state` / `-resetState YES` start from a clean
@@ -46,6 +47,7 @@ struct OwareApp: App {
                 .environment(library)
                 .environment(progress)
                 .environment(tipJar)
+                .environment(reminder)
                 .preferredColorScheme(.dark)
         }
     }
