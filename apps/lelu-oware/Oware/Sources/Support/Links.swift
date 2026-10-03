@@ -2,6 +2,9 @@ import Foundation
 
 /// Web pages the app links to (served by GitHub Pages from docs/lelu-oware).
 enum Links {
+    /// App Review 5.1.1(i): the privacy policy must be reachable inside the app, not only on the store page.
+    static let privacy = URL(string: "https://richardforjoejnr.github.io/oware/lelu-oware/privacy")!
+    static let support = URL(string: "https://richardforjoejnr.github.io/oware/lelu-oware/support")!
     /// Newsletter sign-up lives on the website so the app never asks for an email address.
     static let newsletter = URL(string: "https://richardforjoejnr.github.io/oware/lelu-oware/newsletter")!
 

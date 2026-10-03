@@ -111,7 +111,9 @@ struct SettingsView: View {
                 .accessibilityIdentifier("setting-counts")
 
             VStack(alignment: .leading, spacing: 4) {
-                Toggle("Share anonymous usage stats", isOn: $settings.shareUsageStats)
+                // Changing the switch is an answer too, so the one-time question is not asked again.
+                Toggle("Share anonymous usage stats", isOn: Binding(get: { settings.shareUsageStats },
+                                                                     set: { settings.answerUsageStats($0) }))
                     .accessibilityIdentifier("setting-usage-stats")
                 Text("Which modes are played and how games end, never who you are. It helps decide what to make next.")
                     .font(Theme.caption(12))
@@ -142,6 +144,15 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.ivoryDim)
                 .accessibilityIdentifier("app-version")
                 .task { channel = await AppChannel.current() }
+            HStack(spacing: 20) {
+                Link("Privacy policy", destination: Links.privacy)
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("link-privacy")
+                Link("Support", destination: Links.support)
+                    .frame(minHeight: 44)
+                    .accessibilityIdentifier("link-support")
+            }
+            .font(Theme.caption(14))
         }
         .font(Theme.body())
         .foregroundStyle(Theme.ivory)

@@ -98,6 +98,37 @@ def main(app_dir: str) -> int:
     if "game-center" in project:
         check("Game Center" in privacy, "Privacy policy covers Game Center")
 
+    # 6. App Review guidelines that can be read from the code (see docs/APP_REVIEW.md for the rest).
+    # 5.1.1(i): the privacy policy is linked inside the app, not only on the store page.
+    check(f"github.io/oware/{slug}/privacy" in code, "Privacy policy is linked inside the app (5.1.1(i))")
+    check(f"github.io/oware/{slug}/support" in code, "Support page is linked inside the app")
+    # 5.1.1(i): retention, deletion and withdrawing consent are explained.
+    check(bool(re.search(r"\bkeep\b.*\bmonths?\b|retain|retention", privacy, re.I)), "Privacy policy says how long data is kept (5.1.1(i))")
+    check(bool(re.search(r"delet", privacy, re.I)), "Privacy policy says how to have data deleted (5.1.1(i))")
+    check(bool(re.search(r"switch(ing)? (it |the setting |the switch )?off|change your answer|turn the switch off", privacy, re.I)),
+          "Privacy policy says how to withdraw consent (5.1.1(i))")
+    # 5.1.1(ii): usage data needs consent, even when anonymous: analytics must default to off.
+    if "TelemetryDeck" in project:
+        check(not re.search(r'"shareUsageStats"\)\s*as\?\s*Bool\s*\?\?\s*true', code), "Usage stats are off until the player agrees (5.1.1(ii))")
+    # HIG ratings: requestReview from a button may show nothing (looks broken, 2.1); link to write-review instead.
+    check(not re.search(r"Button\([^)]*\)\s*\{\s*requestReview\(\)", code), "No button calls requestReview (a write-review link is used)")
+    # 2.3.1(a): no hidden features that can be switched on without review: feature flags are compile-time constants.
+    flags = re.search(r"enum FeatureFlags \{(.*?)\n\}", code, re.S)
+    if flags:
+        body = "\n".join(l for l in flags.group(1).splitlines() if not l.strip().startswith("//"))
+        check(bool(re.fullmatch(r"(\s*static let \w+ = (true|false)\s*)*", body)),
+              "Feature flags are compile-time constants, not remotely switchable (2.3.1)")
+    # 2.1: no placeholder text on screen.
+    shown = re.findall(r'Text\("([^"]*)"\)|Button\("([^"]*)"\)|title: "([^"]*)"', code)
+    words = " ".join(w for t in shown for w in t)
+    check(not re.search(r"\b(lorem|TODO|TBD|coming soon|placeholder)\b", words, re.I), "No placeholder text in the app's screens (2.1)")
+    # 2.1: a linked newsletter page must not be a "sign-ups open soon" placeholder.
+    if re.search(r"static let newsletter = true", code):
+        news = (ROOT / "docs" / slug / "newsletter.md")
+        check(news.exists() and not re.search(r'kit_form_uid:\s*""', news.read_text()), "Linked newsletter page has a live sign-up form (2.1)")
+    # Launch screen (HIG launching; required for iOS apps).
+    check("UILaunchScreen" in info or "UILaunchStoryboardName" in info, "A launch screen is configured")
+
     for p in passes:
         print(f"  ✓ {p}")
     for f in failures:

@@ -117,6 +117,9 @@ Branch protection on `main` is configured to require the CI check and a pull req
 
 ## App Store readiness checks
 
+Which App Review guidelines are checked automatically, and which need checking by hand, is in
+[APP_REVIEW.md](APP_REVIEW.md).
+
 `python3 scripts/release_readiness.py apps/<app>` runs on every PR (CI job "App Store readiness") and
 again before every App Store upload. It fails on the things that get uploads rejected or pulled: a
 missing or incomplete privacy manifest (every required-reason API needs a declared reason), test

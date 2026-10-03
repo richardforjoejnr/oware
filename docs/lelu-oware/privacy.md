@@ -4,7 +4,7 @@ title: Lelu Oware — Privacy Policy
 
 # Lelu Oware — Privacy Policy
 
-_Last updated: 27 September 2026_
+_Last updated: 3 October 2026_
 
 Lelu Oware is an Oware game for iPhone and iPad: play the computer, a friend on the same device,
 the Journey, daily riddles and a short lesson.
@@ -13,13 +13,16 @@ the Journey, daily riddles and a short lesson.
 
 - No account, no sign-in, no advertising, no tracking across apps or websites.
 - Anonymous usage statistics (which modes are played, how games end) help decide what to make
-  next. You can switch them off in Settings.
+  next, but only if you agree: the app asks once, after your first game, and nothing is sent
+  before you say yes. You can change your answer in Settings at any time.
 - Leaderboards and achievements use Apple's Game Center, if you choose to sign in to it.
 
 ## Anonymous usage statistics
 
-When **Settings ▸ Share anonymous usage stats** is on (the default), the app sends a small number of
-events to [TelemetryDeck](https://telemetrydeck.com/privacy), an analytics service based in the EU:
+Usage statistics are **off until you agree**. After your first finished game the app asks once
+whether you would like to share them; you can change your answer at any time in **Settings ▸ Share
+anonymous usage stats**. Only while that switch is on does the app send a small number of events to
+[TelemetryDeck](https://telemetrydeck.com/privacy), an analytics service based in the EU:
 
 - the app was opened;
 - a game finished: the mode (computer, Journey, two players), the computer's level, the result
@@ -31,6 +34,17 @@ TelemetryDeck receives no name, email, contacts, location or anything you type. 
 represented only by a one-way hash, so we cannot tell who you are, and the data is not
 linked to you or used to track you. It is used only to count and improve the game. Turn the
 switch off and nothing more is sent.
+
+TelemetryDeck processes these events only on our behalf, under its own
+[privacy policy](https://telemetrydeck.com/privacy), which protects them at least as well as this
+one. It does not sell them or use them for anything else.
+
+**How long we keep them, and deleting them.** We keep usage statistics for at most 12 months and
+then delete them. Because they cannot be linked to you, we cannot pick out the events from your
+device; switching the setting off stops new ones at once, and everything already sent is deleted
+within those 12 months. If you would like us to delete all usage statistics for Lelu Oware sooner,
+or have any question about them, write to the address under Contact and we will reply within 30
+days.
 
 ## Game Center
 
@@ -57,7 +71,8 @@ and used only to send Lelu Oware news. Every email has an unsubscribe link.
 ## Children
 
 The game is suitable for all ages. It collects no personal data from anyone; the anonymous usage
-statistics above contain nothing that identifies a person and can be switched off in Settings.
+statistics above are sent only if someone agrees, contain nothing that identifies a person, and
+can be switched off in Settings.
 
 ## Contact
 

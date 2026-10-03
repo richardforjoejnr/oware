@@ -49,15 +49,28 @@ final class AppSettings {
         let chosen = LaunchOptions.rulesOverride ?? variant
         return RuleSet(variant: chosen, grandSlam: grandSlamRule)
     }
-    /// "Share anonymous usage stats": on by default, off stops every analytics signal at once.
+    /// "Share anonymous usage stats": off until the player says yes. App Review 5.1.1(ii) asks for
+    /// consent even for anonymous data; the player is asked once, after their first finished game
+    /// (`shouldAskUsageStats`), and can change their mind in Settings.
     var shareUsageStats: Bool {
         didSet {
             defaults.set(shareUsageStats, forKey: "shareUsageStats")
             Analytics.shared.isEnabled = effectiveUsageStats
         }
     }
+    /// Whether the player has answered the question (on the card or with the Settings switch).
+    var usageStatsAsked: Bool {
+        didSet { defaults.set(usageStatsAsked, forKey: "usageStatsAsked") }
+    }
     /// Test launches never send analytics.
     var effectiveUsageStats: Bool { shareUsageStats && !testMode }
+    /// Show the one-time question. Never in test launches unless a test asks for it.
+    var shouldAskUsageStats: Bool { !usageStatsAsked && (!testMode || LaunchOptions.askUsageStats) }
+    /// The player's answer, from the card or the Settings switch.
+    func answerUsageStats(_ share: Bool) {
+        shareUsageStats = share
+        usageStatsAsked = true
+    }
     /// Chosen board look (see `BoardTheme`).
     var boardThemeID: String {
         didSet { defaults.set(boardThemeID, forKey: "boardTheme") }
@@ -96,7 +109,10 @@ final class AppSettings {
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id
-        shareUsageStats = defaults.object(forKey: "shareUsageStats") as? Bool ?? true
+        // Builds before 2026-10-03 stored "on" without asking; only an answer counts as consent.
+        let asked = defaults.bool(forKey: "usageStatsAsked")
+        usageStatsAsked = asked
+        shareUsageStats = asked ? (defaults.object(forKey: "shareUsageStats") as? Bool ?? false) : false
     }
 
     /// Builds before 2026-09-24 leaked the test flags into saved preferences (instant sowing, sound

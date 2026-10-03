@@ -84,6 +84,8 @@ enum LaunchOptions {
     /// `--real-speed`: with `--fast-animations`, still sow at normal speed (tests that need a move
     /// in flight, e.g. leaving the game mid-sowing).
     static var realSpeed: Bool { flag("--real-speed") }
+    /// `--ask-usage-stats`: show the one-time usage-stats question even in a test launch.
+    static var askUsageStats: Bool { flag("--ask-usage-stats") }
     /// `--start-game` / `-startGame YES`: open straight onto a new game at Casual level.
     static var startGame: Bool { flag("--start-game", defaultsKey: "startGame") }
     /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (animation checks).
