@@ -16,5 +16,10 @@
 - The app is the template scaffold (`make new-app`), not yet using the engine.
 - CI: `ludo-ci.yml` (engine on Linux); Oware's workflows filtered to Oware.
 
-**Next: stage 2, computer opponents** (see the plan). Waiting on the owner: answers on home kick, side
+**Stage 2, computer opponents, is built** (`LudoAI`, branch `feat/lelu-ludo-ai`, PR after #62 merges):
+heuristic choice per level (Novice to Grandmaster): kicks by the victim's progress, home, safe lane,
+entering, danger at the landing square (forward, entry and back-kick reach), escaping, walls;
+Grandmaster also weighs all its tokens' exposure after the move. Slips 50/20/5/0%. 8 tests.
+
+**Next: stage 3, the playable app** (see the plan). Waiting on the owner: answers on home kick, side
 kick and Labourer; art per `ART_DIRECTION.md`; confirm black (not blue) tokens and the star-as-6 die.
