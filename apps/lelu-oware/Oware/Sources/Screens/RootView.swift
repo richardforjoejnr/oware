@@ -17,13 +17,17 @@ struct RootView: View {
     @State private var screen: Screen = .home
     @State private var showSettings = false
     /// The carved-map opening; skipped for test launches so suites are not slowed.
-    @State private var showSplash = !LaunchOptions.fastAnimations && !LaunchOptions.startGame && LaunchOptions.startScreen == nil
+    @State private var showSplash = RootView.splashThisLaunch != nil
+    /// Decided once per launch (a static is created once), and never in test launches, which skip the splash.
+    private static let splashThisLaunch: Duration? =
+        !LaunchOptions.fastAnimations && !LaunchOptions.startGame && LaunchOptions.startScreen == nil
+            ? SplashSchedule.durationForThisLaunch() : nil
 
     var body: some View {
         ZStack {
             Theme.night.ignoresSafeArea()
             if showSplash {
-                SplashView { withAnimation(.easeInOut(duration: 0.6)) { showSplash = false } }
+                SplashView(duration: RootView.splashThisLaunch ?? SplashSchedule.short) { withAnimation(.easeInOut(duration: 0.6)) { showSplash = false } }
                     .transition(.opacity)
                     .zIndex(1)
             }
