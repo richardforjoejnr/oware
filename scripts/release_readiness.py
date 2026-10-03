@@ -100,8 +100,8 @@ def main(app_dir: str) -> int:
 
     # 6. App Review guidelines that can be read from the code (see docs/APP_REVIEW.md for the rest).
     # 5.1.1(i): the privacy policy is linked inside the app, not only on the store page.
-    check(f"github.io/oware/{slug}/privacy" in code, "Privacy policy is linked inside the app (5.1.1(i))")
-    check(f"github.io/oware/{slug}/support" in code, "Support page is linked inside the app")
+    check(bool(re.search(rf'"https://[^"]+/{slug}/privacy"', code)), "Privacy policy is linked inside the app (5.1.1(i))")
+    check(bool(re.search(rf'"https://[^"]+/{slug}/support"', code)), "Support page is linked inside the app")
     # 5.1.1(i): retention, deletion and withdrawing consent are explained.
     check(bool(re.search(r"\bkeep\b.*\bmonths?\b|retain|retention", privacy, re.I)), "Privacy policy says how long data is kept (5.1.1(i))")
     check(bool(re.search(r"delet", privacy, re.I)), "Privacy policy says how to have data deleted (5.1.1(i))")
