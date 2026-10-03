@@ -17,11 +17,21 @@ struct GameView: View {
                     .accessibilityLabel("Home")
                     .accessibilityIdentifier("btn-home")
                 Spacer()
-                Text(status)
-                    .font(.system(.title3, design: .serif).weight(.semibold))
-                    .foregroundStyle(Palette.ivory)
-                    .multilineTextAlignment(.trailing)
-                    .accessibilityIdentifier("status")
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(status)
+                        .font(.system(.title3, design: .serif).weight(.semibold))
+                        .foregroundStyle(Palette.ivory)
+                        .multilineTextAlignment(.trailing)
+                        .accessibilityIdentifier("status")
+                    // What just happened: kicks, three sixes, no move.
+                    if let line = session.log.last {
+                        Text(line)
+                            .font(.system(.subheadline, design: .serif))
+                            .foregroundStyle(Palette.brass)
+                            .multilineTextAlignment(.trailing)
+                            .accessibilityIdentifier("commentary")
+                    }
+                }
             }
             .foregroundStyle(Palette.ivory)
             BoardView()
@@ -49,19 +59,18 @@ struct GameView: View {
         }
         .padding()
         .background(Palette.night.ignoresSafeArea())
-    }
-
-    private func name(_ color: PlayerColor) -> String {
-        switch session.setup.seat(color) {
-        case .human: session.setup.seats.values.filter({ $0 == .human }).count > 1 ? color.name : "You"
-        case let .computer(level): "\(color.name) (\(level.displayName))"
+        .onChange(of: session.log) { _, log in
+            if let line = log.last { AccessibilityNotification.Announcement(line).post() }
         }
     }
+
+    private func name(_ color: PlayerColor) -> String { session.name(color) }
 
     private var status: String {
         let s = session.state
         if let w = s.winner { return name(w) == "You" ? "You win!" : "\(name(w)) wins" }
         if session.isComputerPlaying { return "\(name(s.toMove)) is playing…" }
+        if session.selectedToken != nil { return "Choose a move" }
         if s.pendingRoll != nil { return name(s.toMove) == "You" ? "Choose a token" : "\(name(s.toMove)): choose a token" }
         return name(s.toMove) == "You" ? "Your roll" : "\(name(s.toMove)) to roll"
     }

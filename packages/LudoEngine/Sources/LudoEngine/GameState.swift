@@ -225,7 +225,7 @@ public struct GameState: Sendable, Codable, Hashable {
     }
 
     /// A colour's progress at a track square (0…51 round from its start).
-    static func progress(of color: PlayerColor, atTrackIndex t: Int) -> Int {
+    public static func progress(of color: PlayerColor, atTrackIndex t: Int) -> Int {
         (t - Board.startIndex(color) + Board.trackLength) % Board.trackLength
     }
 
