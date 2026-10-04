@@ -59,8 +59,7 @@ final class FeedbackTests: XCTestCase {
         let store = TestSupport.store()
         store.save(SavedGame(setup: GameSetup(seats: seats), state: state, aiSeed: 1))
         let s = LudoSession(store: store, dice: ScriptedDice(dice), feedback: feedback)
-        s.computerPause = .zero
-        s.stepPause = .zero
+        s.pacing = .instant
         return s
     }
 
@@ -95,5 +94,64 @@ final class FeedbackTests: XCTestCase {
                          seats: [.red: .human, .black: .computer(.novice)], dice: [6, 6, 6, 2], feedback: rec2)
         await s2.runComputerTurns()
         XCTAssertTrue(rec2.played.contains(.threeSixes))
+    }
+}
+
+/// The opponents' level, changed from the game (as in Lelu Oware), and names without levels.
+@MainActor
+final class LevelTests: XCTestCase {
+    func testTheLevelChangesForEveryComputerMidGame() {
+        let store = TestSupport.store()
+        let s = TestSupport.session(dice: [3], store: store)
+        s.newGame(.versusComputer(opponents: 3, level: .novice, rules: .ghanaClassic))
+        XCTAssertEqual(s.computerLevel, .novice)
+        s.changeLevel(to: .grandmaster)
+        XCTAssertEqual(s.computerLevel, .grandmaster)
+        XCTAssertEqual(s.setup.seat(.green), .computer(.grandmaster))
+        XCTAssertEqual(s.setup.seat(.red), .human, "you stay you")
+        XCTAssertEqual(LudoSession(store: store, dice: ScriptedDice([1])).computerLevel, .grandmaster, "remembered with the game")
+    }
+
+    func testPassAndPlayHasNoLevel() {
+        let s = TestSupport.session(dice: [3])
+        s.newGame(.passAndPlay(players: 2, rules: .ghanaClassic))
+        XCTAssertNil(s.computerLevel)
+        s.changeLevel(to: .grandmaster)
+        XCTAssertTrue(s.setup.colors.allSatisfy { s.setup.seat($0) == .human })
+    }
+
+    func testComputersAreNamedByColourOnly() {
+        let s = TestSupport.session(dice: [3])
+        s.newGame(.versusComputer(opponents: 2, level: .strategist, rules: .ghanaClassic))
+        XCTAssertEqual(s.name(.black), "Black")
+        XCTAssertEqual(s.name(.red), "You")
+    }
+
+    func testEveryRollIsCountedForTheBoardToShow() async {
+        let s = TestSupport.session(dice: [3, 2])
+        s.newGame(.passAndPlay(players: 2, rules: .ghanaClassic))
+        await s.roll()
+        await s.roll()
+        XCTAssertEqual(s.rolls, 2)
+    }
+}
+
+/// The roll said in words at the top: the 3D die shows several faces at once.
+@MainActor
+final class StatusTests: XCTestCase {
+    func testTheRollIsSaidAsANumber() async {
+        let s = TestSupport.session(dice: [6, 4])
+        s.newGame(.passAndPlay(players: 2, rules: .ghanaClassic))
+        XCTAssertEqual(s.status, "Red to roll")
+        await s.roll()
+        XCTAssertEqual(s.status, "Red rolled 6 · choose a token")
+    }
+
+    func testYourRollThenYouRolled() async {
+        let s = TestSupport.session(dice: [6])
+        s.newGame(.versusComputer(opponents: 1, level: .novice, rules: .ghanaClassic))
+        XCTAssertEqual(s.status, "Your roll")
+        await s.roll()
+        XCTAssertEqual(s.status, "You rolled 6 · choose a token")
     }
 }

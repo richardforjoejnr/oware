@@ -51,3 +51,14 @@ dark-wood tray with brass corners, a cream painted board, flag colours, the blac
 Put the files in `apps/lelu-ludo/art/` with the names above (the app's asset catalogue is built from
 them in stage 3 and 5). Rough versions are fine to start; the app is laid out from the board's grid,
 not from the pictures, so better art can replace placeholders at any time.
+
+## The owner's art, as built (2026-10-04)
+
+Sources are in `art/source/`; `art/make_art.py` builds every in-app image from them into
+`Assets.xcassets/Art` (run it after changing a source; see the script's header).
+- **Pawns:** the turned-wood pawns. Black is the blue pawn turned to ebony, because Lelu plays black.
+- **Dice:** the beech dice with the black star as the 6. The sheet had no die showing 2 in front, so the 2 is made from the 1. The flag die shows before the first roll, and the carved cup is the roll button.
+- **Board:** drawn, not the image. The art's grid isn't a playable 15×15 board, and tokens must sit exactly on squares. It's drawn in the art's style: maple squares with the colours painted over the grain, a dark wooden box with brass corners, and the carved LELU LUDO plaque cut from the art.
+- **Menu:** the title plaque and the Start Game, Friends and Settings tiles from the menu art. Online and Shop wait until those features exist; Shop becomes the tip jar.
+- **Splash:** LELU LUDO in Didot with the owner's line, "Play Ghana. Play Together.", on dark wood.
+- **App icon:** the star die on mahogany.

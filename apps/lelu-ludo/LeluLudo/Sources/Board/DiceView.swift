@@ -1,29 +1,76 @@
 import LudoEngine
 import SwiftUI
 
-/// The die: shows the last roll in the colour of whoever rolled; tap to roll on your turn.
+/// The dice cup and the die (the owner's art): tap the cup to shake it and roll. The die shows the
+/// last roll, on a bar in the colour of whoever rolled; before the first roll it shows the flag.
 struct DiceView: View {
     @Environment(LudoSession.self) private var session
-    @State private var tumble = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shakes = 0
+    /// The roll shown here: it changes once the die thrown on the board has landed.
+    @State private var shown: Int?
 
     var body: some View {
-        let value = session.lastRoll?.value
+        let value = shown
         Button {
-            tumble.toggle()
+            shakes += 1
             Task { await session.roll() }
         } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(Palette.cream)
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(session.lastRoll.map { Palette.color($0.color) } ?? Palette.line, lineWidth: 3))
-                    .shadow(color: .black.opacity(0.4), radius: 4, y: 3)
-                if let value { Pips(value: value) } else { Text("Roll").font(.headline).foregroundStyle(Palette.line) }
+            HStack(alignment: .bottom, spacing: 10) {
+                VStack(spacing: 4) {
+                    Image(value.map(Art.die) ?? Art.dieFlag)
+                        .resizable().scaledToFit()
+                        .frame(width: 70, height: 70)
+                        .shadow(color: .black.opacity(0.45), radius: 3, y: 2)
+                        // The roll as a number: a 3D die shows three faces, so say which counts.
+                        .overlay(alignment: .topTrailing) {
+                            if let value { RollBadge(value: value).offset(x: 8, y: -8) }
+                        }
+                        .id(value.map { "\($0)-\(shakes)" } ?? "flag")
+                        .transition(.scale(scale: 0.6).combined(with: .opacity))
+                    Capsule().fill(session.lastRoll.map { Palette.color($0.color) } ?? .clear)
+                        .overlay(Capsule().stroke(Palette.brass, lineWidth: session.lastRoll?.color == .black ? 1 : 0))
+                        .frame(width: 40, height: 5)
+                }
+                VStack(spacing: 2) {
+                Image(Art.diceCup)
+                    .resizable().scaledToFit()
+                    .frame(height: 92)
+                    .rotationEffect(.degrees(shakes % 2 == 0 ? 0 : 0.001))
+                    .keyframeAnimator(initialValue: 0.0, trigger: shakes) { cup, angle in
+                        cup.rotationEffect(.degrees(angle), anchor: .bottom)
+                    } keyframes: { _ in
+                        KeyframeTrack {
+                            CubicKeyframe(-12, duration: 0.08)
+                            CubicKeyframe(12, duration: 0.12)
+                            CubicKeyframe(-8, duration: 0.1)
+                            CubicKeyframe(0, duration: 0.1)
+                        }
+                    }
+                    // Glows when it is your roll.
+                    .shadow(color: session.canRoll ? Palette.brass.opacity(0.9) : .clear, radius: 10)
+                    Text(session.canRoll ? "Tap to roll" : " ")
+                        .font(.system(.caption2, design: .serif).weight(.semibold))
+                        .foregroundStyle(Palette.ivory)
+                }
             }
-            .frame(width: 72, height: 72)
-            .rotationEffect(.degrees(tumble ? 360 : 0))
-            .animation(.spring(duration: 0.45), value: tumble)
+            .frame(minHeight: 100)
+            .animation(.spring(duration: 0.35), value: value)
         }
         .buttonStyle(.plain)
+        .onAppear { shown = session.lastRoll?.value }
+        .onChange(of: session.rolls) {
+            let value = session.lastRoll?.value
+            if RollingDie.shown(reduceMotion: reduceMotion) {
+                Task {
+                    try? await Task.sleep(for: RollingDie.flight)
+                    shown = value
+                }
+            } else {
+                shown = value
+            }
+        }
+        .onChange(of: session.lastRoll == nil) { _, none in if none { shown = nil } }
         .disabled(!session.canRoll)
         .opacity(session.canRoll || session.isComputerPlaying || value != nil ? 1 : 0.5)
         // Spoken as a number: the star on the 6 is Lelu's branding, not a different result.
@@ -59,5 +106,29 @@ struct Pips: View {
                 }
             }
         }
+    }
+}
+
+/// The roll as a number on a brass disc; the 6 also carries the black star.
+struct RollBadge: View {
+    let value: Int
+    var size: CGFloat = 30
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [Color(red: 0.98, green: 0.86, blue: 0.52), Palette.brass],
+                                     center: .init(x: 0.35, y: 0.3), startRadius: 0, endRadius: size * 0.6))
+                .overlay(Circle().stroke(Palette.night.opacity(0.6), lineWidth: 1))
+                .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
+            if value == 6 {
+                Image(systemName: "star.fill").font(.system(size: size * 0.78)).foregroundStyle(.black.opacity(0.18))
+            }
+            Text("\(value)")
+                .font(.system(size: size * 0.6, weight: .heavy, design: .serif))
+                .foregroundStyle(Palette.night)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 }
