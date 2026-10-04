@@ -13,11 +13,15 @@ struct GameView: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack(alignment: .center, spacing: 10) {
-                WoodCircleButton(systemImage: "chevron.left", action: goHome)
+                WoodCircleButton(systemImage: "chevron.left", action: leave)
                     .accessibilityLabel("Home")
                     .accessibilityIdentifier("btn-home")
-                StatusPlaque(status: session.status, line: session.log.last)
-                if let level = session.computerLevel {
+                if session.tutorial != nil {
+                    Spacer(minLength: 0)
+                } else {
+                    StatusPlaque(status: session.status, line: session.log.last)
+                }
+                if session.tutorial == nil, let level = session.computerLevel {
                     // As in Lelu Oware: the opponents' level, tap to change it for this game.
                     Button { withAnimation(.easeInOut(duration: 0.2)) { showLevels.toggle() } } label: {
                         HStack(spacing: 4) {
@@ -58,6 +62,9 @@ struct GameView: View {
                 .woodPanel(corner: 22)
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
+            if let tutorial = session.tutorial {
+                LessonPlaque(progress: tutorial, next: next, retry: { session.retryLesson() })
+            }
             Spacer(minLength: 0)
             BoardFrame(plaque: false) { BoardView() }
                 .overlay {
@@ -75,6 +82,70 @@ struct GameView: View {
         .background(Table())
         .onChange(of: session.log) { _, log in
             if let line = log.last { AccessibilityNotification.Announcement(line).post() }
+        }
+    }
+}
+
+extension GameView {
+    /// Home; a lesson in progress gives the player's own game back first.
+    private func leave() {
+        session.endTutorial()
+        goHome()
+    }
+
+    /// The next lesson, or home after the last.
+    private func next() {
+        if !session.nextLesson() { leave() }
+    }
+}
+
+/// Learn the game: the lesson's title, what to do (or why it worked), and Next or Try again.
+struct LessonPlaque: View {
+    let progress: TutorialProgress
+    let next: () -> Void
+    let retry: () -> Void
+
+    var body: some View {
+        let lesson = progress.lesson
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("\(lesson.chapter.title.uppercased()) · \(progress.index + 1) OF \(Lesson.all.count)")
+                    .font(.system(.caption, design: .serif).weight(.bold))
+                    .tracking(1)
+                    .foregroundStyle(Palette.brass)
+                Spacer()
+            }
+            Text(lesson.title)
+                .font(.system(.title3, design: .serif).weight(.bold))
+                .foregroundStyle(Palette.brassLight)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("lesson-title")
+            Text(text(lesson))
+                .font(.system(.callout, design: .serif))
+                .foregroundStyle(Palette.ivory)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityIdentifier("lesson-text")
+            switch progress.outcome {
+            case .playing:
+                EmptyView()
+            case .done:
+                BrassButton(title: progress.isLast ? "Finish" : "Next", systemImage: progress.isLast ? "checkmark" : "chevron.right", compact: true, action: next)
+                    .accessibilityIdentifier("btn-lesson-next")
+            case .tryAgain:
+                BrassButton(title: "Try again", systemImage: "arrow.counterclockwise", compact: true, action: retry)
+                    .accessibilityIdentifier("btn-lesson-retry")
+            }
+        }
+        .padding(14)
+        .woodPanel(corner: 16)
+        .animation(.easeInOut(duration: 0.2), value: progress)
+    }
+
+    private func text(_ lesson: Lesson) -> String {
+        switch progress.outcome {
+        case .playing: lesson.text
+        case .done: lesson.doneText
+        case .tryAgain: "Not quite. " + lesson.text
         }
     }
 }

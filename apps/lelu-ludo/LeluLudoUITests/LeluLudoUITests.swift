@@ -59,14 +59,15 @@ final class LeluLudoUITests: XCTestCase {
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
         XCTAssertTrue(settings.label.contains("Ghana Classic"), settings.label)
         settings.tap()
-        let picker = app.segmentedControls["picker-rules"]
-        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["rules-ghanaClassic"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["rules-ghanaClassic"].isSelected, "Ghana Classic is the default")
         XCTAssertFalse(app.switches["rule-home-kick"].exists, "switches only for Custom")
-        picker.buttons["Custom"].tap()
+        app.buttons["rules-custom"].tap()
         XCTAssertTrue(app.switches["rule-home-kick"].waitForExistence(timeout: 3))
         try app.performAccessibilityAudit(for: XCUIAccessibilityAuditType.all.subtracting([.contrast, .dynamicType, .textClipped]))
-        picker.buttons["Classic"].tap()
-        app.buttons["btn-done"].tap()
+        app.buttons["rules-classic"].tap()
+        // Settings opens under the tiles; scroll back up to the tile, whose label names the rules.
+        app.swipeDown()
         XCTAssertTrue(settings.waitForExistence(timeout: 3))
         expectation(for: NSPredicate(format: "label CONTAINS 'Classic' AND NOT (label CONTAINS 'Ghana')"), evaluatedWith: settings)
         waitForExpectations(timeout: 5)
@@ -87,6 +88,33 @@ final class LeluLudoUITests: XCTestCase {
         expectation(for: NSPredicate(format: "label CONTAINS 'Black'"), evaluatedWith: app.staticTexts["status"])
         waitForExpectations(timeout: 5)
         XCTAssertTrue(roll.isEnabled, "black rolls for themselves")
+    }
+
+    @MainActor
+    func testLearnTheGameFromTheMenu() throws {
+        let app = launch([])
+        let learn = app.buttons["tile-learn"]
+        XCTAssertTrue(learn.waitForExistence(timeout: 5))
+        learn.tap()
+        let start = app.buttons["btn-start-tutorial"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        start.tap()
+        let title = app.staticTexts["lesson-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertEqual(title.label, "Your yard")
+        // Lesson 1: roll the scripted 6 and bring a token out.
+        app.buttons["btn-roll"].tap()
+        let token = app.descendants(matching: .any)["token-red-0"]
+        XCTAssertTrue(token.waitForExistence(timeout: 5))
+        token.tap()
+        let next = app.buttons["btn-lesson-next"]
+        XCTAssertTrue(next.waitForExistence(timeout: 5))
+        next.tap()
+        expectation(for: NSPredicate(format: "label == 'Home is the centre'"), evaluatedWith: title)
+        waitForExpectations(timeout: 5)
+        // Home gives the menu back (TutorialTests prove the saved game is untouched).
+        app.buttons["btn-home"].tap()
+        XCTAssertTrue(app.buttons["tile-learn"].waitForExistence(timeout: 5))
     }
 
     @MainActor

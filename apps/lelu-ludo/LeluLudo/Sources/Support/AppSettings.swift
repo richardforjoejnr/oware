@@ -11,6 +11,15 @@ enum RulesPreset: String, CaseIterable, Sendable {
     /// The player's own switches, starting from Ghana Classic.
     case custom
 
+    /// The preset's name where room is short (the Settings switch): Ghana · Classic · Custom.
+    var shortTitle: String {
+        switch self {
+        case .ghanaClassic: "Ghana"
+        case .classic: "Classic"
+        case .custom: "Custom"
+        }
+    }
+
     var title: String {
         switch self {
         case .ghanaClassic: "Ghana Classic"
