@@ -40,6 +40,8 @@ final class AppSettings {
     }
     var soundOn: Bool { didSet { defaults.set(soundOn, forKey: "soundOn") } }
     var hapticsOn: Bool { didSet { defaults.set(hapticsOn, forKey: "hapticsOn") } }
+    /// Your rolls: the full throw onto the board, or a quick one (computers' are always quick).
+    var diceAnimation: DiceAnimation { didSet { defaults.set(diceAnimation.rawValue, forKey: "diceAnimation") } }
 
     /// Test launches are silent without touching what the player chose.
     let testMode: Bool
@@ -68,5 +70,6 @@ final class AppSettings {
         custom = stored
         soundOn = defaults.object(forKey: "soundOn") as? Bool ?? true
         hapticsOn = defaults.object(forKey: "hapticsOn") as? Bool ?? true
+        diceAnimation = DiceAnimation(rawValue: defaults.string(forKey: "diceAnimation") ?? "") ?? .full
     }
 }

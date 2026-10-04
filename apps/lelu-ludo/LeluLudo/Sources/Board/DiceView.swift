@@ -6,6 +6,7 @@ import SwiftUI
 struct DiceView: View {
     @Environment(LudoSession.self) private var session
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(DieFlight.self) private var flight
     @State private var shakes = 0
     /// The roll shown here: it changes once the die thrown on the board has landed.
     @State private var shown: Int?
@@ -55,17 +56,9 @@ struct DiceView: View {
         }
         .buttonStyle(.plain)
         .onAppear { shown = session.lastRoll?.value }
-        .onChange(of: session.rolls) {
-            let value = session.lastRoll?.value
-            if RollingDie.shown(reduceMotion: reduceMotion) {
-                Task {
-                    try? await Task.sleep(for: RollingDie.flight)
-                    shown = value
-                }
-            } else {
-                shown = value
-            }
-        }
+        // With the throw shown on the board, the result comes here when that die lands (or is skipped).
+        .onChange(of: session.rolls) { if !RollingDie.shown(reduceMotion: reduceMotion) { shown = session.lastRoll?.value } }
+        .onChange(of: flight.landed) { shown = session.lastRoll?.value }
         .onChange(of: session.lastRoll == nil) { _, none in if none { shown = nil } }
         .disabled(!session.canRoll)
         .opacity(session.canRoll || session.isComputerPlaying || value != nil ? 1 : 0.5)

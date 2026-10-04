@@ -147,3 +147,50 @@ final class ChoiceMarkerTests: XCTestCase {
         }
     }
 }
+
+/// The dice throw (owner's storyboard, 2026-10-04): when it lands, what it shows, and what can skip it.
+@MainActor
+final class DiceThrowTests: XCTestCase {
+    func testTheQuickThrowIsShorterAndEveryThrowLandsBeforeItGoesBack() {
+        XCTAssertLessThan(ThrowTiming.quick.total, ThrowTiming.full.total)
+        for t in [ThrowTiming.full, .quick] {
+            XCTAssertLessThan(t.landsAfter, t.total)
+            XCTAssertEqual(t.total, t.landsAfter + t.rest + t.returnTrip, accuracy: 1e-9)
+        }
+        XCTAssertLessThanOrEqual(ThrowTiming.full.total, 2.0, "a full throw stays under two seconds")
+        XCTAssertEqual(ThrowTiming.of(.quick), .quick)
+    }
+
+    func testItAlwaysComesToRestShowingTheRoll() {
+        for value in 1...6 {
+            XCTAssertEqual(RollingDie.face(spin: 1080, value: value), value)
+            let tumbling = Set(stride(from: 0.0, to: 1000, by: 90).map { RollingDie.face(spin: $0, value: value) })
+            XCTAssertGreaterThan(tumbling.count, 3, "it shows several faces while tumbling")
+            XCTAssertTrue(tumbling.allSatisfy { (1...6).contains($0) })
+        }
+    }
+
+    func testLandingOrSkippingRevealsTheRoll() {
+        let flight = DieFlight()
+        XCTAssertTrue(flight.inFlight(1))
+        flight.land(1)
+        XCTAssertFalse(flight.inFlight(1))
+        XCTAssertTrue(flight.inFlight(2), "the next throw is in the air")
+        flight.skip(2)
+        XCTAssertFalse(flight.inFlight(2))
+        XCTAssertEqual(flight.skipped, 2)
+        flight.land(1)   // a late landing of an older throw changes nothing
+        XCTAssertEqual(flight.landed, 2)
+    }
+
+    func testTheThrowSettingIsRememberedAndPacesYourAutoMoves() {
+        let d = TestSupport.defaults()
+        let settings = AppSettings(defaults: d, testMode: false)
+        XCTAssertEqual(settings.diceAnimation, .full)
+        settings.diceAnimation = .quick
+        XCTAssertEqual(AppSettings(defaults: d, testMode: false).diceAnimation, .quick)
+        XCTAssertLessThan(LudoSession.Pacing.normal(.quick).yourRoll, LudoSession.Pacing.normal(.full).yourRoll)
+        XCTAssertGreaterThan(LudoSession.Pacing.normal(.full).yourRoll, ThrowTiming.full.landing, "the token waits for the die to land")
+        XCTAssertGreaterThan(LudoSession.Pacing.normal.roll, ThrowTiming.quick.landing, "a computer waits for its die too")
+    }
+}

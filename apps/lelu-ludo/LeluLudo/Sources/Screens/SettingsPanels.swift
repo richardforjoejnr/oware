@@ -64,8 +64,18 @@ struct SettingsPanels: View {
                                 .foregroundStyle(Palette.ivory.opacity(0.8))
                         }
                     }
-                    WoodRow(divider: false) {
+                    WoodRow {
                         WoodToggle(title: "Haptics", isOn: $settings.hapticsOn).accessibilityIdentifier("setting-haptics")
+                    }
+                    WoodRow(divider: false) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Dice throw").font(.system(.body, design: .serif).weight(.medium)).foregroundStyle(Palette.ivory)
+                            WoodSegmented(options: DiceAnimation.allCases, selection: $settings.diceAnimation,
+                                          label: { $0.title }, id: { "dice-\($0.rawValue)" })
+                            Text("Full: thrown onto the board. Quick: a short throw. Tap the board to skip either.")
+                                .font(.system(.footnote, design: .serif))
+                                .foregroundStyle(Palette.ivory.opacity(0.8))
+                        }
                     }
                 }
             }

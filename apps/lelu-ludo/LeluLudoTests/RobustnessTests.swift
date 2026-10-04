@@ -94,7 +94,7 @@ final class RobustnessTests: XCTestCase {
         state["pendingRoll"] = 2
         json["state"] = state
         let s = TestSupport.session(dice: [6], store: try writeSave(json))
-        s.pacing = .init(computer: .milliseconds(5), step: .zero, roll: .zero)
+        s.pacing = .init(computer: .milliseconds(5), step: .zero, roll: .zero, yourRoll: .zero)
         let task = Task { await s.runComputerTurns() }
         try await Task.sleep(for: .milliseconds(300))
         let looping = s.isComputerPlaying
@@ -177,7 +177,7 @@ final class RobustnessTests: XCTestCase {
         var saved = GameState.arranged(players: [.red, .black], toMove: .red, tokens: [:])
         saved.roll(6)   // you rolled a 6 in your own game, then went to Learn
         let (s, store) = session(saving: saved, setup: youVsComputer, dice: [1])
-        s.pacing = .init(computer: .zero, step: .milliseconds(150), roll: .zero)
+        s.pacing = .init(computer: .zero, step: .milliseconds(150), roll: .zero, yourRoll: .zero)
         s.startTutorial(at: 0)   // "Your yard": roll a 6, bring a token out
         await s.roll()
         let walking = Task { await s.tap(token: 0) }
@@ -195,7 +195,7 @@ final class RobustnessTests: XCTestCase {
     func testAStaleComputerLoopNeverRollsInTheNextGame() async throws {
         let state = GameState.arranged(players: [.red, .black], toMove: .black, tokens: [.red: [4, -1, -1, -1]])
         let (s, _) = session(saving: state, setup: youVsComputer, dice: [3, 2, 1])
-        s.pacing = .init(computer: .milliseconds(150), step: .zero, roll: .zero)
+        s.pacing = .init(computer: .milliseconds(150), step: .zero, roll: .zero, yourRoll: .zero)
         let old = Task { await s.runComputerTurns() }
         try await Task.sleep(for: .milliseconds(30))   // the computer is pausing before its roll
         s.newGame(youVsComputer)                        // Home, Play
@@ -209,7 +209,7 @@ final class RobustnessTests: XCTestCase {
     func testAStaleComputerLoopNeverRollsInALesson() async throws {
         let state = GameState.arranged(players: [.red, .black], toMove: .black, tokens: [.red: [4, -1, -1, -1]])
         let (s, _) = session(saving: state, setup: youVsComputer, dice: [3, 2, 1])
-        s.pacing = .init(computer: .milliseconds(150), step: .zero, roll: .zero)
+        s.pacing = .init(computer: .milliseconds(150), step: .zero, roll: .zero, yourRoll: .zero)
         let old = Task { await s.runComputerTurns() }
         try await Task.sleep(for: .milliseconds(30))
         s.endTutorial()

@@ -23,10 +23,21 @@ final class LudoSession {
         var computer: Duration
         /// Per square as a token walks its path.
         var step: Duration
-        /// While the die tumbles across the board, before a computer plays the roll.
+        /// While a computer's die is thrown (always the quick throw), before it plays the roll.
         var roll: Duration
-        static let normal = Pacing(computer: .milliseconds(600), step: .milliseconds(130), roll: .milliseconds(750))
-        static let instant = Pacing(computer: .zero, step: .zero, roll: .zero)
+        /// While your die is thrown, before a move that plays itself (Novice, one move forward).
+        var yourRoll: Duration
+        static let normal = Pacing(computer: .milliseconds(600), step: .milliseconds(130),
+                                   roll: ThrowTiming.quick.landing + .milliseconds(150),
+                                   yourRoll: ThrowTiming.full.landing + .milliseconds(150))
+        static let instant = Pacing(computer: .zero, step: .zero, roll: .zero, yourRoll: .zero)
+
+        /// Normal pacing, with your throw the full or quick one.
+        static func normal(_ style: DiceAnimation) -> Pacing {
+            var p = normal
+            p.yourRoll = ThrowTiming.of(style).landing + .milliseconds(150)
+            return p
+        }
     }
     @ObservationIgnored var pacing = Pacing.normal
     /// Counts rolls, so the board can tumble a die for each one.
@@ -287,7 +298,7 @@ final class LudoSession {
         if let move = onlyForwardMove {
             let game = generation
             // Let the die land first, so the roll is seen before the token walks.
-            if pacing.roll > .zero { try? await Task.sleep(for: pacing.roll) }
+            if pacing.yourRoll > .zero { try? await Task.sleep(for: pacing.yourRoll) }
             guard game == generation else { return }
             await play(move)   // plays the computers' turns after it
             return
