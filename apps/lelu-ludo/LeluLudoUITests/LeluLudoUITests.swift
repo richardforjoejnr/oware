@@ -79,6 +79,16 @@ final class LeluLudoUITests: XCTestCase {
     }
 
     @MainActor
+    func testTheSplashOpensOntoTheMenu() throws {
+        let app = launch(["--splash"])
+        let splash = app.descendants(matching: .any)["splash"]
+        XCTAssertTrue(splash.waitForExistence(timeout: 20), "the opening card")
+        XCTAssertTrue(splash.label.contains("Play Ghana. Play Together."), splash.label)
+        splash.tap()   // a tap goes straight on
+        XCTAssertTrue(app.images["home-title"].waitForExistence(timeout: 10), "then the menu")
+    }
+
+    @MainActor
     func testPassAndPlayFromTheMenu() throws {
         let app = launch(["--dice=3"])
         let friends = app.buttons["tile-friends"]

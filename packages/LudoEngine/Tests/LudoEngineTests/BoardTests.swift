@@ -50,3 +50,20 @@ struct BoardTests {
         }
     }
 }
+
+@Suite("Colours and moves in words")
+struct NamesTests {
+    @Test("Seats go clockwise from the top left: red, yellow, black, green (Lelu plays black, not blue)")
+    func colours() {
+        #expect(PlayerColor.allCases == [.red, .yellow, .black, .green])
+        #expect(PlayerColor.allCases.map(\.name) == ["Red", "Yellow", "Black", "Green"])
+    }
+
+    @Test("A move describes itself for logs and test failures")
+    func describesItself() {
+        let plain = Move(token: 1, kind: .forward, from: 4, to: 9, visit: nil)
+        #expect(plain.description == "token 1 forward 4→9")
+        let visiting = Move(token: 0, kind: .homeKick, from: 8, to: 11, visit: .init(owner: .yellow, depth: 2))
+        #expect(visiting.description.hasSuffix("in yellow's lane at 2"))
+    }
+}

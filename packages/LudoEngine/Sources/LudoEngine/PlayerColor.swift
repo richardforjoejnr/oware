@@ -5,9 +5,6 @@
 public enum PlayerColor: Int, Sendable, Codable, CaseIterable, Hashable {
     case red, yellow, black, green
 
-    /// The next colour clockwise.
-    public var next: PlayerColor { PlayerColor(rawValue: (rawValue + 1) % 4)! }
-
     public var name: String {
         switch self {
         case .red: "Red"
