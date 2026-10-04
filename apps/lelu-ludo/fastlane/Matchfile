@@ -1,0 +1,8 @@
+# Code-signing certificates/profiles are stored encrypted in a PRIVATE git repo (fastlane match).
+# Same repo, passphrase and Apple Distribution certificate as Lelu Oware (apps/lelu-oware/fastlane/Matchfile);
+# only the App Store profile is Lelu Ludo's own ("match AppStore com.richardforjoe.leluludo").
+git_url(ENV["MATCH_GIT_URL"])          # e.g. https://github.com/richardforjoejnr/oware-certificates
+storage_mode("git")
+type("appstore")
+app_identifier(["com.richardforjoe.leluludo"])
+readonly(true)                          # CI never creates profiles; run `fastlane ios setup_signing` here once (docs/PIPELINE.md)

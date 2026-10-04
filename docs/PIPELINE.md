@@ -21,6 +21,7 @@ lanes run locally and in CI.
 | `e2e.yml` | every PR, every push to `main` | No | Maestro and Appium (TypeScript) UI flows on a simulator; JUnit reports as artifacts |
 | `pr-title.yml` | PR opened / edited / updated | No | Fails unless the PR title is a Conventional Commit (it decides the version) |
 | `testflight.yml` | push to `main` that changes the app (paths below), or manual | Yes | New build in TestFlight, tagged `build/<version>-<build #>` |
+| `testflight-ludo.yml` | push to `main` that changes Lelu Ludo, or manual | Yes (the same ones) | New Lelu Ludo build in TestFlight, tagged `build/ludo-<version>-<build #>` (see "Lelu Ludo" below) |
 | `release.yml` | manual, from a `build/…` tag | Yes | That build submitted for App Review with "What's New", released automatically once approved; tags `vX.Y.Z` and publishes the GitHub Release |
 | `pages.yml` ("Site") | docs or site change on `main`, a release, CI / E2E finishing on `main`, or manual | AWS keys | Website on AWS (S3 + CloudFront): privacy, support, What's new, test reports |
 
@@ -100,6 +101,53 @@ Branch protection on `main` is configured to require the CI check and a pull req
 - `./scripts/bootstrap.sh` (installs xcodegen, xcbeautify, swiftlint; generates every app's project).
 - Ruby 3.x for fastlane locally (optional; CI has it): `brew install ruby` then `bundle install`.
 - Sign in to Xcode with your Apple ID (Settings → Accounts) to run on your own iPhone.
+
+---
+
+## Lelu Ludo (TestFlight)
+
+Lelu Ludo has its own lanes (`apps/lelu-ludo/fastlane/Fastfile`, same lanes as Lelu Oware's:
+`test`, `setup_signing`, `beta`, `release`) and its own workflow, `.github/workflows/testflight-ludo.yml`.
+It runs on a merge to `main` that touches `apps/lelu-ludo/LeluLudo/**`, `apps/lelu-ludo/project.yml`,
+`apps/lelu-ludo/fastlane/**`, `packages/LudoEngine/Sources/**`, `packages/LudoEngine/Package.swift`,
+the `Gemfile` or the workflow itself (Lelu Ludo does not use SupportKit), or by hand from the Actions
+tab. It has its own concurrency group, so it never waits for, or cancels, a Lelu Oware upload.
+
+**Secrets: all reused, nothing new.** `DEVELOPMENT_TEAM`, `ASC_KEY_ID`, `ASC_ISSUER_ID`,
+`ASC_KEY_CONTENT`, `MATCH_GIT_URL`, `MATCH_GIT_BASIC_AUTHORIZATION`, `MATCH_PASSWORD`, the
+`SIGNING_READY` variable and the `testflight` environment are the ones set up for Lelu Oware. Lelu Ludo
+signs with the same Apple Distribution certificate from the same match repo
+(`richardforjoejnr/oware-certificates`); only its App Store profile
+(`match AppStore com.richardforjoe.leluludo`) is its own.
+
+One-time steps:
+
+1. ~~Register the bundle ID `com.richardforjoe.leluludo`~~ (done).
+2. ~~Create the App Store Connect app record for it~~ (done).
+3. **Add Lelu Ludo's profile to match, once, from your Mac** (the first TestFlight run fails with "No
+   matching provisioning profiles found for 'AppStore_com.richardforjoe.leluludo'" until this is done):
+   ```bash
+   ./scripts/setup-signing.sh --app=lelu-ludo
+   ```
+   It asks for the same values as Lelu Oware's setup (Team ID, App Store Connect key, the match
+   passphrase; Return uses your GitHub CLI login for the certificates repo) and only creates Lelu
+   Ludo's App Store profile, with the same certificate. The GitHub secrets are shared and left as
+   they are. If Apple refuses to create the profile with the App Manager key, give an Admin key at
+   its prompt. Then re-run **TestFlight (Lelu Ludo)** from the Actions tab.
+4. **TestFlight internal testing:** after the first build, App Store Connect ▸ Lelu Ludo ▸ TestFlight ▸
+   Internal Testing ▸ add a group with yourself (groups are per app, so Lelu Oware's does not carry over).
+5. Merge a change to Lelu Ludo, or run **TestFlight (Lelu Ludo)** by hand from the Actions tab.
+
+**Version and tags.** Builds take the version from `MARKETING_VERSION` in `apps/lelu-ludo/project.yml`
+(raise it by hand for now) and the same build number as Lelu Oware (UTC date and time). Each upload is
+tagged `build/ludo-<version>-<build #>`: the prefix keeps it out of Lelu Oware's App Store Release,
+which only accepts `build/X.Y.Z-N`. `vX.Y.Z` tags stay Lelu Oware's releases.
+
+**Not yet automated (follow-up):** an App Store Release workflow for Lelu Ludo. The `release` lane is
+ready, but Lelu Ludo first needs its own release tags (e.g. `ludo-vX.Y.Z`) in `scripts/next_version.py`
+(which today reads only `vX.Y.Z`), its own GitHub Release name ("Lelu Ludo X.Y.Z") in
+`scripts/build_release_notes.py`, and a copy of `release.yml` that accepts `build/ludo-…` tags. Until
+then, submit a Lelu Ludo TestFlight build for review from App Store Connect.
 
 ---
 

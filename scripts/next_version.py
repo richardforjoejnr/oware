@@ -75,7 +75,9 @@ def last_release() -> str | None:
 # Oware's version or shows in its App Store "What's New").
 APP_PATHS = {
     "lelu-oware": ["apps/lelu-oware", "packages/OwareEngine", "packages/SupportKit"],
-    "lelu-ludo": ["apps/lelu-ludo", "packages/LudoEngine", "packages/SupportKit"],
+    # Not SupportKit yet: Lelu Ludo doesn't use it (add it back with Ludo's tip jar), and its Oware
+    # changes were showing in Lelu Ludo's TestFlight notes.
+    "lelu-ludo": ["apps/lelu-ludo", "packages/LudoEngine"],
 }
 
 

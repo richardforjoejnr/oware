@@ -114,7 +114,8 @@ class PerAppTests(unittest.TestCase):
             finally:
                 os.chdir(here)
             self.assertEqual(oware, ["fix: tip jar", "fix: oware board"])
-            self.assertEqual(ludo, ["fix: tip jar", "feat: ludo dice"], "a shared package counts for both")
+            # SupportKit is Lelu Oware's until Lelu Ludo uses it: its changes stay out of Ludo's notes.
+            self.assertEqual(ludo, ["feat: ludo dice"], "an Oware-only package does not count for Ludo")
             self.assertEqual(len(everything), 4)
             self.assertEqual(bump("1.0.0", [(t, "") for t in oware]), "1.0.1", "Ludo's feat does not make Oware 1.1.0")
 

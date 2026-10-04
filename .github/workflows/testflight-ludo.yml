@@ -1,0 +1,90 @@
+name: TestFlight (Lelu Ludo)
+
+# Lelu Ludo's twin of testflight.yml: a merge to main that changes Lelu Ludo produces a signed build on
+# TestFlight. Same secrets, same SIGNING_READY switch and same build-number scheme as Lelu Oware.
+# Each uploaded build is tagged build/ludo-<version>-<build number> on the commit it was made from.
+# The "ludo-" prefix keeps these tags apart from Lelu Oware's build/<version>-<build> tags: Oware's
+# App Store Release (release.yml) only accepts build/X.Y.Z-N, so it refuses a Ludo tag.
+#
+# Version: Lelu Ludo has no release line of its own yet (vX.Y.Z tags are Lelu Oware's releases, and
+# scripts/next_version.py counts from them), so the version is MARKETING_VERSION in
+# apps/lelu-ludo/project.yml. Raise it there by hand until Lelu Ludo gets its own release tags.
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/lelu-ludo/LeluLudo/**
+      - apps/lelu-ludo/project.yml
+      - apps/lelu-ludo/fastlane/**
+      - packages/LudoEngine/Sources/**
+      - packages/LudoEngine/Package.swift
+      - Gemfile
+      - .github/workflows/testflight-ludo.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to tag each uploaded build
+
+concurrency:
+  group: testflight-ludo
+  cancel-in-progress: false
+
+jobs:
+  beta:
+    name: Build & upload Lelu Ludo to TestFlight
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/lelu-ludo
+    environment: testflight
+    # Skip gracefully until signing secrets are configured (see docs/PIPELINE.md).
+    if: ${{ vars.SIGNING_READY == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Install tools
+        run: brew install xcodegen xcbeautify
+      - name: Version and notes for this beta
+        run: |
+          VERSION="$(sed -n 's/^ *MARKETING_VERSION: *"\(.*\)"/\1/p' project.yml | head -1)"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::MARKETING_VERSION in apps/lelu-ludo/project.yml must be X.Y.Z, got '$VERSION'."
+            exit 1
+          fi
+          # Set here (not inside fastlane) so the build tag below names the same number.
+          # Notes: Lelu Ludo's PR titles (next_version.py picks its paths from this folder).
+          {
+            echo "VERSION=$VERSION"
+            echo "BUILD_NUMBER=$(date -u +%Y%m%d%H%M)"
+            echo "CHANGELOG<<EOF_NOTES"; python3 ../../scripts/next_version.py --notes; echo "EOF_NOTES"
+          } >> "$GITHUB_ENV"
+          echo "Beta of Lelu Ludo $VERSION"
+      - name: Upload to TestFlight
+        env:
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+        run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios beta
+      - name: Tag the build
+        run: |
+          TAG="build/ludo-$VERSION-$BUILD_NUMBER"
+          git tag "$TAG" "$GITHUB_SHA"
+          git push origin "$TAG"
+          echo "Uploaded Lelu Ludo $VERSION ($BUILD_NUMBER) to TestFlight; tagged $TAG." >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload IPA artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LeluLudo-ipa
+          path: "apps/lelu-ludo/*.ipa"
+          if-no-files-found: ignore
