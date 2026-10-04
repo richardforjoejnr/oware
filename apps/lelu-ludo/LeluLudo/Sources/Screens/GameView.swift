@@ -7,8 +7,18 @@ import SwiftUI
 struct GameView: View {
     @Environment(LudoSession.self) private var session
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppSettings.self) private var settings
     let goHome: () -> Void
+    /// Which throws have landed (the tray's die and the status wait for it).
+    @State private var flight = DieFlight()
     @State private var showLevels = false
+
+    /// Throws are shown on the board (not under Reduce Motion, not in tests).
+    private var animated: Bool { RollingDie.shown }
+    /// Your dice throw (Settings), or the device's Reduce Motion until you choose.
+    private var style: DiceAnimation { settings.diceThrow(reduceMotion: reduceMotion) }
+    /// The die is in the air: the status says so until it lands.
+    private var rolling: Bool { animated && session.lastRoll != nil && flight.inFlight(session.rolls) }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -19,7 +29,7 @@ struct GameView: View {
                 if session.tutorial != nil {
                     Spacer(minLength: 0)
                 } else {
-                    StatusPlaque(status: session.status, line: session.log.last)
+                    StatusPlaque(status: rolling ? "Rolling…" : session.status, line: session.log.last)
                 }
                 if session.tutorial == nil, let level = session.computerLevel {
                     // As in Lelu Oware: the opponents' level, tap to change it for this game.
@@ -69,11 +79,22 @@ struct GameView: View {
             BoardFrame(plaque: false) { BoardView() }
                 .overlay {
                     // Each roll tumbles across the board; the tray's die keeps the result.
-                    if session.rolls > 0, let roll = session.lastRoll, RollingDie.shown(reduceMotion: reduceMotion) {
-                        RollingDie(value: roll.value, landing: RollingDie.landing(for: session.rolls))
-                            .id(session.rolls)
+                    // Only when the dice are thrown on the board; with it off the roll shows on the tray's die.
+                    if session.rolls > 0, let roll = session.lastRoll, animated, style != .off, flight.skipped < session.rolls {
+                        let count = session.rolls
+                        // Your throw as chosen in Settings; computers' always the quick one.
+                        let yours = session.setup.seat(roll.color) == .human
+                        RollingDie(value: roll.value, landing: RollingDie.landing(for: count),
+                                   timing: yours ? .of(style) : .quick,
+                                   landed: { flight.land(count) }, returned: { flight.returned(count) })
+                            .id(count)
+                            // Catches taps (to skip) only while in the air, never over the tokens after.
+                            .allowsHitTesting(flight.inFlight(count))
+                            .simultaneousGesture(TapGesture().onEnded { flight.skip(count) })
                     }
                 }
+                // Above the tray below it: the die leaves from (and goes back to) the tray's cup.
+                .zIndex(1)
             // The board and its tray belong together: no gap between them, and the pair centred in
             // the room below the top bar (on a tall phone the sand goes above and below, not between).
             Tray()
@@ -85,6 +106,15 @@ struct GameView: View {
         // Text grows with the reader's setting up to the largest standard size: beyond it, a lesson's
         // words squeezed the board to a thumbnail and the plaques cut their words short.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .environment(flight)
+        // A light knock as the die lands on the board.
+        .sensoryFeedback(.impact(weight: .light), trigger: flight.landed) { _, _ in animated && settings.effectiveHaptics }
+        // Your throw in Settings applies at once.
+        // No throw on the board: the tray's die shows the roll at once.
+        .onChange(of: session.rolls) { _, rolls in if !animated || style == .off { flight.returned(rolls) } }
+        .onChange(of: style) { _, style in
+            if session.pacing != .instant { session.pacing = .normal(style) }
+        }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Table())

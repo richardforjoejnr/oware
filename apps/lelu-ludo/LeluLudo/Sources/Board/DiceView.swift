@@ -6,6 +6,8 @@ import SwiftUI
 struct DiceView: View {
     @Environment(LudoSession.self) private var session
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppSettings.self) private var settings
+    @Environment(DieFlight.self) private var flight
     @State private var shakes = 0
     /// The roll shown here: it changes once the die thrown on the board has landed.
     @State private var shown: Int?
@@ -21,6 +23,8 @@ struct DiceView: View {
                     Image(value.map(Art.die) ?? Art.dieFlag)
                         .resizable().scaledToFit()
                         .frame(width: 70, height: 70)
+                        // Out being thrown on the board: gone from here until it comes back to the cup.
+                        .opacity(flight.thrown(session.rolls) ? 0 : 1)
                         .shadow(color: .black.opacity(0.45), radius: 3, y: 2)
                         .id(value.map { "\($0)-\(shakes)" } ?? "flag")
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
@@ -33,7 +37,7 @@ struct DiceView: View {
                     .resizable().scaledToFit()
                     .frame(height: 92)
                     .rotationEffect(.degrees(shakes % 2 == 0 ? 0 : 0.001))
-                    .keyframeAnimator(initialValue: 0.0, trigger: reduceMotion ? 0 : shakes) { cup, angle in
+                    .keyframeAnimator(initialValue: 0.0, trigger: settings.diceThrow(reduceMotion: reduceMotion) == .off ? 0 : shakes) { cup, angle in
                         cup.rotationEffect(.degrees(angle), anchor: .bottom)
                     } keyframes: { _ in
                         KeyframeTrack {
@@ -55,17 +59,9 @@ struct DiceView: View {
         }
         .buttonStyle(.plain)
         .onAppear { shown = session.lastRoll?.value }
-        .onChange(of: session.rolls) {
-            let value = session.lastRoll?.value
-            if RollingDie.shown(reduceMotion: reduceMotion) {
-                Task {
-                    try? await Task.sleep(for: RollingDie.flight)
-                    shown = value
-                }
-            } else {
-                shown = value
-            }
-        }
+        // With the throw shown on the board, the result comes here when that die lands (or is skipped).
+        .onChange(of: session.rolls) { if !RollingDie.shown { shown = session.lastRoll?.value } }
+        .onChange(of: flight.landed) { shown = session.lastRoll?.value }
         .onChange(of: session.lastRoll == nil) { _, none in if none { shown = nil } }
         .disabled(!session.canRoll)
         .opacity(session.canRoll || session.isComputerPlaying || value != nil ? 1 : 0.5)

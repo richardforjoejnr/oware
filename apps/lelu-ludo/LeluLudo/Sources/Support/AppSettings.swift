@@ -40,6 +40,13 @@ final class AppSettings {
     }
     var soundOn: Bool { didSet { defaults.set(soundOn, forKey: "soundOn") } }
     var hapticsOn: Bool { didSet { defaults.set(hapticsOn, forKey: "hapticsOn") } }
+    /// "Throw dice on board" (owner, 2026-10-04): on, your die is thrown onto the board; off, it just
+    /// appears there. On by default.
+    var throwDiceOnBoard: Bool { didSet { defaults.set(throwDiceOnBoard, forKey: "throwDiceOnBoard") } }
+
+    /// The dice throw in use: the full throw when on, except with the device's Reduce Motion on, when
+    /// nothing flies (the die just appears) and On can't be chosen.
+    func diceThrow(reduceMotion: Bool) -> DiceAnimation { throwDiceOnBoard && !reduceMotion ? .full : .off }
 
     /// Test launches are silent without touching what the player chose.
     let testMode: Bool
@@ -68,5 +75,6 @@ final class AppSettings {
         custom = stored
         soundOn = defaults.object(forKey: "soundOn") as? Bool ?? true
         hapticsOn = defaults.object(forKey: "hapticsOn") as? Bool ?? true
+        throwDiceOnBoard = defaults.object(forKey: "throwDiceOnBoard") as? Bool ?? true
     }
 }

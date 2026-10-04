@@ -63,9 +63,8 @@ final class RollingDieTests: XCTestCase {
         XCTAssertNotEqual(RollingDie.landing(for: 1), RollingDie.landing(for: 2), "it varies roll to roll")
     }
 
-    func testNotUnderReduceMotionOrInTests() {
-        XCTAssertFalse(RollingDie.shown(reduceMotion: true))
-        XCTAssertFalse(RollingDie.shown(reduceMotion: false), "unit tests are a test run")
+    func testNotInTests() {
+        XCTAssertFalse(RollingDie.shown, "unit tests are a test run")
     }
 
     func testItDrawsEveryFace() {
@@ -145,5 +144,75 @@ final class ChoiceMarkerTests: XCTestCase {
             let s = ChoiceMarker.size(t)
             XCTAssertTrue(p.x - s.width / 2 >= 0 && p.x + s.width / 2 <= 300 && p.y - s.height / 2 >= 0 && p.y + s.height / 2 <= 300, "\(t) at \(p)")
         }
+    }
+}
+
+/// The dice throw (owner's storyboard, 2026-10-04): when it lands, what it shows, and what can skip it.
+@MainActor
+final class DiceThrowTests: XCTestCase {
+    func testTheQuickThrowIsShorterAndEveryThrowLandsBeforeItGoesBack() {
+        XCTAssertLessThan(ThrowTiming.quick.total, ThrowTiming.full.total)
+        for t in [ThrowTiming.full, .quick] {
+            XCTAssertLessThan(t.landsAfter, t.total)
+            XCTAssertEqual(t.total, t.landsAfter + t.rest + t.returnTrip, accuracy: 1e-9)
+        }
+        XCTAssertLessThanOrEqual(ThrowTiming.full.total, 2.0, "a full throw stays under two seconds")
+        XCTAssertEqual(ThrowTiming.of(.quick), .quick)
+    }
+
+    func testItAlwaysComesToRestShowingTheRoll() {
+        for value in 1...6 {
+            XCTAssertEqual(RollingDie.face(spin: 1080, value: value), value)
+            let tumbling = Set(stride(from: 0.0, to: 1000, by: 90).map { RollingDie.face(spin: $0, value: value) })
+            XCTAssertGreaterThan(tumbling.count, 3, "it shows several faces while tumbling")
+            XCTAssertTrue(tumbling.allSatisfy { (1...6).contains($0) })
+        }
+    }
+
+    func testLandingOrSkippingRevealsTheRoll() {
+        let flight = DieFlight()
+        XCTAssertTrue(flight.inFlight(1))
+        flight.land(1)
+        XCTAssertFalse(flight.inFlight(1))
+        XCTAssertTrue(flight.inFlight(2), "the next throw is in the air")
+        flight.skip(2)
+        XCTAssertFalse(flight.inFlight(2))
+        XCTAssertEqual(flight.skipped, 2)
+        flight.land(1)   // a late landing of an older throw changes nothing
+        XCTAssertEqual(flight.landed, 2)
+    }
+
+    /// One die on screen, never two: the tray's die is gone while it is out being thrown, and back once
+    /// it returns to the cup (or the throw is skipped).
+    func testTheTraysDieIsHiddenWhileItIsThrown() {
+        let flight = DieFlight()
+        XCTAssertFalse(flight.thrown(0), "before any roll, the tray shows its die")
+        XCTAssertTrue(flight.thrown(1), "rolled: out on the board")
+        flight.land(1)
+        XCTAssertTrue(flight.thrown(1), "landed, but not back in the cup yet")
+        flight.returned(1)
+        XCTAssertFalse(flight.thrown(1))
+        XCTAssertTrue(flight.thrown(2))
+        flight.skip(2)
+        XCTAssertFalse(flight.thrown(2), "skipping brings it straight back")
+    }
+
+    func testTheThrowSettingIsRememberedAndPacesYourAutoMoves() {
+        let d = TestSupport.defaults()
+        let settings = AppSettings(defaults: d, testMode: false)
+        // "Throw dice on board": on by default; with the device's Reduce Motion on, nothing flies.
+        XCTAssertTrue(settings.throwDiceOnBoard)
+        XCTAssertEqual(settings.diceThrow(reduceMotion: false), .full)
+        XCTAssertEqual(settings.diceThrow(reduceMotion: true), .off)
+        settings.throwDiceOnBoard = false
+        XCTAssertEqual(settings.diceThrow(reduceMotion: false), .off)
+        XCTAssertFalse(AppSettings(defaults: d, testMode: false).throwDiceOnBoard, "remembered")
+        XCTAssertEqual(ThrowTiming.of(.off), .still)
+        XCTAssertTrue(ThrowTiming.still.isStill)
+        XCTAssertEqual(ThrowTiming.still.landsAfter, 0, "no flight: it is there at once")
+        XCTAssertLessThan(LudoSession.Pacing.normal(.off).yourRoll, LudoSession.Pacing.normal(.quick).yourRoll)
+        XCTAssertLessThan(LudoSession.Pacing.normal(.quick).yourRoll, LudoSession.Pacing.normal(.full).yourRoll)
+        XCTAssertGreaterThan(LudoSession.Pacing.normal(.full).yourRoll, ThrowTiming.full.landing, "the token waits for the die to land")
+        XCTAssertGreaterThan(LudoSession.Pacing.normal.roll, ThrowTiming.quick.landing, "a computer waits for its die too")
     }
 }

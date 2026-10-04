@@ -6,6 +6,7 @@ import SwiftUI
 struct SettingsPanels: View {
     @Environment(AppSettings.self) private var settings
     @State private var showTipJar = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var settings = settings
@@ -64,8 +65,26 @@ struct SettingsPanels: View {
                                 .foregroundStyle(Palette.ivory.opacity(0.8))
                         }
                     }
-                    WoodRow(divider: false) {
+                    WoodRow {
                         WoodToggle(title: "Haptics", isOn: $settings.hapticsOn).accessibilityIdentifier("setting-haptics")
+                    }
+                    WoodRow(divider: false) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Throw dice on board").font(.system(.body, design: .serif).weight(.medium)).foregroundStyle(Palette.ivory)
+                            // On or Off. With the device's Reduce Motion on, nothing flies: On is greyed out and a note
+                            // says how to see the dice thrown (owner, 2026-10-04).
+                            WoodSegmented(options: [true, false],
+                                          selection: Binding(get: { settings.throwDiceOnBoard && !reduceMotion },
+                                                             set: { settings.throwDiceOnBoard = $0 }),
+                                          label: { $0 ? "On" : "Off" }, id: { "throw-dice-\($0 ? "on" : "off")" },
+                                          disabled: reduceMotion ? [true] : [])
+                            Text(reduceMotion
+                                 ? "Reduce Motion is on for your device, so the die just appears on the board. To see the dice thrown, turn off Reduce Motion in your device's Settings ▸ Accessibility ▸ Motion."
+                                 : "On: your die is thrown onto the board (tap the board to skip). Off: it just appears there.")
+                                .font(.system(.footnote, design: .serif).weight(reduceMotion ? .semibold : .regular))
+                                .foregroundStyle(reduceMotion ? Palette.brassLight : Palette.ivory.opacity(0.8))
+                                .accessibilityIdentifier("dice-motion-note")
+                        }
                     }
                 }
             }

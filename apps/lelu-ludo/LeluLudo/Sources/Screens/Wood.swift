@@ -398,6 +398,8 @@ struct WoodSegmented<Value: Hashable>: View {
     @Binding var selection: Value
     let label: (Value) -> String
     let id: (Value) -> String
+    /// Options shown but not choosable (greyed out).
+    var disabled: Set<Value> = []
 
     var body: some View {
         HStack(spacing: 0) {
@@ -417,6 +419,8 @@ struct WoodSegmented<Value: Hashable>: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .disabled(disabled.contains(option))
+                .opacity(disabled.contains(option) ? 0.4 : 1)
                 .accessibilityAddTraits(chosen ? .isSelected : [])
                 .accessibilityIdentifier(id(option))
             }
