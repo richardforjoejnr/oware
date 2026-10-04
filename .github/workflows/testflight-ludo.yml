@@ -30,8 +30,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Nothing is uploaded that would fail App Review on the basics (shared with every app's CI).
+  readiness:
+    name: Lelu Ludo
+    uses: ./.github/workflows/reusable-app-readiness.yml
+    with:
+      app-dir: apps/lelu-ludo
+
   beta:
     name: Build & upload Lelu Ludo to TestFlight
+    needs: readiness
     runs-on: macos-15
     defaults:
       run:

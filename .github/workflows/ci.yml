@@ -21,6 +21,7 @@ on:
       - packages/SupportKit/**
       - docs/lelu-oware/**
       - scripts/release_readiness.py
+      - .github/workflows/reusable-app-readiness.yml
       - scripts/next_version.py
       - scripts/test_next_version.py
       - scripts/build_release_notes.py
@@ -41,6 +42,7 @@ on:
       - packages/SupportKit/**
       - docs/lelu-oware/**
       - scripts/release_readiness.py
+      - .github/workflows/reusable-app-readiness.yml
       - scripts/next_version.py
       - scripts/test_next_version.py
       - scripts/build_release_notes.py
@@ -68,12 +70,16 @@ env:
 
 jobs:
   readiness:
-    name: App Store readiness
+    name: Lelu Oware
+    uses: ./.github/workflows/reusable-app-readiness.yml
+    with:
+      app-dir: apps/lelu-oware
+
+  scripts:
+    name: Release scripts
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check privacy manifest, icon, public pages, release flags
-        run: python3 scripts/release_readiness.py "$APP_DIR"
       - name: Test the version calculator
         working-directory: scripts
         run: python3 -m unittest test_next_version test_build_release_notes test_site_pretty_urls

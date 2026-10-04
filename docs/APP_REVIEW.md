@@ -54,8 +54,9 @@ rejection; a bug-fix update with unrelated new issues can ship and fix those nex
 
 ## Lelu Ludo (first submission)
 
-The automatic checks above (`scripts/release_readiness.py`) still read Lelu Oware's paths; until
-they take the app as an argument, check Lelu Ludo by hand:
+The automatic checks above (`scripts/release_readiness.py apps/lelu-ludo`) run for Lelu Ludo too,
+through the shared workflow `reusable-app-readiness.yml`: on every Lelu Ludo PR (`ludo-ci.yml`) and
+before every TestFlight upload (`testflight-ludo.yml`). By hand, before the first submission:
 
 - **Binary:** icon 1024×1024 with no alpha; `PrivacyInfo.xcprivacy` (UserDefaults, CA92.1; nothing
   collected); `ITSAppUsesNonExemptEncryption` false; iPad allows all four orientations and

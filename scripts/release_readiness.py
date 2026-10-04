@@ -2,6 +2,7 @@
 """App Store readiness checks for an app in this repo. Fast, no Xcode needed (runs on Linux CI).
 
     python3 scripts/release_readiness.py apps/lelu-oware
+    python3 scripts/release_readiness.py apps/lelu-ludo
 
 Catches the things that get builds rejected or pulled: a missing or incomplete privacy manifest,
 debug switches in release builds, an icon with transparency, placeholder text on the public
@@ -25,14 +26,18 @@ def check(ok: bool, message: str) -> None:
 def main(app_dir: str) -> int:
     app = ROOT / app_dir
     slug = app.name
-    sources = list((app / "Oware" / "Sources").rglob("*.swift")) + [
-        p for pkg in (ROOT / "packages").iterdir() if (pkg / "Sources").exists() for p in (pkg / "Sources").rglob("*.swift")
-    ]
-    code = "\n".join(p.read_text() for p in sources)
     project = (app / "project.yml").read_text()
+    # The app's own folder (Oware/, LeluLudo/): the one with the sources and the Info.plist.
+    src = next(d for d in sorted(app.iterdir()) if (d / "Sources").is_dir() and (d / "Info.plist").exists())
+    # Its code and the code of the local packages it is built from (as listed in project.yml), so one
+    # app's checks never depend on another app's packages.
+    packages = [(app / m).resolve() for m in re.findall(r"path:\s*(\S*packages/\w+)", project)]
+    sources = list((src / "Sources").rglob("*.swift")) + [p for pkg in packages for p in (pkg / "Sources").rglob("*.swift")]
+    code = "\n".join(p.read_text() for p in sources)
+    collects_data = "TelemetryDeck" in project
 
     # 1. Privacy manifest: present, valid, no tracking, and a reason for every required-reason API used.
-    manifest_path = app / "Oware" / "Resources" / "PrivacyInfo.xcprivacy"
+    manifest_path = src / "Resources" / "PrivacyInfo.xcprivacy"
     check(manifest_path.exists(), "App privacy manifest (PrivacyInfo.xcprivacy) exists")
     if manifest_path.exists():
         manifest = plistlib.loads(manifest_path.read_bytes())
@@ -60,12 +65,11 @@ def main(app_dir: str) -> int:
           "StoreKit test configuration is not shipped in the app")
 
     # 2. Info.plist and entitlements.
-    info = plistlib.loads((app / "Oware" / "Info.plist").read_bytes())
+    info = plistlib.loads((src / "Info.plist").read_bytes())
     check(info.get("ITSAppUsesNonExemptEncryption") is False, "Export compliance answered (ITSAppUsesNonExemptEncryption = NO)")
     usage_keys = [k for k in info if k.endswith("UsageDescription")]
     check(all(str(info[k]).strip() for k in usage_keys), "Every permission prompt has a description")
-    ent_path = app / "Oware" / "Oware.entitlements"
-    if ent_path.exists():
+    for ent_path in src.glob("*.entitlements"):
         ents = set(plistlib.loads(ent_path.read_bytes()))
         allowed = {"com.apple.developer.game-center"}
         check(ents <= allowed, f"Entitlements are only the expected ones ({', '.join(sorted(ents)) or 'none'})")
@@ -73,7 +77,8 @@ def main(app_dir: str) -> int:
     # 3. Version and icon.
     m = re.search(r'MARKETING_VERSION:\s*"([^"]+)"', project)
     check(bool(m and re.fullmatch(r"\d+(\.\d+){1,2}", m.group(1))), f"Version number is valid ({m.group(1) if m else 'missing'})")
-    icons = list((app / "Oware" / "Resources" / "Assets.xcassets" / "AppIcon.appiconset").glob("*.png"))
+    icons = list((src / "Resources" / "Assets.xcassets" / "AppIcon.appiconset").glob("*.png"))
+    check(bool(icons), "The app has an icon")
     for icon in icons:
         head = icon.read_bytes()[:33]
         width, height, _, color_type = struct.unpack(">IIBB", head[16:26])
@@ -105,8 +110,12 @@ def main(app_dir: str) -> int:
     # 5.1.1(i): retention, deletion and withdrawing consent are explained.
     check(bool(re.search(r"\bkeep\b.*\bmonths?\b|retain|retention", privacy, re.I)), "Privacy policy says how long data is kept (5.1.1(i))")
     check(bool(re.search(r"delet", privacy, re.I)), "Privacy policy says how to have data deleted (5.1.1(i))")
-    check(bool(re.search(r"switch(ing)? (it |the setting |the switch )?off|change your answer|turn the switch off", privacy, re.I)),
-          "Privacy policy says how to withdraw consent (5.1.1(i))")
+    if collects_data:   # nothing to consent to (or withdraw) when nothing is collected
+        check(bool(re.search(r"switch(ing)? (it |the setting |the switch )?off|change your answer|turn the switch off", privacy, re.I)),
+              "Privacy policy says how to withdraw consent (5.1.1(i))")
+    else:
+        check(bool(re.search(r"collects no data|does not collect|no data", privacy, re.I)), "Privacy policy says no data is collected")
+        check(not re.search(r"URLSession|NWConnection|TelemetryDeck", code), "No network code, as the policy says")
     # 5.1.1(ii): usage data needs consent, even when anonymous: analytics must default to off.
     if "TelemetryDeck" in project:
         check(not re.search(r'"shareUsageStats"\)\s*as\?\s*Bool\s*\?\?\s*true', code), "Usage stats are off until the player agrees (5.1.1(ii))")

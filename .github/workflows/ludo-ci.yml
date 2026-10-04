@@ -21,6 +21,9 @@ on:
       - .github/workflows/ludo-ci.yml
       - .github/workflows/reusable-swift-package.yml
       - .github/workflows/reusable-ios-app.yml
+      - .github/workflows/reusable-app-readiness.yml
+      - scripts/release_readiness.py
+      - docs/lelu-ludo/**
   push:
     branches: [main]
     paths:
@@ -29,6 +32,9 @@ on:
       - .github/workflows/ludo-ci.yml
       - .github/workflows/reusable-swift-package.yml
       - .github/workflows/reusable-ios-app.yml
+      - .github/workflows/reusable-app-readiness.yml
+      - scripts/release_readiness.py
+      - docs/lelu-ludo/**
 
 permissions:
   contents: read
@@ -38,6 +44,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  readiness:
+    name: Lelu Ludo
+    uses: ./.github/workflows/reusable-app-readiness.yml
+    with:
+      app-dir: apps/lelu-ludo
+
   engine:
     name: LudoEngine
     uses: ./.github/workflows/reusable-swift-package.yml
