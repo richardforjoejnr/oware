@@ -17,6 +17,9 @@
                             <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFill" image="LaunchSplash" translatesAutoresizingMaskIntoConstraints="NO" id="LSi-mg-v01">
                                 <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
                             </imageView>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" image="SplashContent" translatesAutoresizingMaskIntoConstraints="NO" id="LSi-mg-v02">
+                                <rect key="frame" x="24" y="60" width="345" height="732"/>
+                            </imageView>
                         </subviews>
                         <color key="backgroundColor" name="LaunchBackground"/>
                         <constraints>
@@ -24,6 +27,10 @@
                             <constraint firstItem="LSi-mg-v01" firstAttribute="bottom" secondItem="LSv-ie-w01" secondAttribute="bottom" id="LSc-02-bot"/>
                             <constraint firstItem="LSi-mg-v01" firstAttribute="leading" secondItem="LSv-ie-w01" secondAttribute="leading" id="LSc-03-lea"/>
                             <constraint firstItem="LSi-mg-v01" firstAttribute="trailing" secondItem="LSv-ie-w01" secondAttribute="trailing" id="LSc-04-tra"/>
+                            <constraint firstItem="LSi-mg-v02" firstAttribute="top" secondItem="LSv-ie-w01" secondAttribute="top" constant="60" id="LSc-05-top"/>
+                            <constraint firstAttribute="bottom" secondItem="LSi-mg-v02" secondAttribute="bottom" constant="60" id="LSc-06-bot"/>
+                            <constraint firstItem="LSi-mg-v02" firstAttribute="leading" secondItem="LSv-ie-w01" secondAttribute="leading" constant="24" id="LSc-07-lea"/>
+                            <constraint firstAttribute="trailing" secondItem="LSi-mg-v02" secondAttribute="trailing" constant="24" id="LSc-08-tra"/>
                         </constraints>
                     </view>
                 </viewController>
@@ -33,6 +40,7 @@
     </scenes>
     <resources>
         <image name="LaunchSplash" width="1072" height="1920"/>
+        <image name="SplashContent" width="390" height="546"/>
         <namedColor name="LaunchBackground">
             <color red="0.059999999999999998" green="0.040000000000000001" blue="0.029999999999999999" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
         </namedColor>

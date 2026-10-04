@@ -23,6 +23,8 @@ enum Art {
     static let menuTitle = "MenuTitle"
     /// The owner's splash art, full screen; also the launch screen's image (LaunchScreen.storyboard).
     static let launchSplash = "LaunchSplash"
+    /// The splash's title, line and board on nothing, over LaunchSplash at launch and in SplashView.
+    static let splashContent = "SplashContent"
     static let tileStart = "Tile-start"
     static let tileFriends = "Tile-friends"
     static let tileSettings = "Tile-settings"
@@ -33,6 +35,6 @@ enum Art {
 
     static var all: [String] {
         PlayerColor.allCases.map(pawn) + PlayerColor.allCases.map(pawnTop) + (1...6).map(die)
-            + [dieFlag, diceCup, boardPlaque, woodGrain, maple, darkWood, darkWoodAcross, linen, boardBox, menuTitle, launchSplash, tileStart, tileFriends, tileSettings, tileLearn, tileSupport]
+            + [dieFlag, diceCup, boardPlaque, woodGrain, maple, darkWood, darkWoodAcross, linen, boardBox, menuTitle, launchSplash, splashContent, tileStart, tileFriends, tileSettings, tileLearn, tileSupport]
     }
 }
