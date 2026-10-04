@@ -15,7 +15,7 @@ which iPhone or iPad you use and what happened. Screenshots help.
 
 ## Common questions
 
-- **How do I learn the rules?** On the home screen, tap **Learn the game**. There are short lessons
+- **How do I learn the rules?** On the home screen, tap **Learn**. There are short lessons
   on the real board: your yard, moving, kicking, back kicks, walls and the black star 6.
 - **I can't bring a token out.** Only a 6 brings a token out of your yard. In Settings, choose
   **Custom** and turn on **A 1 also brings a token out** if you play it that way.

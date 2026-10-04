@@ -74,9 +74,17 @@ struct GameView: View {
                             .id(session.rolls)
                     }
                 }
-            Spacer(minLength: 0)
+            // The board and its tray belong together: no gap between them, and the pair centred in
+            // the room below the top bar (on a tall phone the sand goes above and below, not between).
             Tray()
+            Spacer(minLength: 0)
         }
+        // On iPad: a game-sized column in the middle, not a tray stretched across the screen.
+        .frame(maxWidth: 720)
+        .frame(maxWidth: .infinity)
+        // Text grows with the reader's setting up to the largest standard size: beyond it, a lesson's
+        // words squeezed the board to a thumbnail and the plaques cut their words short.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Table())

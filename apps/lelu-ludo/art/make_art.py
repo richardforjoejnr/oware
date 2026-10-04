@@ -387,6 +387,27 @@ def splash_content() -> None:
         {"images": [{"idiom": "universal", "filename": "SplashContent.png"}], "info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
 
 
+def knot() -> None:
+    """The four-loop knot (Mpatapo, the knot of reconciliation) carved on the owner's LELU LUDO plaque,
+    cut out as a single colour so the app can tint it: the panels' and switches' ornament, in place
+    of the ⌘ symbol it stood in for (that is Apple's keyboard Command key, not an Adinkra)."""
+    m = np.array(Image.open(SRC / "menu.png").convert("RGB").crop((103, 188, 186, 286))).astype(int)
+    r, g, b = m[..., 0], m[..., 1], m[..., 2]
+    gold = (r > 110) & (r - b > 45)                      # the brass of the carving, not the wood round it
+    labels, n = ndimage.label(gold)
+    if n > 1:                                            # the knot itself: the largest piece of brass
+        sizes = ndimage.sum(gold, labels, range(1, n + 1))
+        gold = labels == (1 + int(np.argmax(sizes)))
+    alpha = Image.fromarray((gold * 255).astype("uint8")).filter(ImageFilter.GaussianBlur(0.6))
+    side = max(alpha.size)
+    square = Image.new("L", (side, side), 0)
+    square.paste(alpha, ((side - alpha.width) // 2, (side - alpha.height) // 2))
+    square = square.resize((120, 120), Image.LANCZOS)
+    white = Image.new("RGBA", square.size, (255, 255, 255, 0))
+    white.putalpha(square)
+    imageset("Knot", white)
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "Contents.json").write_text(json.dumps({"info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
@@ -399,5 +420,6 @@ if __name__ == "__main__":
     menu()
     launch_splash()
     splash_content()
+    knot()
     app_icon()
     print("art written to", OUT)

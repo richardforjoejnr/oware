@@ -33,19 +33,26 @@ struct BoardView: View {
                         .accessibilityHint(t.movable ? (t.kickChoice ? "Double tap to choose a move" : "Double tap to move") : "")
                         .accessibilityIdentifier("token-\(t.color.name.lowercased())-\(t.token)")
                 }
-                // The moves of the selected token, each a marker on the square it would end on.
+                // The moves of the selected token: a brass ring on the square each would end on, and its
+                // label beside it; labels for neighbouring squares are spread so none covers another.
                 if let token = session.selectedToken {
-                    ForEach(Array(session.choices(for: token).enumerated()), id: \.offset) { _, move in
-                        if let end = session.path(for: move).last {
-                            ChoiceMarker(title: Self.title(move), kick: move.kind != .forward && move.kind != .enter)
-                                .position(layout.center(end))
-                                .onTapGesture { Task { await session.play(move) } }
-                                .accessibilityElement()
-                                .accessibilityLabel(Self.title(move))
-                                .accessibilityAddTraits(.isButton)
-                                .accessibilityIdentifier("choice-\(move.kind.rawValue)")
-                                .zIndex(3)
-                        }
+                    let moves = session.choices(for: token).filter { session.path(for: $0).last != nil }
+                    let ends = moves.map { layout.center(session.path(for: $0).last!) }
+                    let labels = ChoiceMarker.spread(ends, titles: moves.map(Self.title), board: side)
+                    ForEach(Array(moves.enumerated()), id: \.offset) { i, move in
+                        Circle().stroke(Palette.brassLight, lineWidth: 2.5)
+                            .frame(width: layout.cell * 0.95, height: layout.cell * 0.95)
+                            .position(ends[i])
+                            .allowsHitTesting(false)
+                            .zIndex(2)
+                        ChoiceMarker(title: Self.title(move), kick: move.kind != .forward && move.kind != .enter)
+                            .position(labels[i])
+                            .onTapGesture { Task { await session.play(move) } }
+                            .accessibilityElement()
+                            .accessibilityLabel(Self.title(move))
+                            .accessibilityAddTraits(.isButton)
+                            .accessibilityIdentifier("choice-\(move.kind.rawValue)")
+                            .zIndex(3)
                     }
                 }
             }
@@ -160,6 +167,31 @@ struct TokenView: View {
 struct ChoiceMarker: View {
     let title: String
     let kick: Bool
+
+    /// About how much room a label takes (its pill is at least 44 × 44).
+    static func size(_ title: String) -> CGSize { CGSize(width: max(44, 18 + CGFloat(title.count) * 7.5), height: 44) }
+
+    /// Where each label goes: on its square, unless that would cover a label already placed; then a row
+    /// up (or down, near the top edge), and again if need be. Pure, so it is tested without a screen.
+    static func spread(_ ends: [CGPoint], titles: [String], board: CGFloat) -> [CGPoint] {
+        var placed: [(CGPoint, CGSize)] = []
+        for (end, title) in zip(ends, titles) {
+            let size = size(title)
+            func clashes(_ p: CGPoint) -> Bool {
+                placed.contains { q, s in abs(q.x - p.x) < (s.width + size.width) / 2 + 4 && abs(q.y - p.y) < (s.height + size.height) / 2 + 4 }
+            }
+            let step = size.height + 6
+            let direction: CGFloat = end.y - step < size.height / 2 ? 1 : -1   // down if there's no room above
+            var p = end
+            var tries = 0
+            while clashes(p), tries < 4 { p.y += direction * step; tries += 1 }
+            // Keep it on the board.
+            p.x = min(max(p.x, size.width / 2), board - size.width / 2)
+            p.y = min(max(p.y, size.height / 2), board - size.height / 2)
+            placed.append((p, size))
+        }
+        return placed.map(\.0)
+    }
 
     var body: some View {
         Text(title)

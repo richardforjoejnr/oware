@@ -32,7 +32,7 @@ struct Lesson: Sendable {
 
         var summary: String {
             switch self {
-            case .board: "Move your tokens from home to the centre star."
+            case .board: "Move your tokens from your yard to the centre star."
             case .moving: "Roll, bring tokens out, race around the board, and kick opponents."
             case .ghanaRules: "Kicks, walls, extra rolls, and the black star 6."
             }

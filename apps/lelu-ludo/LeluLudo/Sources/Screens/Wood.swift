@@ -110,14 +110,20 @@ struct WoodCircleButton: View {
     }
 }
 
-/// The knot carved on the board box (the four-loop motif), drawn as a brass glyph.
+/// The four-loop knot carved on the owner's LELU LUDO plaque (Mpatapo, the knot of reconciliation),
+/// cut from that art and set in brass. Not the ⌘ symbol it once stood in for: that is Apple's
+/// keyboard Command key, not an Adinkra.
 struct KnotGlyph: View {
     var size: CGFloat = 18
+    var color: Color = Palette.brassLight
 
     var body: some View {
-        Image(systemName: "command")
-            .font(.system(size: size, weight: .semibold))
-            .foregroundStyle(Palette.brassLight)
+        Image(Art.knot)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size * 1.15, height: size * 1.15)
+            .foregroundStyle(color)
             .accessibilityHidden(true)
     }
 }
@@ -434,7 +440,7 @@ struct KnotToggleStyle: ToggleStyle {
                         Circle().fill(RadialGradient(colors: [Palette.brassLight, Palette.brass, Palette.brassDark],
                                                      center: .init(x: 0.35, y: 0.3), startRadius: 0, endRadius: 20))
                         Circle().stroke(Palette.brassDark, lineWidth: 1)
-                        Image(systemName: "command").font(.system(size: 12, weight: .bold)).foregroundStyle(Palette.brassDark)
+                        KnotGlyph(size: 13, color: Palette.brassDark)
                     }
                     .frame(width: 30, height: 30)
                     .shadow(color: .black.opacity(0.45), radius: 2, y: 1)

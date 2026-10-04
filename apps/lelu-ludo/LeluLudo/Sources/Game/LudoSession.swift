@@ -392,7 +392,7 @@ final class LudoSession {
                 case .homeKick: "home-kicked"
                 default: "kicked"
                 }
-                line = "\(name(by)) \(verb) \(whose(color)) token home"
+                line = "\(name(by)) \(verb) \(whose(color)) token back to its yard"
             case let .reachedHome(color, _): line = "\(name(color)) brought a token home"
             case let .threeSixes(color): line = "Three sixes: \(whose(color)) turn is undone"
             case let .passed(color): line = "\(name(color)) \(name(color) == "You" ? "have" : "has") no move"

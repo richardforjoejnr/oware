@@ -30,7 +30,6 @@ struct HomeView: View {
                 // The owner's layout: the board in its box first, the tiles below it.
                 Image(Art.boardBox)
                     .resizable().scaledToFit()
-                    .frame(maxHeight: 300)
                     .shadow(color: .black.opacity(0.35), radius: 12, y: 10)
                     .accessibilityHidden(true)
 
@@ -70,6 +69,11 @@ struct HomeView: View {
                 .woodPanel(corner: 8)
                 .padding(.bottom, 24)
             }
+            // One column, centred: on iPad the board box grows with it and the tiles and panels keep a
+            // sensible width instead of running edge to edge.
+            .frame(maxWidth: 600)
+            .frame(maxWidth: .infinity)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)   // the rules switch's words fit (as in GameView)
             .padding(.horizontal, 14)
         }
         .background(Table())

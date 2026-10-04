@@ -113,3 +113,37 @@ final class DeviceFeedbackTests: XCTestCase {
         for f in all { player.play(f) }
     }
 }
+
+/// The labels of a token's moves never cover one another, and stay on the board (the screenshot run
+/// found "Side kick" covering "Move 5" on the next square).
+@MainActor
+final class ChoiceMarkerTests: XCTestCase {
+    private func overlap(_ a: CGPoint, _ at: String, _ b: CGPoint, _ bt: String) -> Bool {
+        let sa = ChoiceMarker.size(at), sb = ChoiceMarker.size(bt)
+        return abs(a.x - b.x) < (sa.width + sb.width) / 2 && abs(a.y - b.y) < (sa.height + sb.height) / 2
+    }
+
+    func testNeighbouringLabelsAreSpreadApart() {
+        let titles = ["Back kick", "Side kick", "Move 5"]
+        let ends = [CGPoint(x: 150, y: 150), CGPoint(x: 170, y: 150), CGPoint(x: 190, y: 150)]   // three squares in a row
+        let placed = ChoiceMarker.spread(ends, titles: titles, board: 300)
+        for i in 0..<3 { for j in (i + 1)..<3 {
+            XCTAssertFalse(overlap(placed[i], titles[i], placed[j], titles[j]), "\(titles[i]) covers \(titles[j])")
+        } }
+        XCTAssertEqual(placed[0], ends[0], "the first stays on its square")
+    }
+
+    func testFarApartLabelsStayOnTheirSquares() {
+        let ends = [CGPoint(x: 60, y: 60), CGPoint(x: 220, y: 220)]   // well inside the board: no edge nudge
+        XCTAssertEqual(ChoiceMarker.spread(ends, titles: ["Move 4", "Back kick"], board: 300), ends)
+    }
+
+    func testLabelsStayOnTheBoardEvenAtItsEdges() {
+        let ends = [CGPoint(x: 5, y: 5), CGPoint(x: 15, y: 5), CGPoint(x: 295, y: 295)]
+        let titles = ["Back kick", "Move 5", "Home kick"]
+        for (p, t) in zip(ChoiceMarker.spread(ends, titles: titles, board: 300), titles) {
+            let s = ChoiceMarker.size(t)
+            XCTAssertTrue(p.x - s.width / 2 >= 0 && p.x + s.width / 2 <= 300 && p.y - s.height / 2 >= 0 && p.y + s.height / 2 <= 300, "\(t) at \(p)")
+        }
+    }
+}

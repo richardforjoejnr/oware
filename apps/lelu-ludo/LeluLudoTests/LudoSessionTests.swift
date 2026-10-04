@@ -120,7 +120,7 @@ final class MoveChoiceTests: XCTestCase {
         await s.play(try XCTUnwrap(s.choices(for: 0).first { $0.kind == .backKick }))
         XCTAssertEqual(s.state.tokens(of: .black)[0], -1, "kicked home")
         XCTAssertNil(s.selectedToken)
-        XCTAssertTrue(s.log.contains("Red back-kicked Black's token home"), "pass & play names colours: \(s.log)")
+        XCTAssertTrue(s.log.contains("Red back-kicked Black's token back to its yard"), "pass & play names colours: \(s.log)")
     }
 
     func testATokenWithOneMovePlaysAtOnce() async {
@@ -138,7 +138,7 @@ final class MoveChoiceTests: XCTestCase {
         let s = session(state, seats: [.red: .human, .black: .computer(.intermediate)], dice: [3, 1])
         await s.runComputerTurns()
         XCTAssertEqual(s.state.tokens(of: .red)[0], -1)
-        XCTAssertTrue(s.log.contains("Black kicked your token home"), "\(s.log)")
+        XCTAssertTrue(s.log.contains("Black kicked your token back to its yard"), "\(s.log)")
     }
 
     func testThreeSixesAreAnnounced() async {
