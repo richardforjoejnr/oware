@@ -2,6 +2,9 @@
 # One-time setup for automatic TestFlight and App Store uploads from GitHub Actions.
 #
 # Run it yourself in Terminal from the repo root:  ./scripts/setup-signing.sh
+# For another app (e.g. Lelu Ludo) once Lelu Oware is set up:  ./scripts/setup-signing.sh --app=lelu-ludo
+#   That only creates the app's own App Store profile in the same certificates repo, with the same
+#   certificate and passphrase. The GitHub secrets are shared, so they are left as they are.
 # It asks for each value privately, creates the private certificates repo if needed, stores the
 # App Store certificate there with fastlane match, adds every secret to GitHub, and finally turns
 # SIGNING_READY on. No secret is written to this repo or printed back.
@@ -13,12 +16,17 @@ set -euo pipefail
 REPO="richardforjoejnr/oware"
 CERTS_REPO="richardforjoejnr/oware-certificates"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+APP="lelu-oware"
+for arg in "$@"; do case "$arg" in --app=*) APP="${arg#--app=}" ;; *) echo "Unknown option: $arg"; exit 1 ;; esac; done
+[ -f "$ROOT/apps/$APP/fastlane/Fastfile" ] || { echo "No fastlane setup in apps/$APP"; exit 1; }
+# Lelu Oware's run sets everything up; any other app only adds its profile.
+PROFILE_ONLY=false; [ "$APP" != "lelu-oware" ] && PROFILE_ONLY=true
 export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 
 ruby -e 'exit(RUBY_VERSION >= "3.0" ? 0 : 1)' || { echo "Needs Ruby 3: brew install ruby"; exit 1; }
 command -v gh >/dev/null || { echo "Needs the GitHub CLI: brew install gh"; exit 1; }
 
-echo "Lelu Oware — signing setup. Values you type after a colon are not shown or saved."
+echo "$APP — signing setup. Values you type after a colon are not shown or saved."
 read -rp "Apple Team ID [${DEVELOPMENT_TEAM:-}]: " TEAM; TEAM="${TEAM:-${DEVELOPMENT_TEAM:-}}"
 read -rp "App Store Connect API Key ID: " ASC_KEY_ID
 read -rp "App Store Connect Issuer ID: " ASC_ISSUER_ID
@@ -46,10 +54,15 @@ echo "It is used once here and never saved; you can revoke it afterwards."
 read -rp "Admin Key ID for the certificate step (press Return to use the same key): " ADMIN_KEY_ID
 if [ -n "$ADMIN_KEY_ID" ]; then ADMIN_P8="$(find_p8 "$ADMIN_KEY_ID")"; else ADMIN_KEY_ID="$ASC_KEY_ID"; ADMIN_P8="$P8"; fi
 echo "GitHub fine-grained token with Contents: read and write on $CERTS_REPO only."
+if $PROFILE_ONLY; then echo "(Press Return to use your GitHub CLI login instead.)"; fi
 read -rsp "Token: " PAT; echo
+if [ -z "$PAT" ] && $PROFILE_ONLY; then PAT="$(gh auth token)"; fi
 echo "Passphrase for the certificates. If $CERTS_REPO already has files, it must be the SAME one as before."
 read -rsp "Passphrase (keep it in your password manager): " MATCH_PASSWORD; echo
 
+if $PROFILE_ONLY && ! gh repo view "$CERTS_REPO" >/dev/null 2>&1; then
+  echo "$CERTS_REPO doesn't exist yet: run ./scripts/setup-signing.sh (Lelu Oware) first."; exit 1
+fi
 if ! gh repo view "$CERTS_REPO" >/dev/null 2>&1; then
   echo "Creating the private repo $CERTS_REPO…"
   gh repo create "$CERTS_REPO" --private --description "Encrypted signing certificates (fastlane match)"
@@ -62,8 +75,14 @@ export MATCH_GIT_BASIC_AUTHORIZATION="$(printf '%s' "richardforjoejnr:$PAT" | ba
 
 echo "Creating and storing the App Store certificate and profile, using key $ADMIN_KEY_ID (must have Admin access)…"
 (cd "$ROOT" && bundle config set --local path vendor/bundle >/dev/null && bundle install --quiet)
-(cd "$ROOT/apps/lelu-oware" && ASC_KEY_ID="$ADMIN_KEY_ID" ASC_KEY_CONTENT="$(base64 -i "$ADMIN_P8" | tr -d '\n')" \
+(cd "$ROOT/apps/$APP" && ASC_KEY_ID="$ADMIN_KEY_ID" ASC_KEY_CONTENT="$(base64 -i "$ADMIN_P8" | tr -d '\n')" \
   BUNDLE_GEMFILE="$ROOT/Gemfile" bundle exec fastlane ios setup_signing)
+
+if $PROFILE_ONLY; then
+  [ "$ADMIN_KEY_ID" != "$ASC_KEY_ID" ] && echo "You can now revoke the Admin key $ADMIN_KEY_ID in App Store Connect."
+  echo "Done: $APP's App Store profile is in $CERTS_REPO. Re-run its TestFlight workflow (Actions tab) to upload."
+  exit 0
+fi
 
 echo "Adding the secrets to GitHub…"
 gh secret set DEVELOPMENT_TEAM -R "$REPO" --body "$DEVELOPMENT_TEAM"

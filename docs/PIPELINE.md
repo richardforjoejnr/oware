@@ -124,23 +124,16 @@ One-time steps:
 
 1. ~~Register the bundle ID `com.richardforjoe.leluludo`~~ (done).
 2. ~~Create the App Store Connect app record for it~~ (done).
-3. **Add Lelu Ludo's profile to match, once, from your Mac.** It reuses the existing distribution
-   certificate and only creates the profile. Use the same passphrase as before:
+3. **Add Lelu Ludo's profile to match, once, from your Mac** (the first TestFlight run fails with "No
+   matching provisioning profiles found for 'AppStore_com.richardforjoe.leluludo'" until this is done):
    ```bash
-   cd apps/lelu-ludo
-   export MATCH_GIT_URL=https://github.com/richardforjoejnr/oware-certificates
-   export MATCH_PASSWORD='the passphrase from step A5'
-   export DEVELOPMENT_TEAM=XXXXXXXXXX
-   export ASC_KEY_ID=... ASC_ISSUER_ID=... ASC_KEY_CONTENT="$(base64 -i AuthKey_XXXX.p8 | tr -d '\n')"
-   # Only if git cannot already clone the private repo over https:
-   export MATCH_GIT_BASIC_AUTHORIZATION="$(printf '%s' 'richardforjoejnr:<fine-grained-PAT>' | base64 | tr -d '\n')"
-   BUNDLE_GEMFILE=../../Gemfile bundle exec fastlane ios setup_signing
+   ./scripts/setup-signing.sh --app=lelu-ludo
    ```
-   (This is `fastlane match appstore --readonly false` for `com.richardforjoe.leluludo`;
-   `BUNDLE_GEMFILE=../../Gemfile bundle exec fastlane match appstore --readonly false` from the same
-   folder does the same thing with `apps/lelu-ludo/fastlane/Matchfile`.) If Apple refuses to create the
-   profile with the App Manager key, use the Admin key (`match-setup`) for this one command.
-   `scripts/setup-signing.sh` is Lelu Oware's and does not do this step.
+   It asks for the same values as Lelu Oware's setup (Team ID, App Store Connect key, the match
+   passphrase; Return uses your GitHub CLI login for the certificates repo) and only creates Lelu
+   Ludo's App Store profile, with the same certificate. The GitHub secrets are shared and left as
+   they are. If Apple refuses to create the profile with the App Manager key, give an Admin key at
+   its prompt. Then re-run **TestFlight (Lelu Ludo)** from the Actions tab.
 4. **TestFlight internal testing:** after the first build, App Store Connect ▸ Lelu Ludo ▸ TestFlight ▸
    Internal Testing ▸ add a group with yourself (groups are per app, so Lelu Oware's does not carry over).
 5. Merge a change to Lelu Ludo, or run **TestFlight (Lelu Ludo)** by hand from the Actions tab.
