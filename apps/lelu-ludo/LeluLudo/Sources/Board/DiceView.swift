@@ -22,6 +22,10 @@ struct DiceView: View {
                         .resizable().scaledToFit()
                         .frame(width: 70, height: 70)
                         .shadow(color: .black.opacity(0.45), radius: 3, y: 2)
+                        // The roll as a number: a 3D die shows three faces, so say which counts.
+                        .overlay(alignment: .topTrailing) {
+                            if let value { RollBadge(value: value).offset(x: 8, y: -8) }
+                        }
                         .id(value.map { "\($0)-\(shakes)" } ?? "flag")
                         .transition(.scale(scale: 0.6).combined(with: .opacity))
                     Capsule().fill(session.lastRoll.map { Palette.color($0.color) } ?? .clear)
@@ -102,5 +106,29 @@ struct Pips: View {
                 }
             }
         }
+    }
+}
+
+/// The roll as a number on a brass disc; the 6 also carries the black star.
+struct RollBadge: View {
+    let value: Int
+    var size: CGFloat = 30
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(RadialGradient(colors: [Color(red: 0.98, green: 0.86, blue: 0.52), Palette.brass],
+                                     center: .init(x: 0.35, y: 0.3), startRadius: 0, endRadius: size * 0.6))
+                .overlay(Circle().stroke(Palette.night.opacity(0.6), lineWidth: 1))
+                .shadow(color: .black.opacity(0.4), radius: 2, y: 1)
+            if value == 6 {
+                Image(systemName: "star.fill").font(.system(size: size * 0.78)).foregroundStyle(.black.opacity(0.18))
+            }
+            Text("\(value)")
+                .font(.system(size: size * 0.6, weight: .heavy, design: .serif))
+                .foregroundStyle(Palette.night)
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
     }
 }

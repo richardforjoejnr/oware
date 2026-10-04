@@ -138,6 +138,23 @@ final class LudoSession {
         return nil
     }
 
+    /// The line at the top of the game: whose turn, and the roll in words (the 3D die shows several
+    /// faces, so the roll is always said as a number too).
+    var status: String {
+        let s = state
+        if let w = s.winner { return name(w) == "You" ? "You win!" : "\(name(w)) wins" }
+        let mover = name(s.toMove)
+        let rolled = lastRoll.flatMap { $0.color == s.toMove ? $0.value : nil }
+        if isComputerPlaying {
+            if let rolled, s.pendingRoll != nil || motion != nil { return "\(mover) rolled \(rolled)" }
+            return "\(mover) is playing…"
+        }
+        if let rolled, s.pendingRoll != nil {
+            return "\(mover) rolled \(rolled) · " + (selectedToken != nil ? "choose a move" : "choose a token")
+        }
+        return mover == "You" ? "Your roll" : "\(mover) to roll"
+    }
+
     /// Changes every computer opponent's level, mid-game; the game carries on from where it is.
     func changeLevel(to level: LudoAIDifficulty) {
         guard computerLevel != nil else { return }

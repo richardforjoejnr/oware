@@ -13,6 +13,8 @@ struct RollingDie: View {
         var spin: Double = 0
         var scale: CGFloat = 0.7
         var opacity: Double = 1
+        /// The roll's number, shown once the die has landed.
+        var badge: Double = 0
     }
 
     var body: some View {
@@ -27,6 +29,12 @@ struct RollingDie: View {
                     .rotationEffect(.degrees(pose.spin))
                     .shadow(color: .black.opacity(0.45), radius: 6, x: 3, y: 6)
                     .scaleEffect(pose.scale)
+                    .overlay(alignment: .top) {
+                        RollBadge(value: value, size: side * 0.11)
+                            .scaleEffect(pose.badge)
+                            .opacity(min(1, pose.badge))
+                            .offset(y: -side * 0.1)
+                    }
                     .opacity(pose.opacity)
                     .position(x: pose.x * side, y: pose.y * side)
             } keyframes: { _ in
@@ -46,12 +54,17 @@ struct RollingDie: View {
                 KeyframeTrack(\.scale) {
                     CubicKeyframe(1.25, duration: 0.2)   // in the air
                     CubicKeyframe(1, duration: 0.3)
-                    LinearKeyframe(1, duration: 0.45)
-                    CubicKeyframe(0.6, duration: 0.2)
+                    LinearKeyframe(1, duration: 0.75)
+                    CubicKeyframe(0.6, duration: 0.25)
+                }
+                KeyframeTrack(\.badge) {
+                    LinearKeyframe(0, duration: 0.6)
+                    SpringKeyframe(1.15, duration: 0.15)
+                    SpringKeyframe(1, duration: 0.2)
                 }
                 KeyframeTrack(\.opacity) {
-                    LinearKeyframe(1, duration: 0.95)
-                    LinearKeyframe(0, duration: 0.2)
+                    LinearKeyframe(1, duration: 1.25)
+                    LinearKeyframe(0, duration: 0.25)
                 }
             }
         }

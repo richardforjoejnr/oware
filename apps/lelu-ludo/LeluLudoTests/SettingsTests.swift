@@ -135,3 +135,23 @@ final class LevelTests: XCTestCase {
         XCTAssertEqual(s.rolls, 2)
     }
 }
+
+/// The roll said in words at the top: the 3D die shows several faces at once.
+@MainActor
+final class StatusTests: XCTestCase {
+    func testTheRollIsSaidAsANumber() async {
+        let s = TestSupport.session(dice: [6, 4])
+        s.newGame(.passAndPlay(players: 2, rules: .ghanaClassic))
+        XCTAssertEqual(s.status, "Red to roll")
+        await s.roll()
+        XCTAssertEqual(s.status, "Red rolled 6 · choose a token")
+    }
+
+    func testYourRollThenYouRolled() async {
+        let s = TestSupport.session(dice: [6])
+        s.newGame(.versusComputer(opponents: 1, level: .novice, rules: .ghanaClassic))
+        XCTAssertEqual(s.status, "Your roll")
+        await s.roll()
+        XCTAssertEqual(s.status, "You rolled 6 · choose a token")
+    }
+}

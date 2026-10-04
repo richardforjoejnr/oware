@@ -16,7 +16,7 @@ struct GameView: View {
                 WoodCircleButton(systemImage: "chevron.left", action: goHome)
                     .accessibilityLabel("Home")
                     .accessibilityIdentifier("btn-home")
-                StatusPlaque(status: status, line: session.log.last)
+                StatusPlaque(status: session.status, line: session.log.last)
                 if let level = session.computerLevel {
                     // As in Lelu Oware: the opponents' level, tap to change it for this game.
                     Button { withAnimation(.easeInOut(duration: 0.2)) { showLevels.toggle() } } label: {
@@ -76,17 +76,6 @@ struct GameView: View {
         .onChange(of: session.log) { _, log in
             if let line = log.last { AccessibilityNotification.Announcement(line).post() }
         }
-    }
-
-    private func name(_ color: PlayerColor) -> String { session.name(color) }
-
-    private var status: String {
-        let s = session.state
-        if let w = s.winner { return name(w) == "You" ? "You win!" : "\(name(w)) wins" }
-        if session.isComputerPlaying { return "\(name(s.toMove)) is playing…" }
-        if session.selectedToken != nil { return "Choose a move" }
-        if s.pendingRoll != nil { return name(s.toMove) == "You" ? "Choose a token" : "\(name(s.toMove)): choose a token" }
-        return name(s.toMove) == "You" ? "Your roll" : "\(name(s.toMove)) to roll"
     }
 }
 
