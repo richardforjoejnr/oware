@@ -1,6 +1,7 @@
 # Lelu Ludo — status and hand-off
 
-> For a new session: read this, then [GAME_PLAN.md](GAME_PLAN.md). Work goes in stages; finish one
+> For a new session: read this, then [GAME_PLAN.md](GAME_PLAN.md). Latest hand-off:
+> [HANDOFF-2026-10-04.md](HANDOFF-2026-10-04.md) (dice, menus, Learn the game, launch screen, TestFlight). Work goes in stages; finish one
 > (tests, implement, test, improve) before starting the next.
 
 ## Now (2026-10-03)
