@@ -1,10 +1,19 @@
 import LudoEngine
+import SupportKit
 import SwiftUI
+
+/// Tips (owner, 2026-10-04): three consumable in-app purchases, made in App Store Connect. They unlock
+/// nothing. Tested against LeluLudo/Resources/Tips.storekit (Xcode runs and tests only).
+enum Tips {
+    static let productIDs = ["com.richardforjoe.leluludo.tip.small", "com.richardforjoe.leluludo.tip.medium",
+                             "com.richardforjoe.leluludo.tip.large"]
+}
 
 @main
 struct LeluLudoApp: App {
     @State private var session: LudoSession
     @State private var settings: AppSettings
+    @State private var tipJar = TipJar(productIDs: Tips.productIDs)
 
     init() {
         if LaunchOptions.resetState {
@@ -29,6 +38,7 @@ struct LeluLudoApp: App {
             RootView()
                 .environment(session)
                 .environment(settings)
+                .environment(tipJar)
                 .preferredColorScheme(.dark)
         }
         // Off the screen, computers wait and the audio engine stops (battery).

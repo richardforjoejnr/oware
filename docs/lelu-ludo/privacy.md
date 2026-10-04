@@ -4,7 +4,7 @@ title: Lelu Ludo — Privacy Policy
 
 # Lelu Ludo — Privacy Policy
 
-_Last updated: 4 October 2026_
+_Last updated: 4 October 2026 (tips added)_
 
 Lelu Ludo is a game of Ludo as it is played in Ghana, for iPhone and iPad. You can play the
 computer, play friends on the same device, or learn the game with a short lesson.
@@ -13,7 +13,10 @@ computer, play friends on the same device, or learn the game with a short lesson
 
 - **Lelu Ludo collects no data.** It has no account or sign-in, no advertising and no analytics. It
   does not track you across apps or websites.
-- The app does not connect to the internet. Your game and settings stay on your device.
+- The app does not connect to the internet, except to show the optional tips. Your game and settings
+  stay on your device.
+- **Tips are optional and unlock nothing.** They are paid through Apple's App Store. We never see
+  your payment details; Apple handles them under [Apple's privacy policy](https://www.apple.com/legal/privacy/).
 
 ## What stays on your device
 

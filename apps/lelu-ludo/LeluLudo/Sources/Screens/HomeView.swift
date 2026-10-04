@@ -10,6 +10,7 @@ struct HomeView: View {
     @Environment(AppSettings.self) private var settings
     let startGame: () -> Void
     @State private var open: Panel?
+    @State private var showTipJar = false
     @State private var computer = ComputerSeating()
     @State private var friends = FriendsSeating()
     @State private var level: LudoAIDifficulty = .novice
@@ -58,6 +59,16 @@ struct HomeView: View {
                     }
                 }
 
+                // The Support tile (owner's art): the tip jar.
+                Button { showTipJar = true } label: {
+                    Image(Art.tileSupport).resizable().scaledToFit()
+                        .shadow(color: .black.opacity(0.35), radius: 4, y: 3)
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: 120)
+                .accessibilityLabel("Support me. A tip; it unlocks nothing")
+                .accessibilityIdentifier("tile-support")
+
                 HStack(spacing: 12) {
                     KnotGlyph(size: 16)
                     Text("\(settings.preset.title) rules")
@@ -77,6 +88,7 @@ struct HomeView: View {
             .padding(.horizontal, 14)
         }
         .background(Table())
+        .sheet(isPresented: $showTipJar) { LudoTipJar() }
     }
 
     /// You against 1–3 computers: your colour (the computers take the rest), how many, how strong.

@@ -6,7 +6,7 @@ counts the same way). Checked against the app on `feat/lelu-ludo-menus-learn` (5
 4 October 2026: nothing below claims more than the code does. Owner to review the wording.
 
 Things the copy deliberately does **not** say, because 1.0 doesn't do them: online play, Game Center
-(leaderboards, achievements), tips or any in-app purchase, iCloud sync, music. Side kicks and home
+(leaderboards, achievements), iCloud sync, music. (Optional tips were added after this draft: see below.) Side kicks and home
 kicks are in Ghana Classic but have no lesson of their own yet (the seven lessons cover the yard,
 home, moving, kicking, back kick, walls and the black star 6), so the copy says the lessons teach
 "the basics and the Ghana rules", not every kick. If any of this changes before submission, change
@@ -76,7 +76,7 @@ MADE TO FEEL LIKE A REAL BOARD
 A board in red, gold, green and black, set in a dark wooden box with brass corners. Turned-wood pawns, beech dice and a carved dice cup you tap to roll. Soft sounds for every roll, step and kick, and gentle haptics, both easy to turn off.
 
 THE SMALL PRINT
-- Free, with no ads and no account.
+- Free, with no ads and no account. Optional tips, if you want to say thank you: they unlock nothing.
 - Collects no data: no analytics, no tracking.
 - Works offline. Your game is saved on your device, so you can close the app and carry on later.
 - For iPhone and iPad.
@@ -146,7 +146,7 @@ Expected rating: **4+**. Answer every content question **None** and every capabi
 - **Notes** (paste):
 
 ```
-Lelu Ludo is Ludo as it is played in Ghana. No login is needed, and there are no in-app purchases.
+Lelu Ludo is Ludo as it is played in Ghana. No login is needed. The only in-app purchases are three optional tips (Support tile on the menu, or Settings ▸ About ▸ Support me); they are consumable and unlock nothing.
 
 WHAT MAKES IT DIFFERENT (guideline 4.3(b))
 Most Ludo apps play the standard printed rules. Lelu Ludo plays the Ghanaian house rules, built and tested from the ground up: back kicks (kicking an opponent behind you), forward and back side kicks across a home lane, home kicks into an opponent's home lane, walls of two tokens that nobody can pass, and the die's 6 shown as Ghana's black star. When a token has more than one possible move, the board marks each one (Move 4, Back kick, Side kick) and the player chooses. It also has a seven-lesson tutorial on the real board, computer opponents at four levels (Novice to Grandmaster), pass and play for 2 to 4 people, and art and sounds made for this app, in Ghana's flag colours on a wooden board. The rules engine is our own, with an independent second implementation in the tests that must agree on every move.
@@ -156,7 +156,7 @@ Home screen ▸ Learn (the book tile) ▸ "Special Ghana rules". Three short les
 To play a full game: Start Game ▸ choose opponents and a level ▸ Play. The rules are chosen in Settings (Ghana Classic by default; Classic and Custom are the others).
 
 PRIVACY AND NETWORK
-The app collects no data and makes no network requests: no analytics, no ads, no tracking, no third-party code. The game and settings are stored on the device only. The only links are to our privacy policy and support pages (Settings ▸ About), which open in Safari. Online play and Game Center are not in this version.
+The app collects no data: no analytics, no ads, no tracking, no third-party code. Its only network use is Apple's StoreKit, to show and buy the optional tips. The game and settings are stored on the device only. The only links are to our privacy policy and support pages (Settings ▸ About), which open in Safari. Online play and Game Center are not in this version.
 ```
 1,701 characters (App Store Connect allows 4,000).
 

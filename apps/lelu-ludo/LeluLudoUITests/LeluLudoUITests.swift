@@ -158,6 +158,22 @@ final class LeluLudoUITests: XCTestCase {
         waitForExpectations(timeout: 20)
     }
 
+    /// The Support tile opens the tip jar.
+    @MainActor
+    func testTheSupportTileOpensTheTipJar() throws {
+        let app = launch([])
+        let support = app.buttons["tile-support"]
+        XCTAssertTrue(support.waitForExistence(timeout: 20))
+        for _ in 0..<4 where !support.isHittable { app.swipeUp() }
+        support.tap()
+        XCTAssertTrue(app.staticTexts["tip-jar-title"].waitForExistence(timeout: 15))
+        // The tips themselves come from the App Store. A command-line test run often doesn't load the
+        // local test store, so the jar shows its status line instead; buying is tested in SupportKit's
+        // own tests (StoreKitTest), as for Lelu Oware.
+        let loaded = app.buttons["tip-0"].waitForExistence(timeout: 10)
+        XCTAssertTrue(loaded || app.staticTexts["tip-jar-status"].exists, "the jar shows its tips or why not")
+    }
+
     @MainActor
     func testPassAndPlayFromTheMenu() throws {
         let app = launch(["--dice=3"])

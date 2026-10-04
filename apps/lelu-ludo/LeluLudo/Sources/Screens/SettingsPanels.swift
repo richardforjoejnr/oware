@@ -5,6 +5,7 @@ import SwiftUI
 /// or your own switches), sound and haptics, in carved cards.
 struct SettingsPanels: View {
     @Environment(AppSettings.self) private var settings
+    @State private var showTipJar = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -72,10 +73,26 @@ struct SettingsPanels: View {
             WoodCard(title: "About") {
                 VStack(alignment: .leading, spacing: 0) {
                     WoodRow { linkRow("Privacy policy", systemImage: "hand.raised", url: Links.privacy, id: "link-privacy") }
-                    WoodRow(divider: false) { linkRow("Help and support", systemImage: "questionmark.circle", url: Links.support, id: "link-support") }
+                    WoodRow { linkRow("Help and support", systemImage: "questionmark.circle", url: Links.support, id: "link-support") }
+                    WoodRow(divider: false) {
+                        Button { showTipJar = true } label: {
+                            HStack {
+                                Label("Support me", systemImage: "heart")
+                                    .font(.system(.body, design: .serif).weight(.medium))
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold))
+                            }
+                            .foregroundStyle(Palette.ivory)
+                            .frame(minHeight: 44)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("btn-tip-jar")
+                    }
                 }
             }
         }
+        .sheet(isPresented: $showTipJar) { LudoTipJar() }
     }
 
     /// A web page from the settings: opens in the browser.
