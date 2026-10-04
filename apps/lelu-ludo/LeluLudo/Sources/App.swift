@@ -22,6 +22,8 @@ struct LeluLudoApp: App {
         _session = State(initialValue: session)
     }
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -29,6 +31,8 @@ struct LeluLudoApp: App {
                 .environment(settings)
                 .preferredColorScheme(.dark)
         }
+        // Off the screen, computers wait and the audio engine stops (battery).
+        .onChange(of: scenePhase) { _, phase in session.setOnScreen(phase == .active) }
     }
 }
 

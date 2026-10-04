@@ -341,6 +341,32 @@ final class LudoSession {
         }
     }
 
+    // MARK: On and off the screen
+
+    /// Whether the app is on the screen. Off it, computers wait rather than play on unseen (and
+    /// keep the app busy in the background); they carry on where they were when it comes back.
+    @ObservationIgnored private(set) var isOnScreen = true
+    @ObservationIgnored private var waitingForScreen: [CheckedContinuation<Void, Never>] = []
+
+    /// The scene became active (true) or went inactive or to the background (false).
+    func setOnScreen(_ on: Bool) {
+        guard on != isOnScreen else { return }
+        isOnScreen = on
+        if on {
+            let waiting = waitingForScreen
+            waitingForScreen = []
+            for w in waiting { w.resume() }
+        } else {
+            feedback?.suspend()
+        }
+    }
+
+    private func untilOnScreen() async {
+        while !isOnScreen {
+            await withCheckedContinuation { waitingForScreen.append($0) }
+        }
+    }
+
     /// Lets computer seats play until it is a person's turn or the game is over.
     func runComputerTurns() async {
         guard !isComputerPlaying else { return }
@@ -352,6 +378,7 @@ final class LudoSession {
         // in between, and this loop must not roll or move for them.
         while game == generation, !state.isOver, case let .computer(level) = setup.seat(state.toMove) {
             if pacing.computer > .zero { try? await Task.sleep(for: pacing.computer) }
+            await untilOnScreen()
             guard game == generation, !state.isOver, case .computer = setup.seat(state.toMove) else { return }
             if state.pendingRoll == nil {
                 rollDie()

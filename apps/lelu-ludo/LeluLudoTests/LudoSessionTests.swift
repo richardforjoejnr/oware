@@ -87,6 +87,33 @@ final class LudoSessionTests: XCTestCase {
         XCTAssertNil(ScriptedDice.parse("--dice=6,9"), "faces are 1…6")
         XCTAssertNil(ScriptedDice.parse("--other"))
     }
+
+    func testComputersWaitWhileTheAppIsOffTheScreen() async {
+        // You roll a 3 (nothing out: passed); the computer's turn waits until the app is back.
+        let s = TestSupport.session(dice: [3, 2, 5])
+        s.newGame(youVsComputer)
+        s.setOnScreen(false)
+        let turn = Task { await s.roll() }
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(s.state.toMove, .black, "the computer has not played off the screen")
+        XCTAssertNil(s.state.pendingRoll)
+        XCTAssertTrue(s.isComputerPlaying)
+        s.setOnScreen(true)
+        await turn.value
+        XCTAssertEqual(s.state.toMove, .red, "back on the screen, the computer played its turn")
+        XCTAssertEqual(s.lastRoll?.color, .black)
+        XCTAssertTrue(s.canRoll)
+    }
+
+    func testLeavingTheScreenSilencesTheFeedback() {
+        let feedback = RecordingFeedback()
+        let s = LudoSession(store: TestSupport.store(), dice: ScriptedDice([3]), feedback: feedback)
+        s.setOnScreen(false)
+        s.setOnScreen(false)
+        XCTAssertEqual(feedback.suspensions, 1, "once per time off the screen")
+        s.setOnScreen(true)
+        XCTAssertEqual(feedback.suspensions, 1)
+    }
 }
 
 /// The die's sixth face is the black star, but it is announced as a number.
