@@ -20,6 +20,8 @@ settings:
 packages:
   LudoEngine:
     path: ../../packages/LudoEngine
+  SupportKit:
+    path: ../../packages/SupportKit
 
 targets:
   LeluLudo:
@@ -29,11 +31,15 @@ targets:
     sources:
       - path: LeluLudo/Sources
       - path: LeluLudo/Resources
+        # The StoreKit test file is only for Xcode runs and tests; it does not ship in the app.
+        excludes: ["Tips.storekit"]
     dependencies:
       - package: LudoEngine
         product: LudoEngine
       - package: LudoEngine
         product: LudoAI
+      - package: SupportKit
+        product: SupportKit
     info:
       path: LeluLudo/Info.plist
       properties:
@@ -88,8 +94,10 @@ schemes:
         LeluLudoUITests: [test]
     run:
       config: Debug
+      storeKitConfiguration: LeluLudo/Resources/Tips.storekit
     test:
       config: Debug
+      storeKitConfiguration: LeluLudo/Resources/Tips.storekit
       gatherCoverageData: true
       targets: [LeluLudoTests, LeluLudoUITests]
     archive:

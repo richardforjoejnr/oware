@@ -145,3 +145,24 @@ final class FriendsSeatingTests: XCTestCase {
         XCTAssertEqual(setup.colors, [.red, .black])
     }
 }
+
+/// Tips: the product ids the app asks the App Store for are Lelu Ludo's own, the three made in App
+/// Store Connect, and the same as in the local test store.
+final class TipsTests: XCTestCase {
+    func testTheTipProductsAreLeluLudosOwnAndMatchTheTestStore() throws {
+        XCTAssertEqual(Tips.productIDs, ["com.richardforjoe.leluludo.tip.small", "com.richardforjoe.leluludo.tip.medium",
+                                         "com.richardforjoe.leluludo.tip.large"])
+        let storeFile = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("LeluLudo/Resources/Tips.storekit")
+        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: storeFile)) as! [String: Any]
+        let ids = (json["products"] as! [[String: Any]]).compactMap { $0["productID"] as? String }
+        XCTAssertEqual(Set(ids), Set(Tips.productIDs))
+        XCTAssertFalse(Bundle.main.bundleURL.appendingPathComponent("Tips.storekit").path.isEmpty)
+        XCTAssertNil(Bundle.main.url(forResource: "Tips", withExtension: "storekit"), "the test store never ships in the app")
+    }
+
+    func testTheReviewLinkIsLeluLudosAppStorePage() {
+        XCTAssertEqual(Links.writeReview.host, "apps.apple.com")
+        XCTAssertTrue(Links.writeReview.absoluteString.contains("id6818915279"))
+    }
+}
