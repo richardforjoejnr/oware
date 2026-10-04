@@ -1,0 +1,125 @@
+# Lelu Ludo — fastlane lanes used by GitHub Actions (see .github/workflows/testflight-ludo.yml) and locally.
+#
+#   bundle exec fastlane ios test            # unit + UI tests on simulator
+#   bundle exec fastlane ios setup_signing   # one-time: Lelu Ludo's App Store profile into match
+#   bundle exec fastlane ios beta            # signed build -> TestFlight
+#   bundle exec fastlane ios release         # a TestFlight build -> App Review -> released when approved
+#
+# Required env (CI secrets, shared with Lelu Oware): see docs/PIPELINE.md at the repo root. Run from
+# apps/lelu-ludo with
+#   BUNDLE_GEMFILE=../../Gemfile bundle exec fastlane ios <lane>
+
+default_platform(:ios)
+
+SCHEME     = "LeluLudo"
+PROJECT    = "LeluLudo.xcodeproj"
+BUNDLE_ID  = "com.richardforjoe.leluludo"
+# Lelu Ludo's Apple ID in App Store Connect (App Information), so uploads need no lookup by bundle id.
+APP_STORE_ID = "6818915279"
+PROFILE    = "match AppStore #{BUNDLE_ID}"
+
+platform :ios do
+  before_all do |lane|
+    setup_ci if ENV["CI"]
+    # `release` and `setup_signing` only talk to Apple, so they need no Xcode project (or XcodeGen).
+    sh("cd .. && xcodegen generate") unless %i[release setup_signing].include?(lane) || File.exist?("../#{PROJECT}")
+  end
+
+  desc "Run unit and UI tests on the iOS simulator"
+  lane :test do
+    run_tests(
+      project: PROJECT,
+      scheme: SCHEME,
+      devices: [sh("../../../scripts/pick-simulator.sh").strip],
+      code_coverage: true,
+      xcodebuild_formatter: "xcbeautify",
+      result_bundle: true,
+      output_directory: "fastlane/test_output"
+    )
+  end
+
+  desc "Authenticate with App Store Connect via API key (from secrets)"
+  private_lane :asc_auth do
+    app_store_connect_api_key(
+      key_id: ENV.fetch("ASC_KEY_ID"),
+      issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+      key_content: ENV.fetch("ASC_KEY_CONTENT"),   # base64-encoded .p8
+      is_key_content_base64: true,
+      in_house: false
+    )
+  end
+
+  desc "Fetch signing certs/profiles (read-only) and build a signed Release archive"
+  private_lane :build_signed do
+    asc_auth
+    match(type: "appstore", app_identifier: [BUNDLE_ID], readonly: true)
+    # Same scheme as Lelu Oware and `make archive`: UTC date and time, always increasing.
+    build_number = ENV.fetch("BUILD_NUMBER", Time.now.utc.strftime("%Y%m%d%H%M"))
+    increment_build_number(build_number: build_number, xcodeproj: PROJECT)
+    # project.yml signs automatically (for Xcode archives); CI signs manually with match.
+    # Only the app target gets the profile, never the test bundles or Swift packages.
+    update_code_signing_settings(
+      path: PROJECT,
+      targets: [SCHEME],
+      build_configurations: ["Release"],
+      use_automatic_signing: false,
+      team_id: ENV.fetch("DEVELOPMENT_TEAM"),
+      code_sign_identity: "Apple Distribution",
+      profile_name: PROFILE
+    )
+    build_app(
+      project: PROJECT,
+      scheme: SCHEME,
+      configuration: "Release",
+      export_method: "app-store",
+      xcodebuild_formatter: "xcbeautify",
+      export_options: {
+        provisioningProfiles: { BUNDLE_ID => PROFILE }
+      }
+    )
+  end
+
+  desc "One-time, on your Mac: add Lelu Ludo's App Store profile to match (reuses the existing distribution certificate)"
+  lane :setup_signing do
+    asc_auth
+    match(type: "appstore", app_identifier: [BUNDLE_ID], readonly: false)
+  end
+
+  desc "Build and upload to TestFlight (runs on every merge to main that changes the app)"
+  lane :beta do
+    build_signed
+    # "What to Test" in TestFlight: release notes from PR titles (set by CI), else the last commit.
+    changelog = ENV["CHANGELOG"].to_s.strip.empty? ? sh("git log -1 --pretty=%B").strip : ENV["CHANGELOG"]
+    upload_to_testflight(
+      app_identifier: BUNDLE_ID,
+      apple_id: APP_STORE_ID,
+      skip_waiting_for_build_processing: true,
+      changelog: changelog,
+      distribute_external: false
+    )
+  end
+
+  desc "Submit a build already on TestFlight for App Review; Apple releases it to everyone once approved"
+  # Nothing is rebuilt. APP_VERSION and BUILD_NUMBER come from the build's build/ludo-<version>-<build>
+  # tag (see .github/workflows/testflight-ludo.yml). No workflow calls this yet (docs/PIPELINE.md).
+  lane :release do
+    asc_auth
+    # Empty for the first version: App Store Connect has no "What's New" until there is an update.
+    notes = ENV["RELEASE_NOTES"].to_s.strip
+    upload_to_app_store(
+      app_identifier: BUNDLE_ID,
+      app_version: ENV.fetch("APP_VERSION"),
+      build_number: ENV.fetch("BUILD_NUMBER"),
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: notes.empty?,
+      release_notes: notes.empty? ? nil : { "default" => notes },
+      submit_for_review: true,
+      automatic_release: true,
+      phased_release: false,
+      submission_information: { add_id_info_uses_idfa: false },
+      precheck_include_in_app_purchases: false,
+      force: true
+    )
+  end
+end
