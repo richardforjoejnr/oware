@@ -133,8 +133,10 @@ One-time steps:
    It asks for the same values as Lelu Oware's setup (Team ID, App Store Connect key, the match
    passphrase; Return uses your GitHub CLI login for the certificates repo) and only creates Lelu
    Ludo's App Store profile, with the same certificate. The GitHub secrets are shared and left as
-   they are. If Apple refuses to create the profile with the App Manager key, give an Admin key at
-   its prompt. Then re-run **TestFlight (Lelu Ludo)** from the Actions tab.
+   they are. Creating a profile needs a key with **Admin** access. At the "Admin key" prompt, type **n**
+   and the script guides you: it opens App Store Connect's keys page, waits for the downloaded
+   `AuthKey_….p8` in Downloads, and uses it for this run only (revoke it afterwards). Or type the ID of an
+   Admin key you already have. If Apple still refuses ("forbidden"), the script says so in plain words. Then re-run **TestFlight (Lelu Ludo)** from the Actions tab.
 4. **TestFlight internal testing:** after the first build, App Store Connect ▸ Lelu Ludo ▸ TestFlight ▸
    Internal Testing ▸ add a group with yourself (groups are per app, so Lelu Oware's does not carry over).
 5. Merge a change to Lelu Ludo, or run **TestFlight (Lelu Ludo)** by hand from the Actions tab.
