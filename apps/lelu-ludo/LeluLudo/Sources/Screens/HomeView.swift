@@ -17,6 +17,7 @@ struct HomeView: View {
     enum Panel { case computer, friends, settings, learn }
 
     var body: some View {
+        ScrollViewReader { scroller in
         ScrollView {
             VStack(spacing: 16) {
                 Image(Art.menuTitle)
@@ -26,6 +27,13 @@ struct HomeView: View {
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityIdentifier("home-title")
                     .padding(.top, 8)
+
+                // The owner's layout: the board in its box first, the tiles below it.
+                Image(Art.boardBox)
+                    .resizable().scaledToFit()
+                    .frame(maxHeight: 300)
+                    .shadow(color: .black.opacity(0.35), radius: 12, y: 10)
+                    .accessibilityHidden(true)
 
                 HStack(spacing: 8) {
                     tile(Art.tileStart, label: "Start game against the computer", id: "tile-start", panel: .computer)
@@ -39,21 +47,21 @@ struct HomeView: View {
                         .accessibilityIdentifier("btn-continue")
                 }
 
+                // A tile's panel opens under the tiles, and is scrolled into view.
                 Group {
                     switch open {
                     case .computer: computerPanel
                     case .friends: friendsPanel
                     case .settings: SettingsPanels()
                     case .learn: learnPanel
-                    case nil:
-                        Image(Art.boardBox)
-                            .resizable().scaledToFit()
-                            .frame(maxHeight: 300)
-                            .shadow(color: .black.opacity(0.35), radius: 12, y: 10)
-                            .accessibilityHidden(true)
+                    case nil: EmptyView()
                     }
                 }
+                .id("panel")
                 .transition(.opacity.combined(with: .move(edge: .top)))
+                .onChange(of: open) { _, now in
+                    if now != nil { withAnimation(.easeInOut(duration: 0.3)) { scroller.scrollTo("panel", anchor: .top) } }
+                }
 
                 HStack(spacing: 12) {
                     KnotGlyph(size: 16)
@@ -67,6 +75,7 @@ struct HomeView: View {
                 .padding(.bottom, 24)
             }
             .padding(.horizontal, 14)
+        }
         }
         .background(Table())
     }

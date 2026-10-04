@@ -249,13 +249,21 @@ def learn_tile(online: Image.Image) -> Image.Image:
 
 
 def launch_splash() -> None:
-    """The owner's splash art, full screen: the launch screen (LaunchScreen.storyboard) and the opening
-    card, so launch runs straight into the splash with no black frame."""
-    # A JPEG at the catalog's top level: the system draws launch screens under a tight size budget, and
-    # a 1.4 MB PNG here showed a blank frame before the art.
+    """The launch screen and the splash's background, one image: dark mahogany lit from above, no
+    text (Apple's guidance for launch screens). The splash draws LELU LUDO, the owner's line and the
+    boxed board on top of this same picture, so launch runs into it with no black and no jump."""
+    w, h = 1290, 2796                                   # a 6.9" iPhone at 3x; aspect-filled elsewhere
+    wood = np.array(grain(h, (96, 52, 30), (34, 16, 9), seed=5))[:, (h - w) // 2:(h + w) // 2].astype(float)
+    night = np.array([15, 10, 8], dtype=float)
+    rgb = night * 0.4 + wood * 0.6
+    yy, xx = np.mgrid[0:h, 0:w]
+    glow = np.clip(1 - np.hypot(xx - w / 2, yy - h * 0.18) / 1300, 0, 1)[..., None] * 0.75
+    rgb = rgb * (1 - glow) + np.array([140, 84, 41]) * glow
     folder = OUT.parent / "LaunchSplash.imageset"
     folder.mkdir(parents=True, exist_ok=True)
-    Image.open(SRC / "splash.png").convert("RGB").save(folder / "LaunchSplash.jpg", quality=88, optimize=True)
+    for old in folder.glob("*.jpg"):
+        old.unlink()
+    Image.fromarray(rgb.clip(0, 255).astype("uint8")).save(folder / "LaunchSplash.jpg", quality=86, optimize=True)
     (folder / "Contents.json").write_text(json.dumps(
         {"images": [{"idiom": "universal", "filename": "LaunchSplash.jpg"}], "info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
 
