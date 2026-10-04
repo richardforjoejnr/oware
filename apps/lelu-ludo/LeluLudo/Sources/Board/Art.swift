@@ -32,9 +32,11 @@ enum Art {
     static let tileLearn = "Tile-learn"
     /// For the tip jar (release stage).
     static let tileSupport = "Tile-support"
+    /// The four-loop knot from the plaque art, single colour, to tint (KnotGlyph).
+    static let knot = "Knot"
 
     static var all: [String] {
         PlayerColor.allCases.map(pawn) + PlayerColor.allCases.map(pawnTop) + (1...6).map(die)
-            + [dieFlag, diceCup, boardPlaque, woodGrain, maple, darkWood, darkWoodAcross, linen, boardBox, menuTitle, launchSplash, splashContent, tileStart, tileFriends, tileSettings, tileLearn, tileSupport]
+            + [dieFlag, diceCup, boardPlaque, woodGrain, maple, darkWood, darkWoodAcross, linen, boardBox, menuTitle, launchSplash, splashContent, tileStart, tileFriends, tileSettings, tileLearn, tileSupport, knot]
     }
 }

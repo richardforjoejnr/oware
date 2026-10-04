@@ -169,13 +169,18 @@ final class HomeScreenUITests: XCTestCase {
     @MainActor
     func testTipJarOpensFromSettingsAndUnlocksNothing() throws {
         let more = app.buttons["btn-more"]
-        if !app.buttons["btn-settings"].exists { more.tap() }
-        app.buttons["btn-settings"].tap()
+        if !app.buttons["btn-settings"].waitForExistence(timeout: 5) { more.tap() }
+        let settings = app.buttons["btn-settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 15))
+        settings.tap()
+        // Waits sized for a slow CI simulator (this failed once there with 5 s and 4 swipes): wait for
+        // Settings to be up, then scroll until the row can be tapped.
         let row = app.buttons["btn-tip-jar"]
-        for _ in 0..<4 where !row.isHittable { app.swipeUp() }
-        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        XCTAssertTrue(row.waitForExistence(timeout: 15), "the tip jar row is in Settings")
+        for _ in 0..<8 where !row.isHittable { app.swipeUp() }
+        XCTAssertTrue(row.isHittable, "scrolled to the tip jar row")
         row.tap()
-        XCTAssertTrue(app.staticTexts["tip-jar-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["tip-jar-title"].waitForExistence(timeout: 15))
         // Every look is still selectable regardless of tips.
         XCTAssertFalse(app.buttons["theme-kente"].label.contains("locked"))
     }

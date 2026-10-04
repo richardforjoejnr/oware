@@ -4,6 +4,8 @@ import SwiftUI
 /// in its box, on the launch screen's wood. It is the launch screen, picture for picture (both come
 /// from art/make_art.py), so there is no blank wood while the app starts. Tap to go straight on.
 struct SplashView: View {
+    /// Stays until tapped instead of moving on by itself (the UI test that checks it).
+    var holds = false
     let done: () -> Void
 
     /// Where the splash content sits: exactly as the launch screen places it (LaunchScreen.storyboard:
@@ -26,6 +28,7 @@ struct SplashView: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: done)
         .task {
+            guard !holds else { return }
             try? await Task.sleep(for: .seconds(2.2))
             done()
         }

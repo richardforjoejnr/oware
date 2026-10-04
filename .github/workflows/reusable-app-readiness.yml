@@ -1,0 +1,32 @@
+name: Reusable - App Store readiness
+
+# Shared template: the App Store readiness check (scripts/release_readiness.py) for one app, called
+# by each app's own workflows (ci.yml for Lelu Oware; ludo-ci.yml and testflight-ludo.yml for Lelu
+# Ludo). It has no triggers of its own.
+#
+# It catches what gets builds rejected: a missing or incomplete privacy manifest, debug switches in
+# release builds, an icon with transparency, placeholder text, the privacy policy not linked in the
+# app, public privacy and support pages missing or unfinished. Pure Python, no Xcode: it runs on
+# Linux in seconds.
+#
+# Editing this file (or the script) affects every app that calls it, so every caller lists both in
+# its `paths:` filter.
+on:
+  workflow_call:
+    inputs:
+      app-dir:
+        description: The app's folder from the repository root (e.g. apps/lelu-ludo)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  readiness:
+    name: App Store readiness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Privacy manifest, icon, launch screen, public pages, release flags, in-app links
+        run: python3 scripts/release_readiness.py "${{ inputs.app-dir }}"

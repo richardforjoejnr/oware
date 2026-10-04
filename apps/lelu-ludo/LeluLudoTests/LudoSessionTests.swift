@@ -87,6 +87,33 @@ final class LudoSessionTests: XCTestCase {
         XCTAssertNil(ScriptedDice.parse("--dice=6,9"), "faces are 1…6")
         XCTAssertNil(ScriptedDice.parse("--other"))
     }
+
+    func testComputersWaitWhileTheAppIsOffTheScreen() async {
+        // You roll a 3 (nothing out: passed); the computer's turn waits until the app is back.
+        let s = TestSupport.session(dice: [3, 2, 5])
+        s.newGame(youVsComputer)
+        s.setOnScreen(false)
+        let turn = Task { await s.roll() }
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(s.state.toMove, .black, "the computer has not played off the screen")
+        XCTAssertNil(s.state.pendingRoll)
+        XCTAssertTrue(s.isComputerPlaying)
+        s.setOnScreen(true)
+        await turn.value
+        XCTAssertEqual(s.state.toMove, .red, "back on the screen, the computer played its turn")
+        XCTAssertEqual(s.lastRoll?.color, .black)
+        XCTAssertTrue(s.canRoll)
+    }
+
+    func testLeavingTheScreenSilencesTheFeedback() {
+        let feedback = RecordingFeedback()
+        let s = LudoSession(store: TestSupport.store(), dice: ScriptedDice([3]), feedback: feedback)
+        s.setOnScreen(false)
+        s.setOnScreen(false)
+        XCTAssertEqual(feedback.suspensions, 1, "once per time off the screen")
+        s.setOnScreen(true)
+        XCTAssertEqual(feedback.suspensions, 1)
+    }
 }
 
 /// The die's sixth face is the black star, but it is announced as a number.
@@ -120,7 +147,7 @@ final class MoveChoiceTests: XCTestCase {
         await s.play(try XCTUnwrap(s.choices(for: 0).first { $0.kind == .backKick }))
         XCTAssertEqual(s.state.tokens(of: .black)[0], -1, "kicked home")
         XCTAssertNil(s.selectedToken)
-        XCTAssertTrue(s.log.contains("Red back-kicked Black's token home"), "pass & play names colours: \(s.log)")
+        XCTAssertTrue(s.log.contains("Red back-kicked Black's token back to its yard"), "pass & play names colours: \(s.log)")
     }
 
     func testATokenWithOneMovePlaysAtOnce() async {
@@ -138,7 +165,7 @@ final class MoveChoiceTests: XCTestCase {
         let s = session(state, seats: [.red: .human, .black: .computer(.intermediate)], dice: [3, 1])
         await s.runComputerTurns()
         XCTAssertEqual(s.state.tokens(of: .red)[0], -1)
-        XCTAssertTrue(s.log.contains("Black kicked your token home"), "\(s.log)")
+        XCTAssertTrue(s.log.contains("Black kicked your token back to its yard"), "\(s.log)")
     }
 
     func testThreeSixesAreAnnounced() async {

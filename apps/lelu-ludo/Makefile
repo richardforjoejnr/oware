@@ -4,7 +4,7 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))/../..)
 SIM  = $$($(ROOT)/scripts/pick-simulator.sh)
 
-.PHONY: project family archive test open clean e2e e2e-build e2e-studio e2e-ts
+.PHONY: project family archive test open clean screenshots e2e e2e-build e2e-studio e2e-ts
 
 project:              ## Generate LeluLudo.xcodeproj from project.yml
 	xcodegen generate
@@ -12,6 +12,11 @@ project:              ## Generate LeluLudo.xcodeproj from project.yml
 test: project         ## Run unit + UI tests on a simulator
 	set -o pipefail; xcodebuild test -project LeluLudo.xcodeproj -scheme LeluLudo \
 	  -destination "platform=iOS Simulator,name=$(SIM)" CODE_SIGNING_ALLOWED=NO | xcbeautify
+
+# App Store screenshots from the real app (LeluLudoUITests/ScreenshotUITests) on its own iPhone 6.9"
+# and iPad 13" simulators, into fastlane/screenshots/en-GB/. ONLY=iphone or ONLY=ipad for one set.
+screenshots:          ## App Store screenshots, iPhone 6.9" and iPad 13"
+	./scripts/screenshots.sh
 
 open: project         ## Generate and open in Xcode
 	open LeluLudo.xcodeproj

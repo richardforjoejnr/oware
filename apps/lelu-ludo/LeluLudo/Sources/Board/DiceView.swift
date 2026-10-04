@@ -33,7 +33,7 @@ struct DiceView: View {
                     .resizable().scaledToFit()
                     .frame(height: 92)
                     .rotationEffect(.degrees(shakes % 2 == 0 ? 0 : 0.001))
-                    .keyframeAnimator(initialValue: 0.0, trigger: shakes) { cup, angle in
+                    .keyframeAnimator(initialValue: 0.0, trigger: reduceMotion ? 0 : shakes) { cup, angle in
                         cup.rotationEffect(.degrees(angle), anchor: .bottom)
                     } keyframes: { _ in
                         KeyframeTrack {

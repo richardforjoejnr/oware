@@ -179,7 +179,10 @@ final class LudoSession {
     func newGame(_ setup: GameSetup) {
         startOver()
         self.setup = setup
-        state = GameState(players: setup.colors, rules: setup.rules)
+        // Against the computer you go first, whichever colour you chose; with friends, the first
+        // colour clockwise from red.
+        let people = setup.colors.filter { setup.seat($0) == .human }
+        state = GameState(players: setup.colors, rules: setup.rules, first: people.count == 1 ? people[0] : nil)
         aiSeed = UInt64.random(in: 0...UInt64.max)
         lastRoll = nil
         lastEvents = []
@@ -229,6 +232,7 @@ final class LudoSession {
     func name(_ color: PlayerColor) -> String {
         // In a lesson you play red; Black only stands on the board.
         if tutorial != nil { return color == .red ? "You" : color.name }
+        if let given = setup.names[color] { return given }
         return switch setup.seat(color) {
         case .human: setup.seats.values.filter({ $0 == .human }).count > 1 ? color.name : "You"
         case .computer: color.name
@@ -337,6 +341,32 @@ final class LudoSession {
         }
     }
 
+    // MARK: On and off the screen
+
+    /// Whether the app is on the screen. Off it, computers wait rather than play on unseen (and
+    /// keep the app busy in the background); they carry on where they were when it comes back.
+    @ObservationIgnored private(set) var isOnScreen = true
+    @ObservationIgnored private var waitingForScreen: [CheckedContinuation<Void, Never>] = []
+
+    /// The scene became active (true) or went inactive or to the background (false).
+    func setOnScreen(_ on: Bool) {
+        guard on != isOnScreen else { return }
+        isOnScreen = on
+        if on {
+            let waiting = waitingForScreen
+            waitingForScreen = []
+            for w in waiting { w.resume() }
+        } else {
+            feedback?.suspend()
+        }
+    }
+
+    private func untilOnScreen() async {
+        while !isOnScreen {
+            await withCheckedContinuation { waitingForScreen.append($0) }
+        }
+    }
+
     /// Lets computer seats play until it is a person's turn or the game is over.
     func runComputerTurns() async {
         guard !isComputerPlaying else { return }
@@ -348,6 +378,7 @@ final class LudoSession {
         // in between, and this loop must not roll or move for them.
         while game == generation, !state.isOver, case let .computer(level) = setup.seat(state.toMove) {
             if pacing.computer > .zero { try? await Task.sleep(for: pacing.computer) }
+            await untilOnScreen()
             guard game == generation, !state.isOver, case .computer = setup.seat(state.toMove) else { return }
             if state.pendingRoll == nil {
                 rollDie()
@@ -380,7 +411,7 @@ final class LudoSession {
     /// Puts what just happened into words for the log (and VoiceOver).
     private func describe(_ events: [GameEvent]) {
         var kind: Move.Kind = .forward
-        func whose(_ c: PlayerColor) -> String { name(c) == "You" ? "your" : "\(c.name)'s" }
+        func whose(_ c: PlayerColor) -> String { name(c) == "You" ? "your" : "\(name(c))'s" }
         for event in events {
             var line: String?
             switch event {
@@ -392,7 +423,7 @@ final class LudoSession {
                 case .homeKick: "home-kicked"
                 default: "kicked"
                 }
-                line = "\(name(by)) \(verb) \(whose(color)) token home"
+                line = "\(name(by)) \(verb) \(whose(color)) token back to its yard"
             case let .reachedHome(color, _): line = "\(name(color)) brought a token home"
             case let .threeSixes(color): line = "Three sixes: \(whose(color)) turn is undone"
             case let .passed(color): line = "\(name(color)) \(name(color) == "You" ? "have" : "has") no move"

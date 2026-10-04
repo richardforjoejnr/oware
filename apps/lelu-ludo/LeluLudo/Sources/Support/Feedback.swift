@@ -10,12 +10,20 @@ enum Feedback: Equatable, Sendable {
 @MainActor
 protocol FeedbackPlayer: AnyObject {
     func play(_ feedback: Feedback)
+    /// The app has left the screen: let go of anything running (the audio engine).
+    func suspend()
+}
+
+extension FeedbackPlayer {
+    func suspend() {}
 }
 
 /// For tests: remembers every feedback in order.
 final class RecordingFeedback: FeedbackPlayer {
     private(set) var played: [Feedback] = []
+    private(set) var suspensions = 0
     func play(_ feedback: Feedback) { played.append(feedback) }
+    func suspend() { suspensions += 1 }
 }
 
 /// The device: a wooden tap per square, a knock for a kick, a rising pair of notes home, a rattle for
@@ -36,6 +44,12 @@ final class DeviceFeedback: FeedbackPlayer {
         .win: tone([(523, 4), (659, 4), (784, 4)], duration: 0.8, noise: 0),
     ]
 
+    /// Pauses the engine once nothing has sounded for a while (see `play`).
+    private var idlePause: Task<Void, Never>?
+    /// How long the engine keeps running after the last sound: long enough to cover the gaps in
+    /// play (a token's steps, a computer's turn) without restarting it each time.
+    static let idleAfter: Duration = .seconds(3)
+
     init(settings: AppSettings) { self.settings = settings }
 
     func play(_ feedback: Feedback) {
@@ -44,6 +58,34 @@ final class DeviceFeedback: FeedbackPlayer {
         _ = engine
         player.scheduleBuffer(buffer, at: nil, options: .interrupts)
         if !player.isPlaying { player.play() }
+        // A running engine renders silence for ever (the audio thread wakes every few ms and the
+        // audio hardware stays on): pause it once the game goes quiet. It starts again on the next sound.
+        idlePause?.cancel()
+        idlePause = Task { [weak self] in
+            try? await Task.sleep(for: Self.idleAfter)
+            guard !Task.isCancelled else { return }
+            self?.stopEngine(release: false)
+        }
+    }
+
+    /// Off the screen: stop the engine and give the audio hardware back.
+    func suspend() {
+        idlePause?.cancel()
+        idlePause = nil
+        stopEngine(release: true)
+    }
+
+    /// `pause()` keeps the engine's resources for a quick restart (a few ms, on the next sound);
+    /// `stop()` releases them, and the audio session goes too.
+    private func stopEngine(release: Bool) {
+        guard let engine, engine.isRunning else { return }
+        player?.stop()
+        if release {
+            engine.stop()
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        } else {
+            engine.pause()
+        }
     }
 
     private func haptic(_ f: Feedback) {

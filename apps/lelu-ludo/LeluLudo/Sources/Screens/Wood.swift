@@ -110,14 +110,20 @@ struct WoodCircleButton: View {
     }
 }
 
-/// The knot carved on the board box (the four-loop motif), drawn as a brass glyph.
+/// The four-loop knot carved on the owner's LELU LUDO plaque (Mpatapo, the knot of reconciliation),
+/// cut from that art and set in brass. Not the ⌘ symbol it once stood in for: that is Apple's
+/// keyboard Command key, not an Adinkra.
 struct KnotGlyph: View {
     var size: CGFloat = 18
+    var color: Color = Palette.brassLight
 
     var body: some View {
-        Image(systemName: "command")
-            .font(.system(size: size, weight: .semibold))
-            .foregroundStyle(Palette.brassLight)
+        Image(Art.knot)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size * 1.15, height: size * 1.15)
+            .foregroundStyle(color)
             .accessibilityHidden(true)
     }
 }
@@ -297,9 +303,13 @@ struct WoodChips<Value: Hashable>: View {
         let longest = options.map { label($0).count }.max() ?? 0
         let font: Font.TextStyle = longest <= 3 ? .title3 : .body
         // Up to three in a row; four (the levels) in two rows of two, so every name is set full size.
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: options.count > 3 ? 2 : options.count)
-        LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(options, id: \.self) { option in
+        // A plain grid, not a lazy one: every chip exists even when scrolled off screen (VoiceOver).
+        let perRow = options.count > 3 ? 2 : options.count
+        let rows = stride(from: 0, to: options.count, by: perRow).map { Array(options[$0..<min($0 + perRow, options.count)]) }
+        Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+            ForEach(rows, id: \.self) { row in
+                GridRow {
+            ForEach(row, id: \.self) { option in
                 let chosen = option == selection
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) { selection = option }
@@ -318,6 +328,8 @@ struct WoodChips<Value: Hashable>: View {
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(chosen ? .isSelected : [])
                 .accessibilityIdentifier(id(option))
+            }
+                }
             }
         }
     }
@@ -434,7 +446,7 @@ struct KnotToggleStyle: ToggleStyle {
                         Circle().fill(RadialGradient(colors: [Palette.brassLight, Palette.brass, Palette.brassDark],
                                                      center: .init(x: 0.35, y: 0.3), startRadius: 0, endRadius: 20))
                         Circle().stroke(Palette.brassDark, lineWidth: 1)
-                        Image(systemName: "command").font(.system(size: 12, weight: .bold)).foregroundStyle(Palette.brassDark)
+                        KnotGlyph(size: 13, color: Palette.brassDark)
                     }
                     .frame(width: 30, height: 30)
                     .shadow(color: .black.opacity(0.45), radius: 2, y: 1)

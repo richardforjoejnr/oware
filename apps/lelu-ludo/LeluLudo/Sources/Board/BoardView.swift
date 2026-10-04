@@ -10,35 +10,47 @@ struct BoardView: View {
             let side = min(geo.size.width, geo.size.height)
             let layout = BoardLayout(size: side)
             ZStack(alignment: .topLeading) {
+                // The board stays out of the tokens' animations: inside them, every frame of an animated
+                // change (a token sliding home, the board shifting when the plaque grows a line) redrew
+                // the whole Canvas (performance check, 2026-10-04: 84 redraws a game, now 4).
                 BoardCanvas(rules: session.state.rules)
                     .frame(width: side, height: side)
-                ForEach(tokens, id: \.id) { t in
-                    TokenView(color: t.color, movable: t.movable, kickChoice: t.kickChoice,
-                              selected: t.color == session.state.toMove && session.selectedToken == t.token,
-                              size: layout.cell * (t.progress == Board.yard ? 1.1 : 0.86))
-                        // At least 44 pt to tap (the HIG minimum), though squares are smaller on a phone.
-                        .frame(width: max(44, layout.cell), height: max(44, layout.cell))
-                        .contentShape(Rectangle())
-                        .position(position(of: t, layout))
-                        // Movable tokens on top and the only ones that take taps, so a neighbour's
-                        // larger target never swallows the tap meant for the token that can move.
-                        .zIndex(t.movable ? 1 : 0)
-                        .allowsHitTesting(t.movable)
-                        .onTapGesture { Task { await session.tap(token: t.token) } }
-                        .accessibilityElement()
-                        .accessibilityLabel(t.label)
-                        .accessibilityAddTraits(t.movable ? .isButton : [])
-                        // The value says what the token can do, for VoiceOver and for UI tests alike.
-                        .accessibilityValue(t.kickChoice ? "Can kick" : (t.movable ? "Can move" : ""))
-                        .accessibilityHint(t.movable ? (t.kickChoice ? "Double tap to choose a move" : "Double tap to move") : "")
-                        .accessibilityIdentifier("token-\(t.color.name.lowercased())-\(t.token)")
-                }
-                // The moves of the selected token, each a marker on the square it would end on.
-                if let token = session.selectedToken {
-                    ForEach(Array(session.choices(for: token).enumerated()), id: \.offset) { _, move in
-                        if let end = session.path(for: move).last {
+                ZStack(alignment: .topLeading) {
+                    ForEach(tokens, id: \.id) { t in
+                        TokenView(color: t.color, movable: t.movable, kickChoice: t.kickChoice,
+                                  selected: t.color == session.state.toMove && session.selectedToken == t.token,
+                                  size: layout.cell * (t.progress == Board.yard ? 1.1 : 0.86))
+                            // At least 44 pt to tap (the HIG minimum), though squares are smaller on a phone.
+                            .frame(width: max(44, layout.cell), height: max(44, layout.cell))
+                            .contentShape(Rectangle())
+                            .position(position(of: t, layout))
+                            // Movable tokens on top and the only ones that take taps, so a neighbour's
+                            // larger target never swallows the tap meant for the token that can move.
+                            .zIndex(t.movable ? 1 : 0)
+                            .allowsHitTesting(t.movable)
+                            .onTapGesture { Task { await session.tap(token: t.token) } }
+                            .accessibilityElement()
+                            .accessibilityLabel(t.label)
+                            .accessibilityAddTraits(t.movable ? .isButton : [])
+                            // The value says what the token can do, for VoiceOver and for UI tests alike.
+                            .accessibilityValue(t.kickChoice ? "Can kick" : (t.movable ? "Can move" : ""))
+                            .accessibilityHint(t.movable ? (t.kickChoice ? "Double tap to choose a move" : "Double tap to move") : "")
+                            .accessibilityIdentifier("token-\(t.color.name.lowercased())-\(t.token)")
+                    }
+                    // The moves of the selected token: a brass ring on the square each would end on, and its
+                    // label beside it; labels for neighbouring squares are spread so none covers another.
+                    if let token = session.selectedToken {
+                        let moves = session.choices(for: token).filter { session.path(for: $0).last != nil }
+                        let ends = moves.map { layout.center(session.path(for: $0).last!) }
+                        let labels = ChoiceMarker.spread(ends, titles: moves.map(Self.title), board: side)
+                        ForEach(Array(moves.enumerated()), id: \.offset) { i, move in
+                            Circle().stroke(Palette.brassLight, lineWidth: 2.5)
+                                .frame(width: layout.cell * 0.95, height: layout.cell * 0.95)
+                                .position(ends[i])
+                                .allowsHitTesting(false)
+                                .zIndex(2)
                             ChoiceMarker(title: Self.title(move), kick: move.kind != .forward && move.kind != .enter)
-                                .position(layout.center(end))
+                                .position(labels[i])
                                 .onTapGesture { Task { await session.play(move) } }
                                 .accessibilityElement()
                                 .accessibilityLabel(Self.title(move))
@@ -48,11 +60,12 @@ struct BoardView: View {
                         }
                     }
                 }
+                .frame(width: side, height: side)
+                .animation(.easeInOut(duration: 0.35), value: session.state)
+                .animation(.linear(duration: 0.12), value: session.motion)   // one square at a time
             }
             .frame(width: side, height: side)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeInOut(duration: 0.35), value: session.state)
-            .animation(.linear(duration: 0.12), value: session.motion)   // one square at a time
         }
         .aspectRatio(1, contentMode: .fit)
     }
@@ -160,6 +173,31 @@ struct TokenView: View {
 struct ChoiceMarker: View {
     let title: String
     let kick: Bool
+
+    /// About how much room a label takes (its pill is at least 44 × 44).
+    static func size(_ title: String) -> CGSize { CGSize(width: max(44, 18 + CGFloat(title.count) * 7.5), height: 44) }
+
+    /// Where each label goes: on its square, unless that would cover a label already placed; then a row
+    /// up (or down, near the top edge), and again if need be. Pure, so it is tested without a screen.
+    static func spread(_ ends: [CGPoint], titles: [String], board: CGFloat) -> [CGPoint] {
+        var placed: [(CGPoint, CGSize)] = []
+        for (end, title) in zip(ends, titles) {
+            let size = size(title)
+            func clashes(_ p: CGPoint) -> Bool {
+                placed.contains { q, s in abs(q.x - p.x) < (s.width + size.width) / 2 + 4 && abs(q.y - p.y) < (s.height + size.height) / 2 + 4 }
+            }
+            let step = size.height + 6
+            let direction: CGFloat = end.y - step < size.height / 2 ? 1 : -1   // down if there's no room above
+            var p = end
+            var tries = 0
+            while clashes(p), tries < 4 { p.y += direction * step; tries += 1 }
+            // Keep it on the board.
+            p.x = min(max(p.x, size.width / 2), board - size.width / 2)
+            p.y = min(max(p.y, size.height / 2), board - size.height / 2)
+            placed.append((p, size))
+        }
+        return placed.map(\.0)
+    }
 
     var body: some View {
         Text(title)

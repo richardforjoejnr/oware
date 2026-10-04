@@ -10,9 +10,9 @@ struct HomeView: View {
     @Environment(AppSettings.self) private var settings
     let startGame: () -> Void
     @State private var open: Panel?
-    @State private var opponents = 1
+    @State private var computer = ComputerSeating()
+    @State private var friends = FriendsSeating()
     @State private var level: LudoAIDifficulty = .novice
-    @State private var players = 2
 
     enum Panel { case computer, friends, settings, learn }
 
@@ -30,7 +30,6 @@ struct HomeView: View {
                 // The owner's layout: the board in its box first, the tiles below it.
                 Image(Art.boardBox)
                     .resizable().scaledToFit()
-                    .frame(maxHeight: 300)
                     .shadow(color: .black.opacity(0.35), radius: 12, y: 10)
                     .accessibilityHidden(true)
 
@@ -70,46 +69,99 @@ struct HomeView: View {
                 .woodPanel(corner: 8)
                 .padding(.bottom, 24)
             }
+            // One column, centred: on iPad the board box grows with it and the tiles and panels keep a
+            // sensible width instead of running edge to edge.
+            .frame(maxWidth: 600)
+            .frame(maxWidth: .infinity)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)   // the rules switch's words fit (as in GameView)
             .padding(.horizontal, 14)
         }
         .background(Table())
     }
 
-    /// You against 1–3 computers: how many, and how strong.
+    /// You against 1–3 computers: your colour (the computers take the rest), how many, how strong.
     private var computerPanel: some View {
         WoodCard(title: "Play the computer") {
+            label("Your colour")
+            colourGrid { c in
+                ColourTile(color: c, chosen: computer.you == c, badge: "You", action: { computer.you = c }) { EmptyView() }
+            }
+            SeatSummary(title: "Opponents:", players: computer.opponentColours.map { ($0, $0.name) })
+            RandomColourButton(title: "Random colour") {
+                var rng = SystemRandomNumberGenerator()
+                computer.randomColour(using: &rng)
+            }
+            .accessibilityIdentifier("btn-random-colour")
             label("Opponents")
-            WoodChips(options: [1, 2, 3], selection: $opponents, label: { "\($0)" }, id: { "opponents-\($0)" })
+            WoodChips(options: [1, 2, 3], selection: $computer.opponents, label: { "\($0)" }, id: { "opponents-\($0)" })
             label("Level")
             WoodChips(options: LudoAIDifficulty.allCases, selection: $level, label: { $0.displayName },
                       id: { "level-\($0.displayName.lowercased())" })
-            BrassButton(title: "Play", systemImage: "play.fill") {
-                session.newGame(.versusComputer(opponents: opponents, level: level, rules: settings.rules))
+            BrassButton(title: "Play as \(computer.you.name)", systemImage: "play.fill") {
+                session.newGame(.versusComputer(you: computer.you, opponents: computer.opponents, level: level, rules: settings.rules))
                 open = nil
                 startGame()
             }
             .accessibilityIdentifier("btn-play-computer")
-            RuledNote(text: "\(settings.preset.title) rules. You are red.")
+            RuledNote(text: "\(settings.preset.title) rules. Computers take the other colours.")
         }
     }
 
-    /// 2–4 people passing one phone.
+    /// 2–4 people passing one device: each taps a colour (one each: a colour can't be taken twice)
+    /// and may type a name.
     private var friendsPanel: some View {
         WoodCard(title: "Play with friends") {
-            label("Players")
-            WoodChips(options: [2, 3, 4], selection: $players, label: { "\($0)" }, id: { "players-\($0)" })
+            Text("Tap colours to add or remove players.")
+                .font(.system(.subheadline, design: .serif))
+                .foregroundStyle(Palette.ivory.opacity(0.9))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+            colourGrid { c in
+                ColourTile(color: c, chosen: friends.isPlaying(c), action: { friends.toggle(c) }) {
+                    // Typing names is left out for now: the keyboard got stuck over the panel (owner, 2026-10-04).
+                    Button { friends.toggle(c) } label: {
+                        Text(friends.isPlaying(c) ? "Playing" : "Tap to add")
+                            .font(.system(.subheadline, design: .serif).weight(friends.isPlaying(c) ? .bold : .regular))
+                            .foregroundStyle(friends.isPlaying(c) ? Palette.brassLight : Palette.ivory.opacity(0.85))
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                            .background(CarvedBlock(kind: .recessed, corner: 8))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(friends.isPlaying(c) ? "Remove \(c.name)" : "Add \(c.name)")
+                    .accessibilityIdentifier("add-\(c.name.lowercased())")
+                }
+            }
+            SeatSummary(title: "Players: \(friends.colours.count)", players: friends.colours.map { ($0, friends.displayName($0)) })
+            RandomColourButton(title: "Random colours") {
+                var rng = SystemRandomNumberGenerator()
+                friends.randomColours(using: &rng)
+            }
+            .accessibilityIdentifier("btn-random-colours")
             BrassButton(title: "Play together", systemImage: "person.2.fill") {
-                session.newGame(.passAndPlay(players: players, rules: settings.rules))
+                guard let setup = friends.setup(rules: settings.rules) else { return }
+                session.newGame(setup)
                 open = nil
                 startGame()
             }
+            .disabled(!friends.canPlay)
+            .opacity(friends.canPlay ? 1 : 0.5)
             .accessibilityIdentifier("btn-pass-play")
-            Text("\(settings.preset.title) rules. Pass the device on each turn.")
+            Text(friends.canPlay ? "\(settings.preset.title) rules. Pass the device on each turn." : "Choose at least two colours.")
                 .font(.system(.subheadline, design: .serif))
                 .foregroundStyle(Palette.ivory.opacity(0.9))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
         }
+    }
+
+    /// The four colours, two by two.
+    private func colourGrid<Tile: View>(@ViewBuilder _ tile: @escaping (PlayerColor) -> Tile) -> some View {
+        // A plain grid, not a lazy one: every tile exists at once (VoiceOver can reach them all).
+        Grid(horizontalSpacing: 14, verticalSpacing: 22) {
+            GridRow { tile(.red); tile(.yellow) }
+            GridRow { tile(.green); tile(.black) }
+        }
+        .padding(.bottom, 6)
     }
 
     /// Learn the game: three chapters, each a few lessons on the real board, and Start tutorial.
