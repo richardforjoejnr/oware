@@ -143,4 +143,16 @@ final class ScreenshotUITests: XCTestCase {
         waitForLabel(app.staticTexts["status"], contains: "choose a token")
         try shoot("08-pass-and-play")
     }
+
+    /// For App Store Connect: each tip's "Review Information" screenshot (the purchase screen).
+    @MainActor func test09TipJar() throws {
+        let app = launch([])
+        let support = app.buttons["tile-support"]
+        XCTAssertTrue(support.waitForExistence(timeout: 20))
+        for _ in 0..<4 where !support.isHittable { app.swipeUp() }
+        support.tap()
+        XCTAssertTrue(app.staticTexts["tip-jar-title"].waitForExistence(timeout: 15))
+        _ = app.buttons["tip-0"].waitForExistence(timeout: 15)   // the tips, if the test store loads
+        try shoot("09-tip-jar")
+    }
 }
