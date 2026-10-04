@@ -70,24 +70,20 @@ struct SettingsPanels: View {
                     }
                     WoodRow(divider: false) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Dice throw").font(.system(.body, design: .serif).weight(.medium)).foregroundStyle(Palette.ivory)
-                            WoodSegmented(options: DiceAnimation.allCases,
-                                          selection: Binding(get: { settings.diceThrow(reduceMotion: reduceMotion) },
-                                                             set: { settings.diceThrowChoice = $0 }),
-                                          label: { $0.title }, id: { "dice-\($0.rawValue)" })
-                            Text(settings.diceThrowChoice == nil
-                                 ? "Set to match your device's Reduce Motion. Full or Quick: the die is thrown onto the board. Off: it just appears. Tap the board to skip a throw."
-                                 : "Full or Quick: the die is thrown onto the board. Off: it just appears. Tap the board to skip a throw.")
-                                .font(.system(.footnote, design: .serif))
-                                .foregroundStyle(Palette.ivory.opacity(0.8))
-                            // The player chose a throw while their device asks for less motion: say so.
-                            if reduceMotion, settings.diceThrow(reduceMotion: reduceMotion) != .off {
-                                Label("Reduce Motion is on for your device. Lelu Ludo will still throw the dice, as you chose. Choose Off to keep the game still.",
-                                      systemImage: "info.circle")
-                                    .font(.system(.footnote, design: .serif).weight(.semibold))
-                                    .foregroundStyle(Palette.brassLight)
-                                    .accessibilityIdentifier("dice-motion-note")
-                            }
+                            Text("Throw dice on board").font(.system(.body, design: .serif).weight(.medium)).foregroundStyle(Palette.ivory)
+                            // On or Off. With the device's Reduce Motion on, nothing flies: On is greyed out and a note
+                            // says how to see the dice thrown (owner, 2026-10-04).
+                            WoodSegmented(options: [true, false],
+                                          selection: Binding(get: { settings.throwDiceOnBoard && !reduceMotion },
+                                                             set: { settings.throwDiceOnBoard = $0 }),
+                                          label: { $0 ? "On" : "Off" }, id: { "throw-dice-\($0 ? "on" : "off")" },
+                                          disabled: reduceMotion ? [true] : [])
+                            Text(reduceMotion
+                                 ? "Reduce Motion is on for your device, so the die just appears on the board. To see the dice thrown, turn off Reduce Motion in your device's Settings ▸ Accessibility ▸ Motion."
+                                 : "On: your die is thrown onto the board (tap the board to skip). Off: it just appears there.")
+                                .font(.system(.footnote, design: .serif).weight(reduceMotion ? .semibold : .regular))
+                                .foregroundStyle(reduceMotion ? Palette.brassLight : Palette.ivory.opacity(0.8))
+                                .accessibilityIdentifier("dice-motion-note")
                         }
                     }
                 }

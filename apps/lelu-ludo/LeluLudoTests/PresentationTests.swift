@@ -185,17 +185,13 @@ final class DiceThrowTests: XCTestCase {
     func testTheThrowSettingIsRememberedAndPacesYourAutoMoves() {
         let d = TestSupport.defaults()
         let settings = AppSettings(defaults: d, testMode: false)
-        // Until the player chooses, it follows the device: Reduce Motion on means Off.
-        XCTAssertNil(settings.diceThrowChoice)
+        // "Throw dice on board": on by default; with the device's Reduce Motion on, nothing flies.
+        XCTAssertTrue(settings.throwDiceOnBoard)
         XCTAssertEqual(settings.diceThrow(reduceMotion: false), .full)
         XCTAssertEqual(settings.diceThrow(reduceMotion: true), .off)
-        // Choosing Full or Quick shows the throw even with Reduce Motion on (owner, 2026-10-04).
-        settings.diceThrowChoice = .quick
-        XCTAssertEqual(settings.diceThrow(reduceMotion: true), .quick)
-        let reopened = AppSettings(defaults: d, testMode: false)
-        XCTAssertEqual(reopened.diceThrowChoice, .quick, "remembered")
-        reopened.diceThrowChoice = .off
-        XCTAssertEqual(reopened.diceThrow(reduceMotion: false), .off, "Off is off on any device")
+        settings.throwDiceOnBoard = false
+        XCTAssertEqual(settings.diceThrow(reduceMotion: false), .off)
+        XCTAssertFalse(AppSettings(defaults: d, testMode: false).throwDiceOnBoard, "remembered")
         XCTAssertEqual(ThrowTiming.of(.off), .still)
         XCTAssertTrue(ThrowTiming.still.isStill)
         XCTAssertEqual(ThrowTiming.still.landsAfter, 0, "no flight: it is there at once")
