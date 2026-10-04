@@ -48,11 +48,47 @@ find_p8() {
 }
 P8="$(find_p8 "$ASC_KEY_ID")"
 
-echo "Creating the distribution certificate needs a key with Admin access. If the key above is"
-echo "App Manager (recommended for GitHub), create a second key with Admin access for this one step."
+# Creating a certificate or a provisioning profile needs a key with Admin access; GitHub's key should be
+# App Manager. Apple lets no script create API keys, so this walks through making one by hand (or
+# takes an existing one), finds the downloaded .p8, and uses it for this run only.
+admin_key_guide() {
+  local page="https://appstoreconnect.apple.com/access/integrations/api"
+  local before
+  before="$(ls "$HOME/Downloads"/AuthKey_*.p8 2>/dev/null | sort)"
+  cat <<GUIDE >&2
+
+  Make a key with Admin access (about a minute):
+    1. In App Store Connect: Users and Access ▸ Integrations ▸ App Store Connect API ▸ Team Keys.
+    2. Click + . Name: match-setup. Access: Admin. Generate.
+    3. Click Download next to the new key (Apple allows ONE download), keeping the file in Downloads.
+  Opening that page in your browser; this script waits for the file to appear in Downloads…
+GUIDE
+  open "$page" 2>/dev/null || echo "  Open: $page" >&2
+  local found=""
+  for _ in $(seq 1 300); do   # up to 10 minutes
+    found="$(comm -13 <(printf '%s\n' "$before") <(ls "$HOME/Downloads"/AuthKey_*.p8 2>/dev/null | sort) | head -1)"
+    [ -n "$found" ] && break
+    sleep 2
+  done
+  if [ -z "$found" ]; then echo "  No new AuthKey_*.p8 in Downloads. Run the script again when you have it." >&2; exit 1; fi
+  echo "  Found $(basename "$found")." >&2
+  printf '%s' "$found"
+}
+
+echo "Creating the certificate or a profile needs a key with Admin access (GitHub's key should be App Manager)."
+echo "  • Press Return if the key above has Admin access."
+echo "  • Type the Key ID of an Admin key you already have (e.g. match-setup), if its .p8 is on this Mac."
+echo "  • Type n to make one now; this script guides you and picks up the downloaded file."
 echo "It is used once here and never saved; you can revoke it afterwards."
-read -rp "Admin Key ID for the certificate step (press Return to use the same key): " ADMIN_KEY_ID
-if [ -n "$ADMIN_KEY_ID" ]; then ADMIN_P8="$(find_p8 "$ADMIN_KEY_ID")"; else ADMIN_KEY_ID="$ASC_KEY_ID"; ADMIN_P8="$P8"; fi
+read -rp "Admin key [Return / Key ID / n]: " ADMIN_KEY_ID
+if [ "$ADMIN_KEY_ID" = "n" ] || [ "$ADMIN_KEY_ID" = "N" ]; then
+  ADMIN_P8="$(admin_key_guide)"
+  ADMIN_KEY_ID="$(basename "$ADMIN_P8" .p8)"; ADMIN_KEY_ID="${ADMIN_KEY_ID#AuthKey_}"
+elif [ -n "$ADMIN_KEY_ID" ]; then
+  ADMIN_P8="$(find_p8 "$ADMIN_KEY_ID")"
+else
+  ADMIN_KEY_ID="$ASC_KEY_ID"; ADMIN_P8="$P8"
+fi
 echo "GitHub fine-grained token with Contents: read and write on $CERTS_REPO only."
 if $PROFILE_ONLY; then echo "(Press Return to use your GitHub CLI login instead.)"; fi
 read -rsp "Token: " PAT; echo
@@ -75,8 +111,22 @@ export MATCH_GIT_BASIC_AUTHORIZATION="$(printf '%s' "richardforjoejnr:$PAT" | ba
 
 echo "Creating and storing the App Store certificate and profile, using key $ADMIN_KEY_ID (must have Admin access)…"
 (cd "$ROOT" && bundle config set --local path vendor/bundle >/dev/null && bundle install --quiet)
-(cd "$ROOT/apps/$APP" && ASC_KEY_ID="$ADMIN_KEY_ID" ASC_KEY_CONTENT="$(base64 -i "$ADMIN_P8" | tr -d '\n')" \
-  BUNDLE_GEMFILE="$ROOT/Gemfile" bundle exec fastlane ios setup_signing)
+LOG="$(mktemp)"
+if ! (cd "$ROOT/apps/$APP" && ASC_KEY_ID="$ADMIN_KEY_ID" ASC_KEY_CONTENT="$(base64 -i "$ADMIN_P8" | tr -d '\n')" \
+  BUNDLE_GEMFILE="$ROOT/Gemfile" bundle exec fastlane ios setup_signing) 2>&1 | tee "$LOG"; then
+  # The two failures people hit, in words (fastlane's own messages are easy to misread).
+  if grep -q "forbidden for security reasons\|not allowed to perform this operation" "$LOG"; then
+    echo
+    echo "✗ Apple refused: key $ADMIN_KEY_ID does not have Admin access (App Manager can't create profiles)."
+    echo "  Run this again and type n at the Admin key prompt to make one, or give an Admin key's ID."
+  elif grep -q "Couldn't decrypt the repo\|Invalid password" "$LOG"; then
+    echo
+    echo "✗ Wrong passphrase: it must be the one $CERTS_REPO was set up with (your password manager)."
+  fi
+  rm -f "$LOG"
+  exit 1
+fi
+rm -f "$LOG"
 
 if $PROFILE_ONLY; then
   [ "$ADMIN_KEY_ID" != "$ASC_KEY_ID" ] && echo "You can now revoke the Admin key $ADMIN_KEY_ID in App Store Connect."
