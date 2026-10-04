@@ -110,22 +110,24 @@ def pawns() -> None:
         imageset(f"PawnTop-{name}", pawn_from_above(pawn, dark=name == "black"))
 
 
-# The dice sheet's front faces: (row, column) of each value; the 6 is the black star. The 2 is its own
-# image (die-2.png).
-DIE_FACES = {1: (0, 1), 3: (0, 2), 4: (1, 2), 5: (0, 3), 6: (1, 0), "flag": (0, 0)}
+# The dice sheet: the flag die (shown before the first roll) and the black-star die (the app icon).
+DIE_SHEET = {"flag": (0, 0), "star": (1, 0)}
+DIE_XS = [545, 770, 995, 1225, 1445]
+DIE_YS = [595, 812, 1030]
+
+
+def sheet_die(src: Image.Image, which: str) -> Image.Image:
+    r, c = DIE_SHEET[which]
+    return clean_cutout(src.crop((DIE_XS[c], DIE_YS[r], DIE_XS[c + 1], DIE_YS[r + 1])), erode=3)
 
 
 def dice() -> None:
     src = Image.open(SRC / "dice.png").convert("RGBA")
-    xs = [545, 770, 995, 1225, 1445]
-    ys = [595, 812, 1030]
-    for value, (r, c) in DIE_FACES.items():
-        die = clean_cutout(src.crop((xs[c], ys[r], xs[c + 1], ys[r + 1])), erode=3)
-        die = fit(die, 240)
-        imageset(f"Die-{value}", die)
-
-    # The sheet had no die showing 2 in front; the owner made one to match (die-2.png).
-    imageset("Die-2", fit(clean_cutout(Image.open(SRC / "die-2.png").convert("RGBA"), erode=3), 240))
+    imageset("Die-flag", fit(sheet_die(src, "flag"), 240))
+    # Die-1…6: the owner's renders (2026-10-04), one per value with the roll on the top face: gold pips
+    # for 1…5, the Ghana black star for the 6.
+    for value in range(1, 7):
+        imageset(f"Die-{value}", fit(clean_cutout(Image.open(SRC / f"die-top-{value}.png").convert("RGBA"), erode=3), 240))
     imageset("DiceCup", fit(clean_cutout(src.crop((10, 40, 510, 1030))), 360))
     return src
 
@@ -185,6 +187,85 @@ def menu() -> None:
     tiles = {"start": (50, 398, 316, 650), "friends": (634, 398, 898, 650), "settings": (544, 1302, 794, 1546)}
     for name, box in tiles.items():
         imageset(f"Tile-{name}", src.crop(box))
+    imageset("Tile-learn", learn_tile(src.crop((342, 398, 608, 650))))
+
+
+# Georgia Bold (macOS) for the Learn tile's label, the nearest match to the art's lettering.
+LABEL_FONT = "/System/Library/Fonts/Supplemental/Georgia Bold.ttf"
+
+
+def learn_tile(online: Image.Image) -> Image.Image:
+    """The Learn tile, made from the menu art's Online tile (the same carved frame and blue disc): an
+    open book replaces the globe and "Learn" replaces "Online". Drawn at 4x, then reduced."""
+    from PIL import ImageDraw, ImageFont
+    k = 4
+    tile = online.resize((online.width * k, online.height * k), Image.LANCZOS).convert("RGBA")
+    d = ImageDraw.Draw(tile)
+    cx, cy, r = 134 * k, 100 * k, 63 * k
+    # The blue disc, without the globe: a deep blue, lighter top-left, with a little cloth noise.
+    blue = Image.new("RGBA", (2 * r, 2 * r))
+    yy, xx = np.mgrid[0:2 * r, 0:2 * r]
+    dist = np.hypot(xx - r * 0.7, yy - r * 0.6) / (2 * r)
+    rng = np.random.default_rng(5)
+    shade = np.clip(1.15 - 0.55 * dist + rng.normal(0, 0.035, dist.shape), 0.55, 1.2)
+    rgb = np.stack([18 * shade, 42 * shade, 92 * shade, np.full(shade.shape, 255.0)], -1)
+    blue = Image.fromarray(rgb.clip(0, 255).astype("uint8"))
+    mask = Image.new("L", blue.size, 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, 2 * r - 1, 2 * r - 1), fill=255)
+    tile.paste(blue, (cx - r, cy - r), mask)
+    # An open book in pale carved wood, a shadow under it.
+    wood, edge, page_line = (226, 184, 124, 255), (110, 62, 26, 255), (170, 118, 66, 255)
+    w, h, top, sag = 52 * k, 44 * k, cy - 25 * k, 7 * k
+    left = [(cx, top + sag), (cx - w, top), (cx - w, top + h), (cx, top + h + sag)]
+    right = [(cx, top + sag), (cx + w, top), (cx + w, top + h), (cx, top + h + sag)]
+    shadow = Image.new("RGBA", tile.size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).polygon([(x + 3 * k, y + 5 * k) for x, y in left + right[::-1]], fill=(0, 0, 0, 140))
+    tile = Image.alpha_composite(tile, shadow.filter(ImageFilter.GaussianBlur(4 * k)))
+    d = ImageDraw.Draw(tile)
+    cover = [(cx, top + h + sag + 4 * k), (cx - w - 4 * k, top + h + 4 * k), (cx - w - 4 * k, top + 6 * k),
+             (cx - w, top + 6 * k), (cx - w, top + h), (cx, top + h + sag), (cx + w, top + h), (cx + w, top + 6 * k),
+             (cx + w + 4 * k, top + 6 * k), (cx + w + 4 * k, top + h + 4 * k)]
+    d.polygon(cover, fill=(150, 96, 44, 255), outline=edge, width=k)
+    for page in (left, right):
+        d.polygon(page, fill=wood, outline=edge, width=2 * k)
+    d.line([(cx, top + sag), (cx, top + h + sag)], fill=edge, width=2 * k)
+    for i in range(1, 4):
+        y = top + i * h // 4
+        d.line([(cx - w + 7 * k, y), (cx - 7 * k, y + sag - 2 * k)], fill=page_line, width=k + 1)
+        d.line([(cx + 7 * k, y + sag - 2 * k), (cx + w - 7 * k, y)], fill=page_line, width=k + 1)
+    # The label: cover "Online" with the label's own grain (a plain strip of it, tiled), then letter "Learn".
+    lx0, ly0, lx1, ly1 = 34 * k, 184 * k, 232 * k, 224 * k
+    strip = tile.crop((lx0, ly0, lx0 + 22 * k, ly1))
+    for x in range(lx0, lx1, strip.width):
+        tile.paste(strip, (x, ly0))
+    font = ImageFont.truetype(LABEL_FONT, 33 * k)
+    text = "Learn"
+    tw = d.textlength(text, font=font)
+    tx, ty = cx - tw / 2, 184 * k
+    d = ImageDraw.Draw(tile)
+    d.text((tx + k, ty + 2 * k), text, font=font, fill=(40, 20, 8, 220))
+    d.text((tx, ty), text, font=font, fill=(232, 182, 98, 255))
+    return tile.resize(online.size, Image.LANCZOS).convert("RGB")
+
+
+def launch_splash() -> None:
+    """The launch screen and the splash's background, one image: dark mahogany lit from above, no
+    text (Apple's guidance for launch screens). The splash draws LELU LUDO, the owner's line and the
+    boxed board on top of this same picture, so launch runs into it with no black and no jump."""
+    w, h = 1290, 2796                                   # a 6.9" iPhone at 3x; aspect-filled elsewhere
+    wood = np.array(grain(h, (96, 52, 30), (34, 16, 9), seed=5))[:, (h - w) // 2:(h + w) // 2].astype(float)
+    night = np.array([15, 10, 8], dtype=float)
+    rgb = night * 0.4 + wood * 0.6
+    yy, xx = np.mgrid[0:h, 0:w]
+    glow = np.clip(1 - np.hypot(xx - w / 2, yy - h * 0.18) / 1300, 0, 1)[..., None] * 0.75
+    rgb = rgb * (1 - glow) + np.array([140, 84, 41]) * glow
+    folder = OUT.parent / "LaunchSplash.imageset"
+    folder.mkdir(parents=True, exist_ok=True)
+    for old in folder.glob("*.jpg"):
+        old.unlink()
+    Image.fromarray(rgb.clip(0, 255).astype("uint8")).save(folder / "LaunchSplash.jpg", quality=86, optimize=True)
+    (folder / "Contents.json").write_text(json.dumps(
+        {"images": [{"idiom": "universal", "filename": "LaunchSplash.jpg"}], "info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
 
 
 def app_icon() -> None:
@@ -195,8 +276,8 @@ def app_icon() -> None:
     glow = 1.25 - 0.6 * (((xx - 512) ** 2 + (yy - 470) ** 2) ** 0.5 / 724)
     a = np.clip(a * glow[..., None], 0, 255)
     icon = Image.fromarray(a.astype("uint8"))
-    die = Image.open(OUT / "Die-6.imageset" / "Die-6.png")
-    die = fit(die, 700)
+    src = Image.open(SRC / "dice.png").convert("RGBA")
+    die = fit(sheet_die(src, "star"), 700)
     shadow = Image.new("RGBA", icon.size, (0, 0, 0, 0))
     sx, sy = (1024 - die.width) // 2, (1024 - die.height) // 2 + 20
     sh = Image.new("RGBA", die.size, (0, 0, 0, 160))
@@ -268,5 +349,6 @@ if __name__ == "__main__":
     support_tile()
     maple()
     menu()
+    launch_splash()
     app_icon()
     print("art written to", OUT)

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The opening card: LELU LUDO and the owner's line, "Play Ghana. Play Together.", over the board
-/// in its box. Tap to go straight on.
+/// in its box, on the launch screen's wood. Tap to go straight on.
 struct SplashView: View {
     let done: () -> Void
 
@@ -37,13 +37,16 @@ struct SplashView: View {
         }
     }
 
-    /// Dark wood lit from above, as in the owner's splash art.
+    /// Dark wood lit from above: the same picture as the launch screen (LaunchScreen.storyboard), drawn
+    /// the same way (aspect-fill), so launch runs into the splash with no black and no jump.
     static var background: some View {
-        ZStack {
-            Palette.night
-            Image(Art.darkWood).resizable(resizingMode: .tile).opacity(0.6)
-            RadialGradient(colors: [Color(red: 0.55, green: 0.33, blue: 0.16).opacity(0.75), .clear],
-                           center: .init(x: 0.5, y: 0.18), startRadius: 10, endRadius: 420)
+        GeometryReader { geo in
+            Image(Art.launchSplash)
+                .resizable()
+                .scaledToFill()
+                .frame(width: geo.size.width, height: geo.size.height)
+                .clipped()
         }
+        .background(Palette.night)
     }
 }

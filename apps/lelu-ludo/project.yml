@@ -40,7 +40,7 @@ targets:
         CFBundleDisplayName: Lelu Ludo
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        UILaunchScreen: { UIColorName: LaunchBackground }
+        UILaunchStoryboardName: LaunchScreen
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
         UIApplicationSceneManifest:

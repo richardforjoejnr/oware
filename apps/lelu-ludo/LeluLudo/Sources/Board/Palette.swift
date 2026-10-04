@@ -11,6 +11,9 @@ enum Palette {
     static let sand = Color(red: 0.87, green: 0.78, blue: 0.63)
     static let sandDeep = Color(red: 0.72, green: 0.58, blue: 0.42)
     static let brass = Color(red: 0.77, green: 0.59, blue: 0.15)
+    /// Brass catching the light, and brass in shadow: the bevels on the menu's buttons and studs.
+    static let brassLight = Color(red: 0.96, green: 0.82, blue: 0.45)
+    static let brassDark = Color(red: 0.52, green: 0.37, blue: 0.08)
     static let ivory = Color(red: 0.92, green: 0.85, blue: 0.72)
 
     /// The colour painted on maple (multiplied over the grain): the flag colours, a touch deeper.

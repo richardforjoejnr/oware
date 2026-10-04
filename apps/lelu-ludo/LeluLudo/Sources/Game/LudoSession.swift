@@ -48,6 +48,10 @@ final class LudoSession {
 
     @ObservationIgnored private let store: GameStore
     @ObservationIgnored private let dice: DiceSource
+    /// Learn the game, while it runs: the lesson and how it went. Nothing is saved meanwhile.
+    private(set) var tutorial: TutorialProgress?
+    /// The lesson's own die (its scripted faces), in place of the game's while a lesson runs.
+    @ObservationIgnored private var lessonDice: ScriptedDice?
     @ObservationIgnored private let feedback: FeedbackPlayer?
     @ObservationIgnored private var aiSeed: UInt64
     @ObservationIgnored private var aiRolls: UInt64 = 0
@@ -56,6 +60,14 @@ final class LudoSession {
         self.store = store
         self.dice = dice
         self.feedback = feedback
+        setup = GameSetup(seats: [.red: .human, .black: .computer(.novice)])
+        state = GameState(players: [.red, .black])
+        aiSeed = UInt64.random(in: 0...UInt64.max)
+        restoreSaved()
+    }
+
+    /// Back to the saved game, if there is one.
+    private func restoreSaved() {
         if let saved = store.load() {
             setup = saved.setup
             state = saved.state
@@ -64,8 +76,70 @@ final class LudoSession {
         } else {
             setup = GameSetup(seats: [.red: .human, .black: .computer(.novice)])
             state = GameState(players: [.red, .black])
-            aiSeed = UInt64.random(in: 0...UInt64.max)
+            hasGame = false
         }
+    }
+
+    // MARK: Learn the game
+
+    /// Starts the tutorial at lesson `index` (a Learn card starts at its chapter's first lesson).
+    func startTutorial(at index: Int = 0) {
+        tutorial = TutorialProgress(index: max(0, min(Lesson.all.count - 1, index)))
+        loadLesson()
+    }
+
+    /// The lesson again from its start position.
+    func retryLesson() { loadLesson() }
+
+    /// On to the next lesson; false after the last.
+    @discardableResult
+    func nextLesson() -> Bool {
+        guard let t = tutorial, !t.isLast else { return false }
+        tutorial = TutorialProgress(index: t.index + 1)
+        loadLesson()
+        return true
+    }
+
+    /// Leaves the tutorial and puts the player's own game back.
+    func endTutorial() {
+        guard tutorial != nil else { return }
+        tutorial = nil
+        lessonDice = nil
+        lastRoll = nil
+        lastEvents = []
+        log = []
+        selectedToken = nil
+        restoreSaved()
+    }
+
+    private func loadLesson() {
+        guard var t = tutorial else { return }
+        let lesson = t.lesson
+        // Black is a person who is never asked to move: the lesson ends on Red's turn.
+        setup = GameSetup(seats: [.red: .human, .black: .human], rules: .ghanaClassic)
+        state = GameState.arranged(players: [.red, .black], rules: .ghanaClassic, toMove: .red,
+                                   tokens: [.red: lesson.red, .black: lesson.black])
+        lessonDice = ScriptedDice(lesson.dice)
+        lastRoll = nil
+        lastEvents = []
+        log = []
+        selectedToken = nil
+        t.outcome = .playing
+        tutorial = t
+    }
+
+    /// After a roll or a move in a lesson: done if it did what the lesson asked; otherwise, once
+    /// Red's go is over, try again.
+    private func checkLesson(_ events: [GameEvent], afterMove: Bool) {
+        guard var t = tutorial, t.outcome == .playing else { return }
+        if events.contains(where: t.lesson.goal) {
+            t.outcome = .done
+        } else if afterMove || events.contains(.passed(.red)) {
+            t.outcome = .tryAgain
+        } else {
+            return
+        }
+        tutorial = t
     }
 
     /// Starts from an arranged position (UI tests, screenshots).
@@ -92,7 +166,10 @@ final class LudoSession {
     private var humanToMove: Bool { setup.seat(state.toMove) == .human }
 
     /// The person whose turn it is may roll.
-    var canRoll: Bool { !state.isOver && humanToMove && state.pendingRoll == nil && !isComputerPlaying }
+    var canRoll: Bool {
+        !state.isOver && humanToMove && state.pendingRoll == nil && !isComputerPlaying
+            && (tutorial == nil || (tutorial?.outcome == .playing && state.toMove == .red))
+    }
 
     /// Tokens the person to move may play with the current roll.
     var movableTokens: [Int] {
@@ -126,7 +203,9 @@ final class LudoSession {
 
     /// A player's or computer's name, as the game says it.
     func name(_ color: PlayerColor) -> String {
-        switch setup.seat(color) {
+        // In a lesson you play red; Black only stands on the board.
+        if tutorial != nil { return color == .red ? "You" : color.name }
+        return switch setup.seat(color) {
         case .human: setup.seats.values.filter({ $0 == .human }).count > 1 ? color.name : "You"
         case .computer: color.name
         }
@@ -197,6 +276,7 @@ final class LudoSession {
         lastEvents = events
         describe(events)
         sound(events)
+        checkLesson(events, afterMove: true)
         save()
     }
 
@@ -235,13 +315,14 @@ final class LudoSession {
 
     private func rollDie() {
         let color = state.toMove
-        let value = dice.roll()
+        let value = (lessonDice ?? dice).roll()
         lastRoll = (color, value)
         rolls += 1
         feedback?.play(.roll)
         lastEvents = state.roll(value)
         describe(lastEvents)
         sound(lastEvents)
+        checkLesson(lastEvents, afterMove: false)
         save()
     }
 
@@ -274,6 +355,7 @@ final class LudoSession {
     }
 
     private func save() {
+        guard tutorial == nil else { return }   // a lesson never replaces the player's own game
         if state.isOver {
             store.clear()
             hasGame = false

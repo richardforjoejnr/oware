@@ -18,6 +18,7 @@ struct LeluLudoApp: App {
         if LaunchOptions.fast { session.pacing = .instant }
         if LaunchOptions.startGame { session.newGame(.versusComputer(opponents: 1, level: .novice, rules: settings.rules)) }
         if let scenario = LaunchOptions.scenario { session.load(scenario) }
+        if LaunchOptions.tutorial { session.startTutorial() }
         _session = State(initialValue: session)
     }
 
@@ -32,9 +33,9 @@ struct LeluLudoApp: App {
 }
 
 struct RootView: View {
-    @State private var inGame = LaunchOptions.startGame || LaunchOptions.scenario != nil
+    @State private var inGame = LaunchOptions.startGame || LaunchOptions.scenario != nil || LaunchOptions.tutorial
     /// The opening card, skipped by tests and when opening straight onto a game.
-    @State private var splash = !LaunchOptions.testMode && !LaunchOptions.startGame && LaunchOptions.scenario == nil
+    @State private var splash = !LaunchOptions.testMode && !LaunchOptions.startGame && LaunchOptions.scenario == nil && !LaunchOptions.tutorial
 
     var body: some View {
         if splash {
@@ -64,6 +65,8 @@ enum LaunchOptions {
     static var startGame: Bool { arguments.contains("--start-game") }
     /// `--scenario=back-kick`: open on an arranged position (UI tests, screenshots).
     static var scenario: Scenario? { arguments.lazy.compactMap { $0.hasPrefix("--scenario=") ? Scenario(rawValue: String($0.dropFirst(11))) : nil }.first }
+    /// `--tutorial`: open straight onto Learn the game's first lesson.
+    static var tutorial: Bool { arguments.contains("--tutorial") }
     /// Any test run (UI tests pass `--fast`; unit tests run inside XCTest): silent, nothing persisted
     /// about the player's own choices.
     static var testMode: Bool {
