@@ -303,9 +303,13 @@ struct WoodChips<Value: Hashable>: View {
         let longest = options.map { label($0).count }.max() ?? 0
         let font: Font.TextStyle = longest <= 3 ? .title3 : .body
         // Up to three in a row; four (the levels) in two rows of two, so every name is set full size.
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: options.count > 3 ? 2 : options.count)
-        LazyVGrid(columns: columns, spacing: 10) {
-            ForEach(options, id: \.self) { option in
+        // A plain grid, not a lazy one: every chip exists even when scrolled off screen (VoiceOver).
+        let perRow = options.count > 3 ? 2 : options.count
+        let rows = stride(from: 0, to: options.count, by: perRow).map { Array(options[$0..<min($0 + perRow, options.count)]) }
+        Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+            ForEach(rows, id: \.self) { row in
+                GridRow {
+            ForEach(row, id: \.self) { option in
                 let chosen = option == selection
                 Button {
                     withAnimation(.easeInOut(duration: 0.15)) { selection = option }
@@ -324,6 +328,8 @@ struct WoodChips<Value: Hashable>: View {
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(chosen ? .isSelected : [])
                 .accessibilityIdentifier(id(option))
+            }
+                }
             }
         }
     }
