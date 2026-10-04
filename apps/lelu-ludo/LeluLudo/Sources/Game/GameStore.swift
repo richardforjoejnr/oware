@@ -18,6 +18,19 @@ struct GameSetup: Codable, Hashable, Sendable {
 
     var colors: [PlayerColor] { PlayerColor.allCases.filter { seats[$0] != nil } }
     func seat(_ color: PlayerColor) -> Seat { seats[color] ?? .human }
+
+    /// You (red) against 1–3 computers: opposite first (black), then beside (yellow, green).
+    static func versusComputer(opponents: Int, level: LudoAIDifficulty, rules: RuleSet) -> GameSetup {
+        var seats: [PlayerColor: Seat] = [.red: .human]
+        for c in [PlayerColor.black, .yellow, .green].prefix(max(1, min(3, opponents))) { seats[c] = .computer(level) }
+        return GameSetup(seats: seats, rules: rules)
+    }
+
+    /// 2–4 people on one phone: red and black face each other, then yellow and green join.
+    static func passAndPlay(players: Int, rules: RuleSet) -> GameSetup {
+        let order: [PlayerColor] = [.red, .black, .yellow, .green]
+        return GameSetup(seats: Dictionary(uniqueKeysWithValues: order.prefix(max(2, min(4, players))).map { ($0, Seat.human) }), rules: rules)
+    }
 }
 
 /// The game in progress, saved so the player can resume after relaunch.
