@@ -15,7 +15,8 @@ final class LeluLudoUITests: XCTestCase {
 
     @MainActor
     func testRollASixBringATokenOutAndMoveIt() throws {
-        // You: 6 (out), 4 (moves it). Computer: 2 (nothing out: passes). You again.
+        // You: 6 (out), 4 (moves it by itself: Novice, and its only move is forward). Computer: 2
+        // (nothing out: passes). You again.
         let app = launch(["--dice=6,4,2,3", "--start-game"])
         let roll = app.buttons["btn-roll"]
         XCTAssertTrue(roll.waitForExistence(timeout: 20))
@@ -26,7 +27,6 @@ final class LeluLudoUITests: XCTestCase {
         token.tap()
         XCTAssertTrue(token.label.contains("0 squares from start"), token.label)
         roll.tap()
-        token.tap()
         let moved = NSPredicate(format: "label CONTAINS '4 squares from start'")
         expectation(for: moved, evaluatedWith: token)
         waitForExpectations(timeout: 20)

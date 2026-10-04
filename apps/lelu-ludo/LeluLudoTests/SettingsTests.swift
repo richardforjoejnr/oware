@@ -166,3 +166,54 @@ final class LinksTests: XCTestCase {
         }
     }
 }
+
+/// Novice against the computer: a roll with one plain move forward plays itself (owner, 2026-10-04).
+@MainActor
+final class OnlyForwardMoveTests: XCTestCase {
+    private func session(_ setup: GameSetup, red: [Int], black: [Int] = [-1, -1, -1, -1], dice: [Int]) -> LudoSession {
+        let store = TestSupport.store()
+        store.save(SavedGame(setup: setup, state: GameState.arranged(players: [.red, .black], toMove: .red,
+                                                                     tokens: [.red: red, .black: black]), aiSeed: 1))
+        return TestSupport.session(dice: dice, store: store)
+    }
+    private func versus(_ level: LudoAIDifficulty) -> GameSetup { GameSetup(seats: [.red: .human, .black: .computer(level)]) }
+
+    func testNoviceMovesYourOnlyForwardMove() async {
+        let s = session(versus(.novice), red: [10, -1, -1, -1], dice: [3, 2])
+        await s.roll()
+        XCTAssertEqual(s.state.tokens(of: .red)[0], 13, "moved by itself")
+        XCTAssertEqual(s.state.toMove, .red, "and the computer has had its turn")
+    }
+
+    func testOtherLevelsLeaveItToYou() async {
+        let s = session(versus(.intermediate), red: [10, -1, -1, -1], dice: [3])
+        await s.roll()
+        XCTAssertEqual(s.state.tokens(of: .red)[0], 10)
+        XCTAssertEqual(s.movableTokens, [0], "your tap")
+    }
+
+    func testNeverInPassAndPlay() async {
+        let s = session(GameSetup(seats: [.red: .human, .black: .human]), red: [10, -1, -1, -1], dice: [3])
+        await s.roll()
+        XCTAssertEqual(s.state.tokens(of: .red)[0], 10)
+    }
+
+    func testNotWhenThereIsAChoice() async {
+        // Two tokens out: which one to move is yours to decide.
+        let two = session(versus(.novice), red: [10, 20, -1, -1], dice: [3])
+        await two.roll()
+        XCTAssertEqual(two.state.tokens(of: .red), [10, 20, -1, -1])
+        // A back kick as well as the move forward.
+        let black = GameState.progress(of: .black, atTrackIndex: 7)
+        let kick = session(versus(.novice), red: [12, -1, -1, -1], black: [black, -1, -1, -1], dice: [5])
+        await kick.roll()
+        XCTAssertEqual(kick.state.tokens(of: .red)[0], 12)
+        XCTAssertEqual(Set(kick.choices(for: 0).map(\.kind)), [.forward, .backKick])
+    }
+
+    func testNotBringingATokenOut() async {
+        let s = session(versus(.novice), red: [-1, -1, -1, -1], dice: [6])
+        await s.roll()
+        XCTAssertEqual(s.state.tokens(of: .red), [-1, -1, -1, -1], "coming out is yours to tap")
+    }
+}

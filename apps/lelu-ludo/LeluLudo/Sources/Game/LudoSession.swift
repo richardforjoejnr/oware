@@ -267,9 +267,27 @@ final class LudoSession {
         save()
     }
 
+    /// Novice games against the computer (owner, 2026-10-04): when your roll leaves one move and it
+    /// is a plain move forward, there is nothing to decide, so it plays itself. Never with a choice
+    /// (two tokens, or a kick as well), never bringing a token out, never in pass & play or lessons.
+    var onlyForwardMove: Move? {
+        guard computerLevel == .novice, tutorial == nil, humanToMove, !isComputerPlaying, motion == nil else { return nil }
+        let moves = state.legalMoves()
+        guard moves.count == 1, moves[0].kind == .forward else { return nil }
+        return moves[0]
+    }
+
     func roll() async {
         guard canRoll else { return }
         rollDie()
+        if let move = onlyForwardMove {
+            let game = generation
+            // Let the die land first, so the roll is seen before the token walks.
+            if pacing.roll > .zero { try? await Task.sleep(for: pacing.roll) }
+            guard game == generation else { return }
+            await play(move)   // plays the computers' turns after it
+            return
+        }
         await runComputerTurns()
     }
 
