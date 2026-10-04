@@ -79,13 +79,14 @@ struct GameView: View {
             BoardFrame(plaque: false) { BoardView() }
                 .overlay {
                     // Each roll tumbles across the board; the tray's die keeps the result.
-                    if session.rolls > 0, let roll = session.lastRoll, animated, flight.skipped < session.rolls {
+                    // Only when the dice are thrown on the board; with it off the roll shows on the tray's die.
+                    if session.rolls > 0, let roll = session.lastRoll, animated, style != .off, flight.skipped < session.rolls {
                         let count = session.rolls
                         // Your throw as chosen in Settings; computers' always the quick one.
                         let yours = session.setup.seat(roll.color) == .human
                         RollingDie(value: roll.value, landing: RollingDie.landing(for: count),
-                                   timing: style == .off ? .still : (yours ? .of(style) : .quick),
-                                   landed: { flight.land(count) })
+                                   timing: yours ? .of(style) : .quick,
+                                   landed: { flight.land(count) }, returned: { flight.returned(count) })
                             .id(count)
                             // Catches taps (to skip) only while in the air, never over the tokens after.
                             .allowsHitTesting(flight.inFlight(count))
@@ -109,6 +110,8 @@ struct GameView: View {
         // A light knock as the die lands on the board.
         .sensoryFeedback(.impact(weight: .light), trigger: flight.landed) { _, _ in animated && settings.effectiveHaptics }
         // Your throw in Settings applies at once.
+        // No throw on the board: the tray's die shows the roll at once.
+        .onChange(of: session.rolls) { _, rolls in if !animated || style == .off { flight.returned(rolls) } }
         .onChange(of: style) { _, style in
             if session.pacing != .instant { session.pacing = .normal(style) }
         }

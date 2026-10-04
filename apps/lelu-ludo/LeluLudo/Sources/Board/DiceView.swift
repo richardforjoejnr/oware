@@ -23,6 +23,8 @@ struct DiceView: View {
                     Image(value.map(Art.die) ?? Art.dieFlag)
                         .resizable().scaledToFit()
                         .frame(width: 70, height: 70)
+                        // Out being thrown on the board: gone from here until it comes back to the cup.
+                        .opacity(flight.thrown(session.rolls) ? 0 : 1)
                         .shadow(color: .black.opacity(0.45), radius: 3, y: 2)
                         .id(value.map { "\($0)-\(shakes)" } ?? "flag")
                         .transition(.scale(scale: 0.6).combined(with: .opacity))

@@ -182,6 +182,21 @@ final class DiceThrowTests: XCTestCase {
         XCTAssertEqual(flight.landed, 2)
     }
 
+    /// One die on screen, never two: the tray's die is gone while it is out being thrown, and back once
+    /// it returns to the cup (or the throw is skipped).
+    func testTheTraysDieIsHiddenWhileItIsThrown() {
+        let flight = DieFlight()
+        XCTAssertFalse(flight.thrown(0), "before any roll, the tray shows its die")
+        XCTAssertTrue(flight.thrown(1), "rolled: out on the board")
+        flight.land(1)
+        XCTAssertTrue(flight.thrown(1), "landed, but not back in the cup yet")
+        flight.returned(1)
+        XCTAssertFalse(flight.thrown(1))
+        XCTAssertTrue(flight.thrown(2))
+        flight.skip(2)
+        XCTAssertFalse(flight.thrown(2), "skipping brings it straight back")
+    }
+
     func testTheThrowSettingIsRememberedAndPacesYourAutoMoves() {
         let d = TestSupport.defaults()
         let settings = AppSettings(defaults: d, testMode: false)

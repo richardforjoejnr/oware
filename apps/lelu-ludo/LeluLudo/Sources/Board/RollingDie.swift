@@ -51,8 +51,14 @@ final class DieFlight {
     private(set) var landed = 0
     /// The last roll the player tapped through: its die is taken off the board at once.
     private(set) var skipped = 0
+    /// The last roll whose die is back by the cup: until then the tray's die is hidden, as it is the
+    /// one being thrown (one die on screen, never two).
+    private(set) var back = 0
     func land(_ roll: Int) { landed = max(landed, roll) }
-    func skip(_ roll: Int) { skipped = max(skipped, roll); land(roll) }
+    func returned(_ roll: Int) { back = max(back, roll); land(roll) }
+    func skip(_ roll: Int) { skipped = max(skipped, roll); returned(roll) }
+    /// Whether the tray's die is out being thrown.
+    func thrown(_ roll: Int) -> Bool { roll > back }
     func inFlight(_ roll: Int) -> Bool { roll > landed }
 }
 
@@ -66,6 +72,8 @@ struct RollingDie: View {
     var timing: ThrowTiming = .full
     /// Called when it lands, or when the player taps to skip.
     var landed: () -> Void = {}
+    /// Called when it is back in the cup.
+    var returned: () -> Void = {}
 
     /// Starts the throw once on screen. (`KeyframeAnimator(repeating: false)` only holds the first
     /// frame; a trigger is what plays it once.)
@@ -93,28 +101,6 @@ struct RollingDie: View {
         GeometryReader { geo in
             let side = geo.size.width
             let k = timing.speed
-            if timing.isStill {
-                // Off: the die appears where it lands, in its glow, and fades away. Nothing moves.
-                KeyframeAnimator(initialValue: Pose(x: landing.x, y: landing.y, spin: 1080, scale: 1, opacity: 0),
-                                 trigger: thrown) { pose in
-                    ZStack {
-                        Circle()
-                            .fill(RadialGradient(colors: [Palette.brassLight.opacity(0.75), .clear],
-                                                 center: .center, startRadius: 0, endRadius: side * 0.13))
-                            .frame(width: side * 0.26, height: side * 0.26)
-                        Image(Art.die(value)).resizable().scaledToFit().frame(width: side * 0.13)
-                            .shadow(color: .black.opacity(0.5), radius: 3, x: 3, y: 5)
-                    }
-                    .opacity(pose.opacity)
-                    .position(x: landing.x * side, y: landing.y * side)
-                } keyframes: { _ in
-                    KeyframeTrack(\.opacity) {
-                        LinearKeyframe(1, duration: 0.2)
-                        LinearKeyframe(1, duration: timing.rest)
-                        LinearKeyframe(0, duration: timing.returnTrip)
-                    }
-                }
-            } else {
             KeyframeAnimator(initialValue: Pose(), trigger: thrown) { pose in
                 ZStack {
                     // The glow it lands in.
@@ -185,7 +171,6 @@ struct RollingDie: View {
                     LinearKeyframe(0, duration: timing.returnTrip * 0.4)
                 }
             }
-            }
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: landed)   // tap to skip: the result at once
@@ -193,6 +178,8 @@ struct RollingDie: View {
             thrown = true
             try? await Task.sleep(for: timing.landing)
             landed()
+            try? await Task.sleep(for: .milliseconds(Int((timing.total - timing.landsAfter) * 1000)))
+            returned()
         }
         .accessibilityHidden(true)
     }
