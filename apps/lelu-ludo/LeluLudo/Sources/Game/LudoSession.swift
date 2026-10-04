@@ -66,6 +66,29 @@ final class LudoSession {
         restoreSaved()
     }
 
+    /// Which game this is. Starting a game or a lesson, or leaving one, moves it on, and anything
+    /// still running for an earlier one (a computer's turn, a token's walk) stops instead of playing
+    /// into the new board.
+    @ObservationIgnored private var generation = 0
+
+    /// A fresh slate for a different game or lesson: earlier turns stop, and nothing of the last
+    /// game (its commentary, a chosen token, a token mid-walk) carries over.
+    private func startOver() {
+        generation &+= 1
+        isComputerPlaying = false
+        motion = nil
+        selectedToken = nil
+        log = []
+        lastEvents = []
+        lastRoll = nil
+    }
+
+    /// A game loaded on a computer's turn (the app was closed while it played) carries on by itself.
+    private func resumeComputerTurns() {
+        guard !state.isOver, case .computer = setup.seat(state.toMove) else { return }
+        Task { await runComputerTurns() }
+    }
+
     /// Back to the saved game, if there is one.
     private func restoreSaved() {
         if let saved = store.load() {
@@ -73,6 +96,7 @@ final class LudoSession {
             state = saved.state
             aiSeed = saved.aiSeed
             hasGame = !saved.state.isOver
+            resumeComputerTurns()
         } else {
             setup = GameSetup(seats: [.red: .human, .black: .computer(.novice)])
             state = GameState(players: [.red, .black])
@@ -103,17 +127,15 @@ final class LudoSession {
     /// Leaves the tutorial and puts the player's own game back.
     func endTutorial() {
         guard tutorial != nil else { return }
+        startOver()
         tutorial = nil
         lessonDice = nil
-        lastRoll = nil
-        lastEvents = []
-        log = []
-        selectedToken = nil
         restoreSaved()
     }
 
     private func loadLesson() {
         guard var t = tutorial else { return }
+        startOver()
         let lesson = t.lesson
         // Black is a person who is never asked to move: the lesson ends on Red's turn.
         setup = GameSetup(seats: [.red: .human, .black: .human], rules: .ghanaClassic)
@@ -144,6 +166,7 @@ final class LudoSession {
 
     /// Starts from an arranged position (UI tests, screenshots).
     func load(_ scenario: Scenario) {
+        startOver()
         let (setup, state) = scenario.game
         self.setup = setup
         self.state = state
@@ -154,6 +177,7 @@ final class LudoSession {
     }
 
     func newGame(_ setup: GameSetup) {
+        startOver()
         self.setup = setup
         state = GameState(players: setup.colors, rules: setup.rules)
         aiSeed = UInt64.random(in: 0...UInt64.max)
@@ -259,6 +283,7 @@ final class LudoSession {
 
     /// Walks the token along its path, then plays the move (kicks land as it arrives).
     private func perform(_ move: Move) async {
+        let game = generation
         let mover = state.toMove
         let cells = state.path(for: move)
         if pacing.step > .zero, !cells.isEmpty {
@@ -267,6 +292,7 @@ final class LudoSession {
                 motion?.step = i
                 feedback?.play(.step)
                 try? await Task.sleep(for: pacing.step)
+                guard game == generation else { return }   // left mid-walk: not this board's move any more
             }
         } else {
             for _ in cells { feedback?.play(.step) }
@@ -296,20 +322,27 @@ final class LudoSession {
     /// Lets computer seats play until it is a person's turn or the game is over.
     func runComputerTurns() async {
         guard !isComputerPlaying else { return }
+        let game = generation
         isComputerPlaying = true
-        defer { isComputerPlaying = false }
-        while !state.isOver, case let .computer(level) = setup.seat(state.toMove) {
+        // Only this game's loop says it has stopped; a newer game's loop may be running by then.
+        defer { if game == generation { isComputerPlaying = false } }
+        // After every pause the game is checked again: Home, a new game or a lesson may have come
+        // in between, and this loop must not roll or move for them.
+        while game == generation, !state.isOver, case let .computer(level) = setup.seat(state.toMove) {
             if pacing.computer > .zero { try? await Task.sleep(for: pacing.computer) }
+            guard game == generation, !state.isOver, case .computer = setup.seat(state.toMove) else { return }
             if state.pendingRoll == nil {
                 rollDie()
                 if pacing.roll > .zero { try? await Task.sleep(for: pacing.roll) }
+                guard game == generation else { return }
             }
             guard !state.isOver, state.pendingRoll != nil, case .computer = setup.seat(state.toMove) else { continue }
             var rng = SeededGenerator(seed: aiSeed &+ aiRolls)
             aiRolls &+= 1
-            if let move = AIPlayer(difficulty: level).chooseMove(state, using: &rng) {
-                await perform(move)
-            }
+            // No move for a roll that is waiting can only come from a damaged save: stop rather than
+            // spin for ever.
+            guard let move = AIPlayer(difficulty: level).chooseMove(state, using: &rng) else { return }
+            await perform(move)
         }
     }
 

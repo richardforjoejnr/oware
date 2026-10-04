@@ -63,6 +63,8 @@ final class AppSettings {
         preset = RulesPreset(rawValue: defaults.string(forKey: "rulesPreset") ?? "") ?? .ghanaClassic
         var stored = (defaults.data(forKey: "customRules")).flatMap { try? JSONDecoder().decode(RuleSet.self, from: $0) } ?? .ghanaClassic
         stored.labourerEnabled = false   // reserved until the owner defines it
+        // Damaged or old settings must still let a token out of the yard (and make saves that load).
+        if stored.entryRolls.isEmpty || !stored.entryRolls.isSubset(of: 1...6) { stored.entryRolls = [6] }
         custom = stored
         soundOn = defaults.object(forKey: "soundOn") as? Bool ?? true
         hapticsOn = defaults.object(forKey: "hapticsOn") as? Bool ?? true

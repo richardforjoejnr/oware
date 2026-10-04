@@ -328,6 +328,9 @@ public struct GameState: Sendable, Codable, Hashable {
         }
         try check(visitsOK(visits, progress), .visits, "visitors stand in another player's lane")
         try check(visitsOK(turnStartVisits, turnStart), .turnStartVisits, "visitors stand in another player's lane")
+        // A roll with no move is passed at once, so one left waiting can only come from a damaged save
+        // (or one made under different rules); loaded, nobody could ever play it.
+        try check(pendingRoll == nil || winner != nil || !legalMoves().isEmpty, .pendingRoll, "a roll waiting to be played has a move")
     }
 
     private mutating func endTurn(_ events: inout [GameEvent]) {

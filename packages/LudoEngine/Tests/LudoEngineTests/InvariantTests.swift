@@ -218,6 +218,7 @@ struct CorruptSaveTests {
         cases.append(("not clockwise", with("players", [1, 0])))
         cases.append(("mover not playing", with("toMove", 3)))
         cases.append(("a roll of 7", with("pendingRoll", 7)))
+        cases.append(("a roll nobody can play (all in the yard, a 3)", with("pendingRoll", 3)))
         cases.append(("three sixes carried", with("sixesInARow", 3)))
         cases.append(("winner with tokens out", with("winner", 0)))
         cases.append(("unknown colour", with("toMove", 9)))
