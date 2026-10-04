@@ -1,9 +1,16 @@
 import SwiftUI
 
-/// How the dice are thrown (Settings ▸ Sound and touch): the full throw, or a quick one.
+/// How the dice are thrown (Settings ▸ Sound and touch): the full throw, a quick one, or off (the die
+/// just fades in on the board showing the roll, with no movement).
 enum DiceAnimation: String, CaseIterable, Sendable {
-    case full, quick
-    var title: String { self == .full ? "Full" : "Quick" }
+    case full, quick, off
+    var title: String {
+        switch self {
+        case .full: "Full"
+        case .quick: "Quick"
+        case .off: "Off"
+        }
+    }
 }
 
 /// When things happen in a throw, in seconds from the tap. Plain data, so it is tested without a screen.
@@ -15,13 +22,22 @@ struct ThrowTiming: Equatable {
 
     static let full = ThrowTiming(speed: 1)
     static let quick = ThrowTiming(speed: 0.5)
-    static func of(_ style: DiceAnimation) -> ThrowTiming { style == .full ? .full : .quick }
+    /// Throw off: no flight; the die fades in where it lands and fades away.
+    static let still = ThrowTiming(speed: 0)
+    static func of(_ style: DiceAnimation) -> ThrowTiming {
+        switch style {
+        case .full: .full
+        case .quick: .quick
+        case .off: .still
+        }
+    }
+    var isStill: Bool { speed == 0 }
 
     /// The cup's shake, the flight in an arc, two bounces: then the die rests showing the roll.
     var landsAfter: Double { 1.05 * speed }
     /// It rests, glowing, before going back to the tray.
-    var rest: Double { 0.45 * speed }
-    var returnTrip: Double { 0.35 * speed }
+    var rest: Double { isStill ? 0.9 : 0.45 * speed }
+    var returnTrip: Double { isStill ? 0.3 : 0.35 * speed }
     var total: Double { landsAfter + rest + returnTrip }
     var landing: Duration { .milliseconds(Int(landsAfter * 1000)) }
 }
@@ -77,6 +93,28 @@ struct RollingDie: View {
         GeometryReader { geo in
             let side = geo.size.width
             let k = timing.speed
+            if timing.isStill {
+                // Off: the die appears where it lands, in its glow, and fades away. Nothing moves.
+                KeyframeAnimator(initialValue: Pose(x: landing.x, y: landing.y, spin: 1080, scale: 1, opacity: 0),
+                                 trigger: thrown) { pose in
+                    ZStack {
+                        Circle()
+                            .fill(RadialGradient(colors: [Palette.brassLight.opacity(0.75), .clear],
+                                                 center: .center, startRadius: 0, endRadius: side * 0.13))
+                            .frame(width: side * 0.26, height: side * 0.26)
+                        Image(Art.die(value)).resizable().scaledToFit().frame(width: side * 0.13)
+                            .shadow(color: .black.opacity(0.5), radius: 3, x: 3, y: 5)
+                    }
+                    .opacity(pose.opacity)
+                    .position(x: landing.x * side, y: landing.y * side)
+                } keyframes: { _ in
+                    KeyframeTrack(\.opacity) {
+                        LinearKeyframe(1, duration: 0.2)
+                        LinearKeyframe(1, duration: timing.rest)
+                        LinearKeyframe(0, duration: timing.returnTrip)
+                    }
+                }
+            } else {
             KeyframeAnimator(initialValue: Pose(), trigger: thrown) { pose in
                 ZStack {
                     // The glow it lands in.
@@ -147,6 +185,7 @@ struct RollingDie: View {
                     LinearKeyframe(0, duration: timing.returnTrip * 0.4)
                 }
             }
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture(perform: landed)   // tap to skip: the result at once
@@ -158,8 +197,8 @@ struct RollingDie: View {
         .accessibilityHidden(true)
     }
 
-    /// Whether rolls are shown on the board: not under Reduce Motion, and not in tests.
-    static func shown(reduceMotion: Bool) -> Bool { !reduceMotion && !LaunchOptions.testMode }
+    /// Whether rolls are shown on the board at all (as a throw, or still when the throw is off): not in tests.
+    static var shown: Bool { !LaunchOptions.testMode }
 
     /// A landing spot for a roll: somewhere on the middle of the board, different each time.
     static func landing(for roll: Int) -> CGPoint {

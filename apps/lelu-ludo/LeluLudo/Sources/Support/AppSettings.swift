@@ -40,8 +40,13 @@ final class AppSettings {
     }
     var soundOn: Bool { didSet { defaults.set(soundOn, forKey: "soundOn") } }
     var hapticsOn: Bool { didSet { defaults.set(hapticsOn, forKey: "hapticsOn") } }
-    /// Your rolls: the full throw onto the board, or a quick one (computers' are always quick).
-    var diceAnimation: DiceAnimation { didSet { defaults.set(diceAnimation.rawValue, forKey: "diceAnimation") } }
+    /// The dice throw the player chose (Full, Quick or Off); nil until they choose.
+    var diceThrowChoice: DiceAnimation? { didSet { defaults.set(diceThrowChoice?.rawValue, forKey: "diceAnimation") } }
+
+    /// The dice throw in use: the player's choice, or until they choose, the device's Reduce Motion
+    /// (on: Off; off: Full). Choosing Full or Quick shows the throw even with Reduce Motion on: the
+    /// player asked for it (owner, 2026-10-04).
+    func diceThrow(reduceMotion: Bool) -> DiceAnimation { diceThrowChoice ?? (reduceMotion ? .off : .full) }
 
     /// Test launches are silent without touching what the player chose.
     let testMode: Bool
@@ -70,6 +75,6 @@ final class AppSettings {
         custom = stored
         soundOn = defaults.object(forKey: "soundOn") as? Bool ?? true
         hapticsOn = defaults.object(forKey: "hapticsOn") as? Bool ?? true
-        diceAnimation = DiceAnimation(rawValue: defaults.string(forKey: "diceAnimation") ?? "") ?? .full
+        diceThrowChoice = DiceAnimation(rawValue: defaults.string(forKey: "diceAnimation") ?? "")
     }
 }

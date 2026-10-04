@@ -63,9 +63,8 @@ final class RollingDieTests: XCTestCase {
         XCTAssertNotEqual(RollingDie.landing(for: 1), RollingDie.landing(for: 2), "it varies roll to roll")
     }
 
-    func testNotUnderReduceMotionOrInTests() {
-        XCTAssertFalse(RollingDie.shown(reduceMotion: true))
-        XCTAssertFalse(RollingDie.shown(reduceMotion: false), "unit tests are a test run")
+    func testNotInTests() {
+        XCTAssertFalse(RollingDie.shown, "unit tests are a test run")
     }
 
     func testItDrawsEveryFace() {
@@ -186,9 +185,21 @@ final class DiceThrowTests: XCTestCase {
     func testTheThrowSettingIsRememberedAndPacesYourAutoMoves() {
         let d = TestSupport.defaults()
         let settings = AppSettings(defaults: d, testMode: false)
-        XCTAssertEqual(settings.diceAnimation, .full)
-        settings.diceAnimation = .quick
-        XCTAssertEqual(AppSettings(defaults: d, testMode: false).diceAnimation, .quick)
+        // Until the player chooses, it follows the device: Reduce Motion on means Off.
+        XCTAssertNil(settings.diceThrowChoice)
+        XCTAssertEqual(settings.diceThrow(reduceMotion: false), .full)
+        XCTAssertEqual(settings.diceThrow(reduceMotion: true), .off)
+        // Choosing Full or Quick shows the throw even with Reduce Motion on (owner, 2026-10-04).
+        settings.diceThrowChoice = .quick
+        XCTAssertEqual(settings.diceThrow(reduceMotion: true), .quick)
+        let reopened = AppSettings(defaults: d, testMode: false)
+        XCTAssertEqual(reopened.diceThrowChoice, .quick, "remembered")
+        reopened.diceThrowChoice = .off
+        XCTAssertEqual(reopened.diceThrow(reduceMotion: false), .off, "Off is off on any device")
+        XCTAssertEqual(ThrowTiming.of(.off), .still)
+        XCTAssertTrue(ThrowTiming.still.isStill)
+        XCTAssertEqual(ThrowTiming.still.landsAfter, 0, "no flight: it is there at once")
+        XCTAssertLessThan(LudoSession.Pacing.normal(.off).yourRoll, LudoSession.Pacing.normal(.quick).yourRoll)
         XCTAssertLessThan(LudoSession.Pacing.normal(.quick).yourRoll, LudoSession.Pacing.normal(.full).yourRoll)
         XCTAssertGreaterThan(LudoSession.Pacing.normal(.full).yourRoll, ThrowTiming.full.landing, "the token waits for the die to land")
         XCTAssertGreaterThan(LudoSession.Pacing.normal.roll, ThrowTiming.quick.landing, "a computer waits for its die too")

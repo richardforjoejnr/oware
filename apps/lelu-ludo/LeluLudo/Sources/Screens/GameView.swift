@@ -14,7 +14,9 @@ struct GameView: View {
     @State private var showLevels = false
 
     /// Throws are shown on the board (not under Reduce Motion, not in tests).
-    private var animated: Bool { RollingDie.shown(reduceMotion: reduceMotion) }
+    private var animated: Bool { RollingDie.shown }
+    /// Your dice throw (Settings), or the device's Reduce Motion until you choose.
+    private var style: DiceAnimation { settings.diceThrow(reduceMotion: reduceMotion) }
     /// The die is in the air: the status says so until it lands.
     private var rolling: Bool { animated && session.lastRoll != nil && flight.inFlight(session.rolls) }
 
@@ -82,7 +84,7 @@ struct GameView: View {
                         // Your throw as chosen in Settings; computers' always the quick one.
                         let yours = session.setup.seat(roll.color) == .human
                         RollingDie(value: roll.value, landing: RollingDie.landing(for: count),
-                                   timing: yours ? .of(settings.diceAnimation) : .quick,
+                                   timing: style == .off ? .still : (yours ? .of(style) : .quick),
                                    landed: { flight.land(count) })
                             .id(count)
                             // Catches taps (to skip) only while in the air, never over the tokens after.
@@ -107,7 +109,7 @@ struct GameView: View {
         // A light knock as the die lands on the board.
         .sensoryFeedback(.impact(weight: .light), trigger: flight.landed) { _, _ in animated && settings.effectiveHaptics }
         // Your throw in Settings applies at once.
-        .onChange(of: settings.diceAnimation) { _, style in
+        .onChange(of: style) { _, style in
             if session.pacing != .instant { session.pacing = .normal(style) }
         }
         .padding(.horizontal, 12)

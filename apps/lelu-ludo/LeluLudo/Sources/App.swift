@@ -24,7 +24,7 @@ struct LeluLudoApp: App {
         let settings = AppSettings()
         _settings = State(initialValue: settings)
         let session = LudoSession(dice: dice, feedback: DeviceFeedback(settings: settings))
-        session.pacing = LaunchOptions.fast ? .instant : .normal(settings.diceAnimation)
+        session.pacing = LaunchOptions.fast ? .instant : .normal(settings.diceThrow(reduceMotion: UIAccessibility.isReduceMotionEnabled))
         if LaunchOptions.startGame { session.newGame(.versusComputer(opponents: 1, level: .novice, rules: settings.rules)) }
         if let scenario = LaunchOptions.scenario { session.load(scenario) }
         if LaunchOptions.tutorial { session.startTutorial() }

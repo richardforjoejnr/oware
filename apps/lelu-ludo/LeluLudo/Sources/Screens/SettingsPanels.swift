@@ -6,6 +6,7 @@ import SwiftUI
 struct SettingsPanels: View {
     @Environment(AppSettings.self) private var settings
     @State private var showTipJar = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         @Bindable var settings = settings
@@ -70,11 +71,23 @@ struct SettingsPanels: View {
                     WoodRow(divider: false) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Dice throw").font(.system(.body, design: .serif).weight(.medium)).foregroundStyle(Palette.ivory)
-                            WoodSegmented(options: DiceAnimation.allCases, selection: $settings.diceAnimation,
+                            WoodSegmented(options: DiceAnimation.allCases,
+                                          selection: Binding(get: { settings.diceThrow(reduceMotion: reduceMotion) },
+                                                             set: { settings.diceThrowChoice = $0 }),
                                           label: { $0.title }, id: { "dice-\($0.rawValue)" })
-                            Text("Full: thrown onto the board. Quick: a short throw. Tap the board to skip either.")
+                            Text(settings.diceThrowChoice == nil
+                                 ? "Set to match your device's Reduce Motion. Full or Quick: the die is thrown onto the board. Off: it just appears. Tap the board to skip a throw."
+                                 : "Full or Quick: the die is thrown onto the board. Off: it just appears. Tap the board to skip a throw.")
                                 .font(.system(.footnote, design: .serif))
                                 .foregroundStyle(Palette.ivory.opacity(0.8))
+                            // The player chose a throw while their device asks for less motion: say so.
+                            if reduceMotion, settings.diceThrow(reduceMotion: reduceMotion) != .off {
+                                Label("Reduce Motion is on for your device. Lelu Ludo will still throw the dice, as you chose. Choose Off to keep the game still.",
+                                      systemImage: "info.circle")
+                                    .font(.system(.footnote, design: .serif).weight(.semibold))
+                                    .foregroundStyle(Palette.brassLight)
+                                    .accessibilityIdentifier("dice-motion-note")
+                            }
                         }
                     }
                 }

@@ -6,6 +6,7 @@ import SwiftUI
 struct DiceView: View {
     @Environment(LudoSession.self) private var session
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppSettings.self) private var settings
     @Environment(DieFlight.self) private var flight
     @State private var shakes = 0
     /// The roll shown here: it changes once the die thrown on the board has landed.
@@ -34,7 +35,7 @@ struct DiceView: View {
                     .resizable().scaledToFit()
                     .frame(height: 92)
                     .rotationEffect(.degrees(shakes % 2 == 0 ? 0 : 0.001))
-                    .keyframeAnimator(initialValue: 0.0, trigger: reduceMotion ? 0 : shakes) { cup, angle in
+                    .keyframeAnimator(initialValue: 0.0, trigger: settings.diceThrow(reduceMotion: reduceMotion) == .off ? 0 : shakes) { cup, angle in
                         cup.rotationEffect(.degrees(angle), anchor: .bottom)
                     } keyframes: { _ in
                         KeyframeTrack {
@@ -57,7 +58,7 @@ struct DiceView: View {
         .buttonStyle(.plain)
         .onAppear { shown = session.lastRoll?.value }
         // With the throw shown on the board, the result comes here when that die lands (or is skipped).
-        .onChange(of: session.rolls) { if !RollingDie.shown(reduceMotion: reduceMotion) { shown = session.lastRoll?.value } }
+        .onChange(of: session.rolls) { if !RollingDie.shown { shown = session.lastRoll?.value } }
         .onChange(of: flight.landed) { shown = session.lastRoll?.value }
         .onChange(of: session.lastRoll == nil) { _, none in if none { shown = nil } }
         .disabled(!session.canRoll)

@@ -35,7 +35,8 @@ final class LudoSession {
         /// Normal pacing, with your throw the full or quick one.
         static func normal(_ style: DiceAnimation) -> Pacing {
             var p = normal
-            p.yourRoll = ThrowTiming.of(style).landing + .milliseconds(150)
+            // Off: the die only fades in, so a short wait is enough to see it.
+            p.yourRoll = style == .off ? .milliseconds(400) : ThrowTiming.of(style).landing + .milliseconds(150)
             return p
         }
     }
