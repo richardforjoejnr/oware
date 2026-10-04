@@ -112,7 +112,7 @@ struct LessonPlaque: View {
                 Text("\(lesson.chapter.title.uppercased()) · \(progress.index + 1) OF \(Lesson.all.count)")
                     .font(.system(.caption, design: .serif).weight(.bold))
                     .tracking(1)
-                    .foregroundStyle(Palette.brass)
+                    .foregroundStyle(Palette.brassLight)   // plain brass on this wood measured 3.7:1; small text needs 4.5:1
                 Spacer()
             }
             Text(lesson.title)

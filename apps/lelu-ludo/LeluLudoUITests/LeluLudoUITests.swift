@@ -78,6 +78,36 @@ final class LeluLudoUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["link-support"].exists)
     }
 
+    /// The audit on every screen, not just the menu and the board: each panel, Custom settings, a
+    /// lesson, and a game with a kick to choose. Contrast, Dynamic Type and text clipping are left
+    /// out, as in Lelu Oware: on painted wood, gradients and engraved lettering they misfire. Contrast
+    /// was measured from screenshot pixels instead (2026-10-04): panel titles 5.7:1, body text 8:1,
+    /// and the lesson heading, which was 3.7:1, now uses the light brass.
+    @MainActor
+    func testAccessibilityAuditOnEveryScreen() throws {
+        let checks = XCUIAccessibilityAuditType.all.subtracting([.contrast, .dynamicType, .textClipped])
+        let app = launch([])
+        XCTAssertTrue(app.images["home-title"].waitForExistence(timeout: 20))
+        for tile in ["tile-start", "tile-friends", "tile-learn", "btn-settings"] {
+            app.buttons[tile].tap()
+            try app.performAccessibilityAudit(for: checks)
+        }
+        app.buttons["rules-custom"].tap()
+        try app.performAccessibilityAudit(for: checks)
+        app.terminate()
+
+        let lesson = launch(["--tutorial"])
+        XCTAssertTrue(lesson.buttons["btn-roll"].waitForExistence(timeout: 20))
+        try lesson.performAccessibilityAudit(for: checks)
+        lesson.terminate()
+
+        let game = launch(["--scenario=kick", "--dice=5"])
+        let roll = game.buttons["btn-roll"]
+        XCTAssertTrue(roll.waitForExistence(timeout: 20))
+        roll.tap()
+        try game.performAccessibilityAudit(for: checks)
+    }
+
     @MainActor
     func testTheSplashOpensOntoTheMenu() throws {
         let app = launch(["--splash"])
