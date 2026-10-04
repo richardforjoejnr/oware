@@ -15,15 +15,53 @@ typealias LudoAIDifficulty = LudoAI.Difficulty
 struct GameSetup: Codable, Hashable, Sendable {
     var seats: [PlayerColor: Seat]
     var rules: RuleSet = .ghana
+    /// Names people gave themselves (pass & play); a colour without one is called by its colour.
+    var names: [PlayerColor: String] = [:]
+
+    init(seats: [PlayerColor: Seat], rules: RuleSet = .ghana, names: [PlayerColor: String] = [:]) {
+        self.seats = seats
+        self.rules = rules
+        self.names = names.compactMapValues(Self.cleanName)
+    }
+
+    // Saves from before names existed have no `names`.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(seats: try c.decode([PlayerColor: Seat].self, forKey: .seats),
+                  rules: try c.decodeIfPresent(RuleSet.self, forKey: .rules) ?? .ghana,
+                  names: try c.decodeIfPresent([PlayerColor: String].self, forKey: .names) ?? [:])
+    }
+
+    /// The longest name kept, so it fits the tray and the status plaque.
+    static let nameLimit = 14
+
+    /// A name as typed, tidied: spaces trimmed, cut to `nameLimit`; nil when nothing is left.
+    static func cleanName(_ raw: String) -> String? {
+        let name = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(nameLimit))
+        return name.isEmpty ? nil : name
+    }
 
     var colors: [PlayerColor] { PlayerColor.allCases.filter { seats[$0] != nil } }
     func seat(_ color: PlayerColor) -> Seat { seats[color] ?? .human }
 
-    /// You (red) against 1–3 computers: opposite first (black), then beside (yellow, green).
-    static func versusComputer(opponents: Int, level: LudoAIDifficulty, rules: RuleSet) -> GameSetup {
-        var seats: [PlayerColor: Seat] = [.red: .human]
-        for c in [PlayerColor.black, .yellow, .green].prefix(max(1, min(3, opponents))) { seats[c] = .computer(level) }
+    /// The colours computers take against you, in order: the seat opposite first, then the two beside.
+    static func opponentColours(for you: PlayerColor, count: Int) -> [PlayerColor] {
+        let i = you.rawValue
+        return [(i + 2) % 4, (i + 1) % 4, (i + 3) % 4].compactMap(PlayerColor.init(rawValue:)).prefix(max(1, min(3, count))).map { $0 }
+    }
+
+    /// You, in the colour you chose, against 1–3 computers in the colours left.
+    static func versusComputer(you: PlayerColor = .red, opponents: Int, level: LudoAIDifficulty, rules: RuleSet) -> GameSetup {
+        var seats: [PlayerColor: Seat] = [you: .human]
+        for c in opponentColours(for: you, count: opponents) { seats[c] = .computer(level) }
         return GameSetup(seats: seats, rules: rules)
+    }
+
+    /// People on one device, each in a colour of their own (a colour can't be taken twice: they are
+    /// the keys), with the names they gave (none: called by their colour). 2–4 players, or nil.
+    static func passAndPlay(_ players: [PlayerColor: String], rules: RuleSet) -> GameSetup? {
+        guard (2...4).contains(players.count) else { return nil }
+        return GameSetup(seats: players.mapValues { _ in Seat.human }, rules: rules, names: players)
     }
 
     /// 2–4 people on one phone: red and black face each other, then yellow and green join.

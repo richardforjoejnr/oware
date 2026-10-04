@@ -119,6 +119,46 @@ final class LeluLudoUITests: XCTestCase {
     }
 
     @MainActor
+    func testYouChooseYourColourAgainstTheComputer() throws {
+        let app = launch([])
+        XCTAssertTrue(app.buttons["tile-start"].waitForExistence(timeout: 20))
+        app.buttons["tile-start"].tap()
+        let green = app.buttons["colour-green"]
+        XCTAssertTrue(green.waitForExistence(timeout: 10))
+        green.tap()
+        XCTAssertTrue(green.isSelected)
+        let play = app.buttons["btn-play-computer"]
+        XCTAssertEqual(play.label, "Play as Green")
+        play.tap()
+        XCTAssertTrue(app.buttons["btn-roll"].waitForExistence(timeout: 20))
+        XCTAssertTrue(app.descendants(matching: .any)["token-green-0"].exists, "you are green")
+        XCTAssertTrue(app.descendants(matching: .any)["token-yellow-0"].exists, "the computer sits opposite")
+        XCTAssertFalse(app.descendants(matching: .any)["token-red-0"].exists)
+        XCTAssertEqual(app.staticTexts["status"].label, "Your roll")
+    }
+
+    @MainActor
+    func testFriendsPickColours() throws {
+        let app = launch(["--dice=3"])
+        XCTAssertTrue(app.buttons["tile-friends"].waitForExistence(timeout: 20))
+        app.buttons["tile-friends"].tap()
+        // Red and Black to start; take Black out, and Play is off until there are two again.
+        let black = app.buttons["colour-black"]
+        XCTAssertTrue(black.waitForExistence(timeout: 10))
+        black.tap()
+        XCTAssertFalse(app.buttons["btn-pass-play"].isEnabled, "one player is not a game")
+        app.buttons["add-yellow"].tap()
+        let play = app.buttons["btn-pass-play"]
+        XCTAssertTrue(play.isEnabled)
+        play.tap()
+        let roll = app.buttons["btn-roll"]
+        XCTAssertTrue(roll.waitForExistence(timeout: 20))
+        roll.tap()   // Red: a 3, nobody out: passes to Yellow (Black was taken out)
+        expectation(for: NSPredicate(format: "label CONTAINS 'Yellow'"), evaluatedWith: app.staticTexts["status"])
+        waitForExpectations(timeout: 20)
+    }
+
+    @MainActor
     func testPassAndPlayFromTheMenu() throws {
         let app = launch(["--dice=3"])
         let friends = app.buttons["tile-friends"]

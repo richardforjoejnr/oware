@@ -179,7 +179,10 @@ final class LudoSession {
     func newGame(_ setup: GameSetup) {
         startOver()
         self.setup = setup
-        state = GameState(players: setup.colors, rules: setup.rules)
+        // Against the computer you go first, whichever colour you chose; with friends, the first
+        // colour clockwise from red.
+        let people = setup.colors.filter { setup.seat($0) == .human }
+        state = GameState(players: setup.colors, rules: setup.rules, first: people.count == 1 ? people[0] : nil)
         aiSeed = UInt64.random(in: 0...UInt64.max)
         lastRoll = nil
         lastEvents = []
@@ -229,6 +232,7 @@ final class LudoSession {
     func name(_ color: PlayerColor) -> String {
         // In a lesson you play red; Black only stands on the board.
         if tutorial != nil { return color == .red ? "You" : color.name }
+        if let given = setup.names[color] { return given }
         return switch setup.seat(color) {
         case .human: setup.seats.values.filter({ $0 == .human }).count > 1 ? color.name : "You"
         case .computer: color.name
@@ -380,7 +384,7 @@ final class LudoSession {
     /// Puts what just happened into words for the log (and VoiceOver).
     private func describe(_ events: [GameEvent]) {
         var kind: Move.Kind = .forward
-        func whose(_ c: PlayerColor) -> String { name(c) == "You" ? "your" : "\(c.name)'s" }
+        func whose(_ c: PlayerColor) -> String { name(c) == "You" ? "your" : "\(name(c))'s" }
         for event in events {
             var line: String?
             switch event {
