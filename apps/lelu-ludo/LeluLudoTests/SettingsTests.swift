@@ -155,3 +155,14 @@ final class StatusTests: XCTestCase {
         XCTAssertEqual(s.status, "You rolled 6 · choose a token")
     }
 }
+
+/// App Review 5.1.1(i): the privacy policy (and support) reachable from inside the app, on Ludo's own pages.
+final class LinksTests: XCTestCase {
+    func testThePagesAreLeluLudosOwn() {
+        for url in [Links.privacy, Links.support] {
+            XCTAssertEqual(url.scheme, "https")
+            XCTAssertEqual(url.host, "leluoware.com")
+            XCTAssertTrue(url.path.hasPrefix("/lelu-ludo/"), "not Lelu Oware's pages: \(url)")
+        }
+    }
+}

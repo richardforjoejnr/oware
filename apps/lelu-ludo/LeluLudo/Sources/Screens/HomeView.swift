@@ -17,7 +17,6 @@ struct HomeView: View {
     enum Panel { case computer, friends, settings, learn }
 
     var body: some View {
-        ScrollViewReader { scroller in
         ScrollView {
             VStack(spacing: 16) {
                 Image(Art.menuTitle)
@@ -37,17 +36,19 @@ struct HomeView: View {
 
                 HStack(spacing: 8) {
                     tile(Art.tileStart, label: "Start game against the computer", id: "tile-start", panel: .computer)
-                    tile(Art.tileFriends, label: "Play with friends on this phone", id: "tile-friends", panel: .friends)
+                    tile(Art.tileFriends, label: "Play with friends on this device", id: "tile-friends", panel: .friends)
                     tile(Art.tileSettings, label: "Settings. Rules: \(settings.preset.title)", id: "btn-settings", panel: .settings)
                     tile(Art.tileLearn, label: "Learn the game", id: "tile-learn", panel: .learn)
                 }
 
-                if session.hasGame, open == nil {
+                // Stays put while a panel is open, so nothing above the panel moves.
+                if session.hasGame {
                     BrassButton(title: "Continue your game", systemImage: "play.fill") { startGame() }
                         .accessibilityIdentifier("btn-continue")
                 }
 
-                // A tile's panel opens under the tiles, and is scrolled into view.
+                // A tile's panel appears under the tiles, in place: no slide, no scrolling. The page
+                // simply grows; the panel's top shows, so it is plain there is more below.
                 Group {
                     switch open {
                     case .computer: computerPanel
@@ -56,11 +57,6 @@ struct HomeView: View {
                     case .learn: learnPanel
                     case nil: EmptyView()
                     }
-                }
-                .id("panel")
-                .transition(.opacity.combined(with: .move(edge: .top)))
-                .onChange(of: open) { _, now in
-                    if now != nil { withAnimation(.easeInOut(duration: 0.3)) { scroller.scrollTo("panel", anchor: .top) } }
                 }
 
                 HStack(spacing: 12) {
@@ -71,11 +67,10 @@ struct HomeView: View {
                     KnotGlyph(size: 16)
                 }
                 .padding(.horizontal, 22).padding(.vertical, 12)
-                .woodPanel(corner: 26)
+                .woodPanel(corner: 8)
                 .padding(.bottom, 24)
             }
             .padding(.horizontal, 14)
-        }
         }
         .background(Table())
     }
@@ -109,7 +104,7 @@ struct HomeView: View {
                 startGame()
             }
             .accessibilityIdentifier("btn-pass-play")
-            Text("\(settings.preset.title) rules. Pass the phone on each turn.")
+            Text("\(settings.preset.title) rules. Pass the device on each turn.")
                 .font(.system(.subheadline, design: .serif))
                 .foregroundStyle(Palette.ivory.opacity(0.9))
                 .multilineTextAlignment(.center)
@@ -142,7 +137,8 @@ struct HomeView: View {
     private func tile(_ image: String, label: String, id: String, panel: Panel) -> some View {
         let selected = open == panel
         return Button {
-            withAnimation(.easeInOut(duration: 0.25)) { open = selected ? nil : panel }
+            // No animation: animating the change slid the panel in and shifted the page.
+            open = selected ? nil : panel
         } label: {
             Image(image).resizable().scaledToFit()
                 .shadow(color: selected ? Palette.brassLight.opacity(0.95) : .black.opacity(0.35), radius: selected ? 9 : 4, y: selected ? 0 : 3)

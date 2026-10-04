@@ -235,7 +235,55 @@ struct WoodCard<Content: View>: View {
     }
 }
 
-/// One choice from a few, as bevelled chips: the chosen one is gold, the others dark wood in a brass rim.
+/// A carved wooden block, the look of every button in the menus (after the owner's tiles): squared
+/// corners, a bevel lit from above, a carved line inside the edge.
+/// - `.inlay`: pale maple set into the panel, edged in brass (the chosen option).
+/// - `.recessed`: dark mahogany sunk into the panel (the options not chosen).
+/// - `.plank`: raised mahogany with brass corner plates (the button that starts a game).
+struct CarvedBlock: View {
+    enum Kind { case inlay, recessed, plank }
+    let kind: Kind
+    var corner: CGFloat = 8
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: corner)
+        shape
+            .fill(ImagePaint(image: Image(kind == .inlay ? Art.maple : Art.darkWoodAcross), scale: kind == .inlay ? 0.35 : 0.5))
+            .overlay(shape.fill(kind == .plank ? Color(red: 0.55, green: 0.27, blue: 0.12).opacity(0.25) : .clear).blendMode(.screen))
+            // Maple oiled to honey, as the owner's board squares are.
+            .overlay(shape.fill(kind == .inlay ? Color(red: 0.93, green: 0.72, blue: 0.42) : .clear).blendMode(.multiply))
+            // The bevel: light along the top edge, shade along the bottom (reversed when sunk in).
+            .overlay(shape.fill(LinearGradient(
+                colors: kind == .recessed ? [.black.opacity(0.45), .black.opacity(0.1), .white.opacity(0.06)]
+                                          : [.white.opacity(kind == .inlay ? 0.35 : 0.14), .clear, .black.opacity(0.3)],
+                startPoint: .top, endPoint: .bottom)))
+            // The carved line just inside the edge.
+            .overlay(RoundedRectangle(cornerRadius: max(2, corner - 3))
+                .stroke(kind == .inlay ? Palette.wood.opacity(0.35) : .black.opacity(0.4), lineWidth: 1).padding(4))
+            .overlay(shape.stroke(kind == .recessed ? Palette.brass.opacity(0.45) : Palette.brass, lineWidth: kind == .recessed ? 1 : 1.75))
+            .overlay {
+                if kind == .plank {
+                    GeometryReader { g in
+                        ForEach(0..<4, id: \.self) { i in
+                            BrassPlate(size: 18).position(x: i % 2 == 0 ? 7 : g.size.width - 7, y: i < 2 ? 7 : g.size.height - 7)
+                        }
+                    }
+                }
+            }
+            .shadow(color: .black.opacity(kind == .recessed ? 0 : 0.45), radius: kind == .plank ? 5 : 2, y: kind == .plank ? 4 : 2)
+    }
+}
+
+extension View {
+    /// Lettering cut into wood: gold, with a dark edge above and a light one below.
+    func engraved(_ color: Color = Palette.brassLight) -> some View {
+        foregroundStyle(color)
+            .shadow(color: .black.opacity(0.75), radius: 0, x: 0, y: -1)
+            .shadow(color: .white.opacity(0.18), radius: 0, x: 0, y: 1)
+    }
+}
+
+/// One choice from a few, as carved blocks: the chosen one a maple inlay, the others sunk in dark wood.
 struct WoodChips<Value: Hashable>: View {
     let options: [Value]
     @Binding var selection: Value
@@ -258,18 +306,14 @@ struct WoodChips<Value: Hashable>: View {
                 } label: {
                     Text(label(option))
                         .font(.system(font, design: .serif).weight(chosen ? .bold : .medium))
-                        .foregroundStyle(chosen ? Palette.night : Palette.ivory)
+                        .foregroundStyle(chosen ? Palette.night : Palette.ivory.opacity(0.92))
+                        .shadow(color: chosen ? .white.opacity(0.45) : .black.opacity(0.6), radius: 0, y: chosen ? 1 : -1)
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                         .padding(.horizontal, 6)
                         .frame(maxWidth: .infinity, minHeight: 46)
-                        .background(Capsule().fill(chosen
-                            ? LinearGradient(colors: [Palette.brassLight, Palette.brass], startPoint: .top, endPoint: .bottom)
-                            : LinearGradient(colors: [.black.opacity(0.35), .black.opacity(0.15)], startPoint: .top, endPoint: .bottom)))
-                        .overlay(Capsule().stroke(.white.opacity(chosen ? 0.45 : 0.08), lineWidth: 1).padding(2))
-                        .overlay(Capsule().stroke(chosen ? Palette.brassDark : Palette.brass.opacity(0.8), lineWidth: 1.5))
-                        .shadow(color: .black.opacity(0.35), radius: 2, y: 2)
-                        .contentShape(Capsule())
+                        .background(CarvedBlock(kind: chosen ? .inlay : .recessed))
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(chosen ? .isSelected : [])
@@ -279,7 +323,7 @@ struct WoodChips<Value: Hashable>: View {
     }
 }
 
-/// The big gold button that starts a game.
+/// The button that starts a game: a raised mahogany plank with brass corner plates, its words cut in gold.
 struct BrassButton: View {
     let title: String
     let systemImage: String
@@ -294,15 +338,10 @@ struct BrassButton: View {
                 Text(title).font(.system(compact ? .title3 : .title, design: .serif).weight(.bold))
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
-                .foregroundStyle(Palette.night)
-                .shadow(color: .white.opacity(0.35), radius: 0, y: 1)
-                .frame(maxWidth: .infinity, minHeight: compact ? 48 : 68)
-                .background(Capsule().fill(LinearGradient(
-                    colors: [Palette.brassLight, Palette.brass, Palette.brassDark], startPoint: .top, endPoint: .bottom)))
-                .overlay(Capsule().stroke(.white.opacity(0.5), lineWidth: 1).padding(3))
-                .overlay(Capsule().stroke(Palette.night.opacity(0.6), lineWidth: 1.5))
-                .shadow(color: .black.opacity(0.45), radius: 5, y: 4)
-                .contentShape(Capsule())
+                .engraved()
+                .frame(maxWidth: .infinity, minHeight: compact ? 48 : 64)
+                .background(CarvedBlock(kind: .plank, corner: 10))
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -341,7 +380,7 @@ struct WoodToggle: View {
     }
 }
 
-/// One of a few, on a single wooden track: the chosen one is a gold pill (the rules preset).
+/// One of a few, on a single carved track: the chosen one a maple inlay (the rules preset).
 struct WoodSegmented<Value: Hashable>: View {
     let options: [Value]
     @Binding var selection: Value
@@ -353,23 +392,17 @@ struct WoodSegmented<Value: Hashable>: View {
             ForEach(options, id: \.self) { option in
                 let chosen = option == selection
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { selection = option }
+                    selection = option   // instant: Custom adds a card below, which must not slide in
                 } label: {
                     Text(label(option))
                         .font(.system(.body, design: .serif).weight(chosen ? .bold : .semibold))
-                        .foregroundStyle(chosen ? Palette.night : Palette.ivory)
+                        .foregroundStyle(chosen ? Palette.night : Palette.ivory.opacity(0.92))
+                        .shadow(color: chosen ? .white.opacity(0.45) : .black.opacity(0.6), radius: 0, y: chosen ? 1 : -1)
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                         .frame(maxWidth: .infinity, minHeight: 46)
-                        .background {
-                            if chosen {
-                                Capsule().fill(LinearGradient(colors: [Palette.brassLight, Palette.brass], startPoint: .top, endPoint: .bottom))
-                                    .overlay(Capsule().stroke(.white.opacity(0.45), lineWidth: 1).padding(2))
-                                    .overlay(Capsule().stroke(Palette.brassDark, lineWidth: 1.5))
-                                    .shadow(color: .black.opacity(0.4), radius: 3, y: 2)
-                            }
-                        }
-                        .contentShape(Capsule())
+                        .background { if chosen { CarvedBlock(kind: .inlay, corner: 6) } }
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(chosen ? .isSelected : [])
@@ -377,8 +410,7 @@ struct WoodSegmented<Value: Hashable>: View {
             }
         }
         .padding(3)
-        .background(Capsule().fill(.black.opacity(0.35)))
-        .overlay(Capsule().stroke(Palette.brass.opacity(0.8), lineWidth: 1.5))
+        .background(CarvedBlock(kind: .recessed, corner: 9))
     }
 }
 
