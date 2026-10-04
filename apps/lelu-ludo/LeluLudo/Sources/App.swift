@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct LeluLudoApp: App {
     @State private var session: LudoSession
+    @State private var settings: AppSettings
 
     init() {
         if LaunchOptions.resetState {
@@ -11,9 +12,11 @@ struct LeluLudoApp: App {
             if let domain = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: domain) }
         }
         let dice: DiceSource = LaunchOptions.dice.map { ScriptedDice($0) } ?? RandomDice()
-        let session = LudoSession(dice: dice)
-        if LaunchOptions.fast { session.computerPause = .zero }
-        if LaunchOptions.startGame { session.newGame(GameSetup(seats: [.red: .human, .black: .computer(.novice)])) }
+        let settings = AppSettings()
+        _settings = State(initialValue: settings)
+        let session = LudoSession(dice: dice, feedback: DeviceFeedback(settings: settings))
+        if LaunchOptions.fast { session.pacing = .instant }
+        if LaunchOptions.startGame { session.newGame(.versusComputer(opponents: 1, level: .novice, rules: settings.rules)) }
         if let scenario = LaunchOptions.scenario { session.load(scenario) }
         _session = State(initialValue: session)
     }
@@ -22,6 +25,7 @@ struct LeluLudoApp: App {
         WindowGroup {
             RootView()
                 .environment(session)
+                .environment(settings)
                 .preferredColorScheme(.dark)
         }
     }
@@ -29,9 +33,13 @@ struct LeluLudoApp: App {
 
 struct RootView: View {
     @State private var inGame = LaunchOptions.startGame || LaunchOptions.scenario != nil
+    /// The opening card, skipped by tests and when opening straight onto a game.
+    @State private var splash = !LaunchOptions.testMode && !LaunchOptions.startGame && LaunchOptions.scenario == nil
 
     var body: some View {
-        if inGame {
+        if splash {
+            SplashView { withAnimation(.easeOut(duration: 0.4)) { splash = false } }
+        } else if inGame {
             GameView(goHome: { inGame = false })
         } else {
             HomeView(startGame: { inGame = true })
@@ -56,6 +64,11 @@ enum LaunchOptions {
     static var startGame: Bool { arguments.contains("--start-game") }
     /// `--scenario=back-kick`: open on an arranged position (UI tests, screenshots).
     static var scenario: Scenario? { arguments.lazy.compactMap { $0.hasPrefix("--scenario=") ? Scenario(rawValue: String($0.dropFirst(11))) : nil }.first }
+    /// Any test run (UI tests pass `--fast`; unit tests run inside XCTest): silent, nothing persisted
+    /// about the player's own choices.
+    static var testMode: Bool {
+        fast || (enabled && ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil)
+    }
     /// `--fast`: computer turns without pauses (UI tests).
     static var fast: Bool { arguments.contains("--fast") }
 }

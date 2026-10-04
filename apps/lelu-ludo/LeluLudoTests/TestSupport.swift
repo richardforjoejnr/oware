@@ -18,8 +18,7 @@ enum TestSupport {
     /// A session with scripted dice and no pauses between computer moves.
     static func session(dice: [Int], store: GameStore? = nil) -> LudoSession {
         let s = LudoSession(store: store ?? self.store(), dice: ScriptedDice(dice))
-        s.computerPause = .zero
-        s.stepPause = .zero
+        s.pacing = .instant
         return s
     }
 }

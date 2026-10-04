@@ -17,10 +17,20 @@ final class LudoSession {
     private(set) var isComputerPlaying = false
     /// Whether there is a game to continue.
     private(set) var hasGame = false
-    /// Pause between computer actions so people can follow them (zero in tests).
-    @ObservationIgnored var computerPause: Duration = .milliseconds(700)
-    /// Time per square as a token walks its path (zero in tests).
-    @ObservationIgnored var stepPause: Duration = .milliseconds(130)
+    /// How long things take on screen, so people can follow them; `.instant` in tests.
+    struct Pacing: Equatable {
+        /// Before each computer action.
+        var computer: Duration
+        /// Per square as a token walks its path.
+        var step: Duration
+        /// While the die tumbles across the board, before a computer plays the roll.
+        var roll: Duration
+        static let normal = Pacing(computer: .milliseconds(600), step: .milliseconds(130), roll: .milliseconds(750))
+        static let instant = Pacing(computer: .zero, step: .zero, roll: .zero)
+    }
+    @ObservationIgnored var pacing = Pacing.normal
+    /// Counts rolls, so the board can tumble a die for each one.
+    private(set) var rolls = 0
 
     /// A token on its way: the squares of its path and how far along it is. Kicks happen when it arrives.
     struct Motion: Equatable {
@@ -38,12 +48,14 @@ final class LudoSession {
 
     @ObservationIgnored private let store: GameStore
     @ObservationIgnored private let dice: DiceSource
+    @ObservationIgnored private let feedback: FeedbackPlayer?
     @ObservationIgnored private var aiSeed: UInt64
     @ObservationIgnored private var aiRolls: UInt64 = 0
 
-    init(store: GameStore = .shared, dice: DiceSource = RandomDice()) {
+    init(store: GameStore = .shared, dice: DiceSource = RandomDice(), feedback: FeedbackPlayer? = nil) {
         self.store = store
         self.dice = dice
+        self.feedback = feedback
         if let saved = store.load() {
             setup = saved.setup
             state = saved.state
@@ -116,8 +128,40 @@ final class LudoSession {
     func name(_ color: PlayerColor) -> String {
         switch setup.seat(color) {
         case .human: setup.seats.values.filter({ $0 == .human }).count > 1 ? color.name : "You"
-        case let .computer(level): setup.seats.values.filter({ $0 != .human }).count > 1 ? "\(color.name) (\(level.displayName))" : color.name
+        case .computer: color.name
         }
+    }
+
+    /// The computers' level, when there are computers (they all play at one level).
+    var computerLevel: LudoAIDifficulty? {
+        for color in setup.colors { if case let .computer(level) = setup.seat(color) { return level } }
+        return nil
+    }
+
+    /// The line at the top of the game: whose turn, and the roll in words (the 3D die shows several
+    /// faces, so the roll is always said as a number too).
+    var status: String {
+        let s = state
+        if let w = s.winner { return name(w) == "You" ? "You win!" : "\(name(w)) wins" }
+        let mover = name(s.toMove)
+        let rolled = lastRoll.flatMap { $0.color == s.toMove ? $0.value : nil }
+        if isComputerPlaying {
+            if let rolled, s.pendingRoll != nil || motion != nil { return "\(mover) rolled \(rolled)" }
+            return "\(mover) is playing…"
+        }
+        if let rolled, s.pendingRoll != nil {
+            return "\(mover) rolled \(rolled) · " + (selectedToken != nil ? "choose a move" : "choose a token")
+        }
+        return mover == "You" ? "Your roll" : "\(mover) to roll"
+    }
+
+    /// Changes every computer opponent's level, mid-game; the game carries on from where it is.
+    func changeLevel(to level: LudoAIDifficulty) {
+        guard computerLevel != nil else { return }
+        var seats = setup.seats
+        for (color, seat) in seats { if case .computer = seat { seats[color] = .computer(level) } }
+        setup = GameSetup(seats: seats, rules: setup.rules)
+        save()
     }
 
     func roll() async {
@@ -138,18 +182,35 @@ final class LudoSession {
     private func perform(_ move: Move) async {
         let mover = state.toMove
         let cells = state.path(for: move)
-        if stepPause > .zero, !cells.isEmpty {
+        if pacing.step > .zero, !cells.isEmpty {
             motion = Motion(color: mover, token: move.token, cells: cells, step: 0)
             for i in cells.indices {
                 motion?.step = i
-                try? await Task.sleep(for: stepPause)
+                feedback?.play(.step)
+                try? await Task.sleep(for: pacing.step)
             }
+        } else {
+            for _ in cells { feedback?.play(.step) }
         }
         guard let events = try? state.apply(move) else { motion = nil; return }
         motion = nil
         lastEvents = events
         describe(events)
+        sound(events)
         save()
+    }
+
+    /// The feedback for what a move or roll did (the steps are played as the token walks).
+    private func sound(_ events: [GameEvent]) {
+        for event in events {
+            switch event {
+            case .kicked, .kickedInLane: feedback?.play(.kick)
+            case .reachedHome: feedback?.play(.home)
+            case .threeSixes: feedback?.play(.threeSixes)
+            case .won: feedback?.play(.win)
+            default: break
+            }
+        }
     }
 
     /// Lets computer seats play until it is a person's turn or the game is over.
@@ -158,8 +219,11 @@ final class LudoSession {
         isComputerPlaying = true
         defer { isComputerPlaying = false }
         while !state.isOver, case let .computer(level) = setup.seat(state.toMove) {
-            if computerPause > .zero { try? await Task.sleep(for: computerPause) }
-            if state.pendingRoll == nil { rollDie() }
+            if pacing.computer > .zero { try? await Task.sleep(for: pacing.computer) }
+            if state.pendingRoll == nil {
+                rollDie()
+                if pacing.roll > .zero { try? await Task.sleep(for: pacing.roll) }
+            }
             guard !state.isOver, state.pendingRoll != nil, case .computer = setup.seat(state.toMove) else { continue }
             var rng = SeededGenerator(seed: aiSeed &+ aiRolls)
             aiRolls &+= 1
@@ -173,8 +237,11 @@ final class LudoSession {
         let color = state.toMove
         let value = dice.roll()
         lastRoll = (color, value)
+        rolls += 1
+        feedback?.play(.roll)
         lastEvents = state.roll(value)
         describe(lastEvents)
+        sound(lastEvents)
         save()
     }
 
