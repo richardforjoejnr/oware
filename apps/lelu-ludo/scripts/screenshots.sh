@@ -70,8 +70,17 @@ status=0
 [ "${ONLY:-}" = ipad ] || shoot iPhone "$IPHONE_TYPE" "${IPHONE_UDID:-}" || status=1
 [ "${ONLY:-}" = iphone ] || shoot iPad "$IPAD_TYPE" "${IPAD_UDID:-}" || status=1
 
+# The 6.5" iPhone slot in App Store Connect takes only 1284×2778 (or 1242×2688), not 6.9"'s 1320×2868:
+# copies scaled to that width and trimmed top and bottom (the shapes differ by under 1%).
+mkdir -p "$OUT/iPhone-6.5"
+for f in "$OUT"/iPhone-*.png; do
+  [ -e "$f" ] || continue
+  out="$OUT/iPhone-6.5/$(basename "$f" | sed 's/^iPhone-/iPhone65-/')"
+  sips --resampleWidth 1284 "$f" --out "$out" >/dev/null && sips --cropToHeightWidth 2778 1284 "$out" >/dev/null
+done
+
 echo
-for f in "$OUT"/*.png; do
+for f in "$OUT"/*.png "$OUT"/iPhone-6.5/*.png; do
   [ -e "$f" ] || continue
   printf '%s  %s×%s\n' "$(basename "$f")" \
     "$(sips -g pixelWidth "$f" | awk '/pixelWidth/ {print $2}')" "$(sips -g pixelHeight "$f" | awk '/pixelHeight/ {print $2}')"
