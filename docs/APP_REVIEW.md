@@ -51,3 +51,23 @@ Outside App Store Connect:
 
 If a review is rejected: reply in App Store Connect's Resolution Center first; one appeal per
 rejection; a bug-fix update with unrelated new issues can ship and fix those next time.
+
+## Lelu Ludo (first submission)
+
+The automatic checks above (`scripts/release_readiness.py`) still read Lelu Oware's paths; until
+they take the app as an argument, check Lelu Ludo by hand:
+
+- **Binary:** icon 1024×1024 with no alpha; `PrivacyInfo.xcprivacy` (UserDefaults, CA92.1; nothing
+  collected); `ITSAppUsesNonExemptEncryption` false; iPad allows all four orientations and
+  `UIRequiresFullScreen` is false (ITMS-90474); debug launch flags only under `#if DEBUG`.
+- **In the app:** Settings ▸ About links to the privacy policy and support (5.1.1(i)).
+- **Website live first:** <https://leluoware.com/lelu-ludo/privacy> and
+  <https://leluoware.com/lelu-ludo/support> must load before submitting (`docs/lelu-ludo/`,
+  deployed by the Site workflow when merged to `main`).
+- **App Store Connect:** App Privacy "Data Not Collected"; Privacy Policy URL and Support URL as
+  above; age rating questionnaire all "None" (4+: "kick" is game slang, the die is not gambling).
+- **Review notes (4.3(b), a crowded category):** what makes it different: Ghana house rules (back,
+  side and home kicks, walls, the black-star 6), a seven-lesson tutorial on the real board, computer
+  opponents at four levels, original art.
+- **Cultural review (1.1):** confirm the four-loop knot used as an ornament (Mpatapo, the knot of
+  reconciliation) before shipping; see `apps/lelu-ludo/docs/GAME_PLAN.md`.

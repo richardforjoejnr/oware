@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Lelu Ludo privacy manifest (required by Apple for App Store uploads).
+  - No tracking, no tracking domains, no data collected (no analytics, no network; see
+    docs/lelu-ludo/privacy.md).
+  - Required-reason API: UserDefaults, to keep the player's own settings inside this app (reason
+    CA92.1). The saved game is a JSON file in Application Support, read and written without
+    timestamp APIs.
+  Update this when Game Center, tips or analytics arrive (Lelu Oware's manifest is the model).
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

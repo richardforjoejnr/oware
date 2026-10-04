@@ -1,34 +1,28 @@
 import SwiftUI
 
 /// The opening card: LELU LUDO and the owner's line, "Play Ghana. Play Together.", over the board
-/// in its box, on the launch screen's wood. Tap to go straight on.
+/// in its box, on the launch screen's wood. It is the launch screen, picture for picture (both come
+/// from art/make_art.py), so there is no blank wood while the app starts. Tap to go straight on.
 struct SplashView: View {
     let done: () -> Void
 
+    /// Where the splash content sits: exactly as the launch screen places it (LaunchScreen.storyboard:
+    /// aspect-fit, 24 pt in from the sides and 60 pt from top and bottom of the screen), so the app
+    /// opens onto the launch screen's own picture without a jump.
+    static let inset = EdgeInsets(top: 60, leading: 24, bottom: 60, trailing: 24)
+
     var body: some View {
-        VStack(spacing: 22) {
-            Spacer(minLength: 20)
-            VStack(spacing: 6) {
-                Text("LELU\nLUDO")
-                    .font(.custom("Didot", size: 76, relativeTo: .largeTitle))
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(-8)
-                    .foregroundStyle(Palette.ivory)
-                    .shadow(color: Palette.brass.opacity(0.5), radius: 18)
-                Text("Play Ghana. Play Together.")
-                    .font(.system(.title3, design: .default).weight(.light))
-                    .foregroundStyle(Palette.ivory.opacity(0.9))
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("splash")
-            Image(Art.boardBox).resizable().scaledToFit()
-                .shadow(color: .black.opacity(0.6), radius: 16, y: 12)
-                .padding(.horizontal, 20)
-                .accessibilityHidden(true)
-            Spacer(minLength: 20)
+        ZStack {
+            Self.background
+            Image(Art.splashContent)
+                .resizable()
+                .scaledToFit()
+                .padding(Self.inset)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Self.background.ignoresSafeArea())
+        .ignoresSafeArea()
+        .accessibilityElement()
+        .accessibilityLabel("Lelu Ludo. Play Ghana. Play Together.")
+        .accessibilityIdentifier("splash")
         .contentShape(Rectangle())
         .onTapGesture(perform: done)
         .task {

@@ -30,7 +30,6 @@ struct SettingsPanels: View {
                         WoodRow(divider: false) { WoodToggle(title: "A kick or a token home earns a roll", isOn: $settings.custom.kickOrHomeEarnsRoll) }
                     }
                 }
-                .transition(.opacity)
                 WoodCard(title: "Turns and squares") {
                     VStack(spacing: 0) {
                         WoodRow { WoodToggle(title: "Three sixes lose the turn", isOn: $settings.custom.threeSixesForfeit) }
@@ -52,7 +51,6 @@ struct SettingsPanels: View {
                         }
                     }
                 }
-                .transition(.opacity)
             }
 
             WoodCard(title: "Sound and touch") {
@@ -60,7 +58,7 @@ struct SettingsPanels: View {
                     WoodRow {
                         VStack(alignment: .leading, spacing: 4) {
                             WoodToggle(title: "Sound", isOn: $settings.soundOn).accessibilityIdentifier("setting-sound")
-                            Text("Sounds follow your phone's Silent switch.")
+                            Text("Sounds follow your device's Silent mode.")
                                 .font(.system(.footnote, design: .serif))
                                 .foregroundStyle(Palette.ivory.opacity(0.8))
                         }
@@ -70,8 +68,30 @@ struct SettingsPanels: View {
                     }
                 }
             }
+
+            WoodCard(title: "About") {
+                VStack(alignment: .leading, spacing: 0) {
+                    WoodRow { linkRow("Privacy policy", systemImage: "hand.raised", url: Links.privacy, id: "link-privacy") }
+                    WoodRow(divider: false) { linkRow("Help and support", systemImage: "questionmark.circle", url: Links.support, id: "link-support") }
+                }
+            }
         }
-        .animation(.easeInOut(duration: 0.2), value: settings.preset)
+    }
+
+    /// A web page from the settings: opens in the browser.
+    private func linkRow(_ title: String, systemImage: String, url: URL, id: String) -> some View {
+        Link(destination: url) {
+            HStack {
+                Label(title, systemImage: systemImage)
+                    .font(.system(.body, design: .serif).weight(.medium))
+                Spacer()
+                Image(systemName: "arrow.up.right").font(.footnote.weight(.semibold))
+            }
+            .foregroundStyle(Palette.ivory)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .accessibilityIdentifier(id)
     }
 
     /// "Wall: nobody passes ▾": the three ways two of your tokens on one square can behave.
@@ -85,15 +105,14 @@ struct SettingsPanels: View {
             HStack(spacing: 8) {
                 Text(stackingTitle(settings.custom.stacking))
                     .font(.system(.subheadline, design: .serif))
-                    .lineLimit(1)
+                    .lineLimit(2)
                     .minimumScaleFactor(0.8)
                 Image(systemName: "triangle.fill").font(.system(size: 9)).rotationEffect(.degrees(180))
             }
             .foregroundStyle(Palette.ivory)
             .padding(.horizontal, 14)
             .frame(minHeight: 40)
-            .background(Capsule().fill(.black.opacity(0.35)))
-            .overlay(Capsule().stroke(Palette.brass.opacity(0.85), lineWidth: 1.5))
+            .background(CarvedBlock(kind: .recessed, corner: 8))
         }
         .accessibilityIdentifier("picker-stacking")
     }

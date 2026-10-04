@@ -339,6 +339,54 @@ def board_perspective() -> None:
     imageset("BoardBox", image.resize((image.width * 2 // 3, image.height * 2 // 3), Image.LANCZOS))
 
 
+def splash_content() -> None:
+    """LELU LUDO, the owner's line and the boxed board, on nothing: the launch screen draws it over
+    LaunchSplash from the first frame, and SplashView draws the same image in the same place, so the
+    app opens straight onto the splash (a plain wood launch screen read as a blank loading screen).
+    Laid out as the splash was: Didot 76 pt in two lines, the line in light 20 pt, then the box."""
+    from PIL import ImageDraw, ImageFont
+    k = 3                                                # points to pixels
+    w = 390 * k
+    ivory, brass = (235, 218, 184), (196, 150, 38)
+    didot = ImageFont.truetype("/System/Library/Fonts/Supplemental/Didot.ttc", 76 * k)
+    light = ImageFont.truetype("/System/Library/Fonts/SFNS.ttf", 20 * k)
+    try:
+        light.set_variation_by_name("Light")
+    except Exception:
+        pass
+    box = Image.open(OUT / "BoardBox.imageset" / "BoardBox.png").convert("RGBA")
+    box = box.resize((w - 40 * k, round(box.height * (w - 40 * k) / box.width)), Image.LANCZOS)
+    line = 83 * k
+    title_h, tag_h, gap = 2 * line, 26 * k, 22 * k
+    h = 40 * k + title_h + 6 * k + tag_h + gap + box.height + 30 * k
+    canvas = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    text = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(text)
+    y = 40 * k
+    for word in ("LELU", "LUDO"):
+        d.text((w / 2, y + line / 2), word, font=didot, fill=ivory, anchor="mm")
+        y += line
+    y += 6 * k
+    d.text((w / 2, y + tag_h / 2), "Play Ghana. Play Together.", font=light, fill=(*ivory, 230), anchor="mm")
+    # The brass glow behind the title, as the splash drew it (shadow radius 18).
+    glow = Image.new("RGBA", (w, h), (*brass, 0))
+    glow.putalpha(text.getchannel("A").point(lambda a: a * 0.5).filter(ImageFilter.GaussianBlur(18 * k / 2)))
+    canvas.alpha_composite(glow)
+    canvas.alpha_composite(text)
+    by = y + tag_h + gap
+    shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    sh = Image.new("RGBA", box.size, (0, 0, 0, 150))
+    shadow.paste(sh, (20 * k, by + 12 * k), box)
+    canvas.alpha_composite(shadow.filter(ImageFilter.GaussianBlur(16 * k / 2)))
+    canvas.alpha_composite(box, (20 * k, by))
+    # Top level of the catalog, as LaunchSplash: the launch screen reads it there.
+    folder = OUT.parent / "SplashContent.imageset"
+    folder.mkdir(parents=True, exist_ok=True)
+    canvas.save(folder / "SplashContent.png", optimize=True)
+    (folder / "Contents.json").write_text(json.dumps(
+        {"images": [{"idiom": "universal", "filename": "SplashContent.png"}], "info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "Contents.json").write_text(json.dumps({"info": {"author": "xcode", "version": 1}}, indent=2) + "\n")
@@ -350,5 +398,6 @@ if __name__ == "__main__":
     maple()
     menu()
     launch_splash()
+    splash_content()
     app_icon()
     print("art written to", OUT)
