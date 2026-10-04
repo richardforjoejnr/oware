@@ -5,7 +5,9 @@ import SwiftUI
 /// The menu: continue, play the computer, or pass & play.
 struct HomeView: View {
     @Environment(LudoSession.self) private var session
+    @Environment(AppSettings.self) private var settings
     let startGame: () -> Void
+    @State private var showSettings = false
     @State private var opponents = 1
     @State private var level: LudoAIDifficulty = .novice
     @State private var players = 2
@@ -36,11 +38,7 @@ struct HomeView: View {
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("picker-level")
                     menuButton("Play", id: "btn-play-computer") {
-                        // You are red; the computer takes the seats opposite first, then the sides.
-                        let order: [PlayerColor] = [.black, .yellow, .green]
-                        var seats: [PlayerColor: Seat] = [.red: .human]
-                        for c in order.prefix(opponents) { seats[c] = .computer(level) }
-                        session.newGame(GameSetup(seats: seats))
+                        session.newGame(.versusComputer(opponents: opponents, level: level, rules: settings.rules))
                         startGame()
                     }
                 }
@@ -49,17 +47,25 @@ struct HomeView: View {
                     Text("Pass & play").font(.headline)
                     Stepper("Players: \(players)", value: $players, in: 2...4).accessibilityIdentifier("stepper-players")
                     menuButton("Play together", id: "btn-pass-play") {
-                        let order: [PlayerColor] = [.red, .black, .yellow, .green]
-                        session.newGame(GameSetup(seats: Dictionary(uniqueKeysWithValues: order.prefix(players).map { ($0, Seat.human) })))
+                        session.newGame(.passAndPlay(players: players, rules: settings.rules))
                         startGame()
                     }
                 }
+
+                Button {
+                    showSettings = true
+                } label: {
+                    Label("Rules: \(settings.preset.title)", systemImage: "gearshape")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .accessibilityIdentifier("btn-settings")
             }
             .padding()
         }
         .foregroundStyle(Palette.ivory)
         .tint(Palette.brass)
         .background(Palette.night.ignoresSafeArea())
+        .sheet(isPresented: $showSettings) { SettingsView() }
     }
 
     private func panel<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

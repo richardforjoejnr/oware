@@ -38,12 +38,14 @@ final class LudoSession {
 
     @ObservationIgnored private let store: GameStore
     @ObservationIgnored private let dice: DiceSource
+    @ObservationIgnored private let feedback: FeedbackPlayer?
     @ObservationIgnored private var aiSeed: UInt64
     @ObservationIgnored private var aiRolls: UInt64 = 0
 
-    init(store: GameStore = .shared, dice: DiceSource = RandomDice()) {
+    init(store: GameStore = .shared, dice: DiceSource = RandomDice(), feedback: FeedbackPlayer? = nil) {
         self.store = store
         self.dice = dice
+        self.feedback = feedback
         if let saved = store.load() {
             setup = saved.setup
             state = saved.state
@@ -142,14 +144,31 @@ final class LudoSession {
             motion = Motion(color: mover, token: move.token, cells: cells, step: 0)
             for i in cells.indices {
                 motion?.step = i
+                feedback?.play(.step)
                 try? await Task.sleep(for: stepPause)
             }
+        } else {
+            for _ in cells { feedback?.play(.step) }
         }
         guard let events = try? state.apply(move) else { motion = nil; return }
         motion = nil
         lastEvents = events
         describe(events)
+        sound(events)
         save()
+    }
+
+    /// The feedback for what a move or roll did (the steps are played as the token walks).
+    private func sound(_ events: [GameEvent]) {
+        for event in events {
+            switch event {
+            case .kicked, .kickedInLane: feedback?.play(.kick)
+            case .reachedHome: feedback?.play(.home)
+            case .threeSixes: feedback?.play(.threeSixes)
+            case .won: feedback?.play(.win)
+            default: break
+            }
+        }
     }
 
     /// Lets computer seats play until it is a person's turn or the game is over.
@@ -173,8 +192,10 @@ final class LudoSession {
         let color = state.toMove
         let value = dice.roll()
         lastRoll = (color, value)
+        feedback?.play(.roll)
         lastEvents = state.roll(value)
         describe(lastEvents)
+        sound(lastEvents)
         save()
     }
 

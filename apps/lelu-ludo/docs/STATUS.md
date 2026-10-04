@@ -34,3 +34,14 @@ a casual-player balance test (as Oware's), the macOS app job in `ludo-ci.yml` (c
 (`feat/lelu-ludo-app`); each PR is opened against `main` once the one before is merged, so none is
 closed when its base branch is deleted. Waiting on the owner: answers on home kick, side
 kick and Labourer; art per `ART_DIRECTION.md`; confirm black (not blue) tokens and the star-as-6 die.
+
+## 2026-10-04
+
+- Merged: #62 (stage 1 + shared CI), #63 (stage 2 AI), #64 (per-app versions), #65 (stage 3 app;
+  Lelu Ludo CI now builds and tests the app on a simulator).
+- Open: **#66** Ghana Classic kicks, move choice, step-by-step moves (green); **#67** stage 4 rules
+  settings, sound and haptics, balance test (merge after #66).
+- **Next: stage 5, release** — the lesson, Game Center, tip jar, privacy and support pages under
+  `docs/lelu-ludo/` (served on leluoware.com), App Review checks for this app, TestFlight and App
+  Store workflows with Lelu Ludo's own release tags, the owner's art (none in the repo yet; see
+  ART_DIRECTION.md: the app icon first).
