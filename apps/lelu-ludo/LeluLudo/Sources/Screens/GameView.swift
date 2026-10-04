@@ -1,3 +1,4 @@
+import LudoAI
 import LudoEngine
 import SwiftUI
 
@@ -5,18 +6,67 @@ import SwiftUI
 /// players, the die and the cup.
 struct GameView: View {
     @Environment(LudoSession.self) private var session
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let goHome: () -> Void
+    @State private var showLevels = false
 
     var body: some View {
-        VStack(spacing: 14) {
-            HStack(alignment: .center, spacing: 12) {
+        VStack(spacing: 12) {
+            HStack(alignment: .center, spacing: 10) {
                 WoodCircleButton(systemImage: "chevron.left", action: goHome)
                     .accessibilityLabel("Home")
                     .accessibilityIdentifier("btn-home")
                 StatusPlaque(status: status, line: session.log.last)
+                if let level = session.computerLevel {
+                    // As in Lelu Oware: the opponents' level, tap to change it for this game.
+                    Button { withAnimation(.easeInOut(duration: 0.2)) { showLevels.toggle() } } label: {
+                        HStack(spacing: 4) {
+                            Text(level.displayName).lineLimit(1).minimumScaleFactor(0.7)
+                            Image(systemName: "chevron.down").font(.caption2.weight(.bold))
+                                .rotationEffect(.degrees(showLevels ? 180 : 0))
+                        }
+                        .font(.system(.footnote, design: .serif).weight(.semibold))
+                        .foregroundStyle(Palette.ivory)
+                        .padding(.horizontal, 10)
+                        .frame(minWidth: 44, minHeight: 48)
+                        .woodPanel(corner: 24)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Opponent level, \(level.displayName). Tap to change")
+                    .accessibilityIdentifier("btn-level")
+                }
+            }
+            if showLevels, let current = session.computerLevel {
+                HStack(spacing: 14) {
+                    ForEach(LudoAIDifficulty.allCases, id: \.self) { level in
+                        Button {
+                            session.changeLevel(to: level)
+                            withAnimation(.easeInOut(duration: 0.2)) { showLevels = false }
+                        } label: {
+                            Text(level.displayName)
+                                .font(.system(.footnote, design: .serif).weight(level == current ? .bold : .regular))
+                                .foregroundStyle(level == current ? Color(red: 0.95, green: 0.80, blue: 0.45) : Palette.ivory)
+                                .underline(level == current)
+                                .frame(minHeight: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(level == current ? .isSelected : [])
+                        .accessibilityIdentifier("game-level-\(level.rawValue)")
+                    }
+                }
+                .padding(.horizontal, 14)
+                .woodPanel(corner: 22)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
             Spacer(minLength: 0)
             BoardFrame(plaque: false) { BoardView() }
+                .overlay {
+                    // Each roll tumbles across the board; the tray's die keeps the result.
+                    if session.rolls > 0, let roll = session.lastRoll, RollingDie.shown(reduceMotion: reduceMotion) {
+                        RollingDie(value: roll.value, landing: RollingDie.landing(for: session.rolls))
+                            .id(session.rolls)
+                    }
+                }
             Spacer(minLength: 0)
             Tray()
         }
@@ -50,17 +100,21 @@ struct StatusPlaque: View {
             Text(status)
                 .font(.system(.title3, design: .serif).weight(.semibold))
                 .foregroundStyle(Palette.ivory)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .accessibilityIdentifier("status")
             // Kicks, three sixes, no move: what just happened.
-            Text(line ?? " ")
-                .font(.system(.footnote, design: .serif))
-                .foregroundStyle(Color(red: 0.95, green: 0.80, blue: 0.45))
-                .lineLimit(2)
-                .accessibilityIdentifier("commentary")
-                .accessibilityHidden(line == nil)
+            if let line {
+                Text(line)
+                    .font(.system(.footnote, design: .serif))
+                    .foregroundStyle(Color(red: 0.95, green: 0.80, blue: 0.45))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+                    .accessibilityIdentifier("commentary")
+            }
         }
         .multilineTextAlignment(.center)
-        .frame(maxWidth: .infinity, minHeight: 56)
+        .frame(maxWidth: .infinity, minHeight: 48, alignment: .center)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .woodPanel(corner: 14)

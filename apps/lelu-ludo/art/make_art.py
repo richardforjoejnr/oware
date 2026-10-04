@@ -48,6 +48,52 @@ def fit(image: Image.Image, height: int) -> Image.Image:
     return image.resize((round(image.width * height / image.height), height), Image.LANCZOS)
 
 
+def pawn_from_above(side: Image.Image, dark: bool = False) -> Image.Image:
+    """The same turned-wood pawn seen from straight above (the board is seen from above, as in Lelu
+    Oware): a wide bevelled base, a groove, the neck's collar and the round head, lit from the top
+    left, in the pawn's own paint with a little grain. Colours come from the side-view pawn."""
+    a = np.array(side).astype(float)
+    solid = a[..., 3] > 200
+    lum = a[..., :3].mean(-1)
+    mid = solid & (lum > np.percentile(lum[solid], 35)) & (lum < np.percentile(lum[solid], 80))
+    paint = np.median(a[mid][:, :3], axis=0)
+    n = 240
+    yy, xx = (np.mgrid[0:n, 0:n] - (n - 1) / 2) / (n / 2)       # -1…1
+    r = np.hypot(xx, yy)
+    light = np.array([-0.45, -0.55, 0.70]); light /= np.linalg.norm(light)
+
+    def dome(radius: float, height: float):
+        """Shading of a rounded surface (radius in the -1…1 frame): normal from a squashed sphere."""
+        t = np.clip(r / radius, 0, 1)
+        nz = np.sqrt(np.clip(1 - t ** 2, 0, 1)) * height + (1 - height) * 0.9
+        nx, ny = xx / radius * (1 - height * 0.2), yy / radius * (1 - height * 0.2)
+        norm = np.sqrt(nx ** 2 + ny ** 2 + nz ** 2)
+        return np.clip((nx * light[0] + ny * light[1] + nz * light[2]) / norm, 0, 1)
+
+    shade = np.zeros((n, n))
+    alpha = np.zeros((n, n))
+    base, groove, collar, head = 0.97, 0.70, 0.62, 0.50
+    shade = np.where(r <= base, 0.35 + 0.65 * dome(base, 0.35), shade)          # the base, a low dome
+    shade = np.where((r > groove - 0.035) & (r < groove), shade * 0.55, shade)  # the turned groove
+    shade = np.where(r <= collar, 0.30 + 0.70 * dome(collar, 0.6), shade)       # the collar under the head
+    shade = np.where(r <= head, 0.25 + 0.80 * dome(head, 1.0), shade)           # the head
+    alpha = np.clip((base - r) * n / 2.5, 0, 1)
+    # The real paint and wear: a patch of the side-view pawn's body, its light evened out, laid over.
+    h, w = a.shape[:2]
+    patch = a[int(h * 0.62):int(h * 0.86), int(w * 0.3):int(w * 0.7), :3].mean(-1)
+    patch = np.array(Image.fromarray(patch.astype("uint8")).resize((n, n), Image.BICUBIC)).astype(float)
+    detail = patch / np.maximum(ndimage.gaussian_filter(patch, 18), 1)
+    detail = 1 + (detail - 1) * 0.45
+    if dark:
+        paint = paint * 0.75
+    rgb = paint[None, None, :] * np.clip(shade * 1.1 * detail, 0, 1.5)[..., None]
+    # A soft sheen on the head.
+    spec = np.exp(-(((xx + 0.16) ** 2 + (yy + 0.19) ** 2) / 0.02)) * (r <= head)
+    rgb = rgb + spec[..., None] * (85 if dark else 75)
+    out = np.dstack([np.clip(rgb, 0, 255), alpha * 255]).astype("uint8")
+    return Image.fromarray(out)
+
+
 def pawns() -> None:
     """Rows of the source: red, yellow, green, blue. Black is the blue pawn turned to ebony (Lelu plays black, not blue)."""
     src = Image.open(SRC / "pieces.png").convert("RGBA")
@@ -61,6 +107,7 @@ def pawns() -> None:
             a[:, :, 0], a[:, :, 1], a[:, :, 2] = 28 + l * 150, 24 + l * 135, 22 + l * 120
             pawn = Image.fromarray(a.astype("uint8"))
         imageset(f"Pawn-{name}", fit(pawn, 240))
+        imageset(f"PawnTop-{name}", pawn_from_above(pawn, dark=name == "black"))
 
 
 # The dice sheet's front faces: (row, column) of each value; the 6 is the black star. The 2 is its own

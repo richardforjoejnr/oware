@@ -15,7 +15,7 @@ struct LeluLudoApp: App {
         let settings = AppSettings()
         _settings = State(initialValue: settings)
         let session = LudoSession(dice: dice, feedback: DeviceFeedback(settings: settings))
-        if LaunchOptions.fast { session.computerPause = .zero }
+        if LaunchOptions.fast { session.pacing = .instant }
         if LaunchOptions.startGame { session.newGame(.versusComputer(opponents: 1, level: .novice, rules: settings.rules)) }
         if let scenario = LaunchOptions.scenario { session.load(scenario) }
         _session = State(initialValue: session)

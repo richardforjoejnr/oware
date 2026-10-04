@@ -15,7 +15,7 @@ struct BoardView: View {
                 ForEach(tokens, id: \.id) { t in
                     TokenView(color: t.color, movable: t.movable, kickChoice: t.kickChoice,
                               selected: t.color == session.state.toMove && session.selectedToken == t.token,
-                              size: layout.cell * (t.progress == Board.yard ? 1.15 : 0.82))
+                              size: layout.cell * (t.progress == Board.yard ? 1.1 : 0.86))
                         // At least 44 pt to tap (the HIG minimum), though squares are smaller on a phone.
                         .frame(width: max(44, layout.cell), height: max(44, layout.cell))
                         .contentShape(Rectangle())
@@ -127,8 +127,7 @@ struct BoardView: View {
     }
 }
 
-/// A turned-wood pawn (the owner's art) standing on its square: its base sits on the square, its
-/// head rises above it. A ring round the base shows it can move.
+/// A turned-wood pawn seen from above, as the board is. A ring shows it can move; chosen, it lifts.
 struct TokenView: View {
     let color: PlayerColor
     let movable: Bool
@@ -138,25 +137,19 @@ struct TokenView: View {
 
     var body: some View {
         ZStack {
-            // Shadow on the board under the base.
-            Ellipse().fill(.black.opacity(0.35))
-                .frame(width: size * 0.95, height: size * 0.38)
-                .blur(radius: 1.5)
-                .offset(y: size * 0.32)
             if movable {
                 // Brass: can move. Red dashes: also has a kick to choose (back, side or home).
-                Ellipse().stroke(kickChoice ? Palette.color(.red) : Palette.brass,
-                                 style: StrokeStyle(lineWidth: selected ? 4 : 3, dash: kickChoice ? [5, 3] : []))
-                    .frame(width: size * 1.35, height: size * 0.75)
-                    .offset(y: size * 0.28)
+                Circle().stroke(kickChoice ? Palette.color(.red) : Palette.brass,
+                                style: StrokeStyle(lineWidth: selected ? 4 : 3, dash: kickChoice ? [5, 3] : []))
+                    .frame(width: size * 1.28, height: size * 1.28)
             }
-            Image(Art.pawn(color))
+            Image(Art.pawnTop(color))
                 .resizable()
                 .scaledToFit()
-                .frame(height: size * 1.6)
-                .offset(y: -size * 0.42)
-                // Lifted a little when chosen.
-                .scaleEffect(selected ? 1.12 : 1, anchor: .bottom)
+                .frame(width: size, height: size)
+                // Lifted when chosen: bigger, its shadow further off.
+                .scaleEffect(selected ? 1.15 : 1)
+                .shadow(color: .black.opacity(0.45), radius: selected ? 4 : 1.5, x: selected ? 2 : 1, y: selected ? 4 : 1.5)
         }
         .frame(width: size, height: size)
     }

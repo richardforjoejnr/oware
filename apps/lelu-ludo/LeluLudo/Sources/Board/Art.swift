@@ -3,7 +3,10 @@ import LudoEngine
 /// The owner's art in the asset catalog (built by art/make_art.py from art/source/). Every name the
 /// app uses is here, so one test can prove each image is in the bundle.
 enum Art {
+    /// A pawn standing, seen from the side (the tray).
     static func pawn(_ color: PlayerColor) -> String { "Pawn-\(color.name.lowercased())" }
+    /// The same pawn seen from above (the board, which is seen from above, as in Lelu Oware).
+    static func pawnTop(_ color: PlayerColor) -> String { "PawnTop-\(color.name.lowercased())" }
     /// 1…6; the 6 shows the black star.
     static func die(_ value: Int) -> String { "Die-\(max(1, min(6, value)))" }
     /// The die before anyone has rolled: Ghana's flag.
@@ -25,7 +28,7 @@ enum Art {
     static let tileSupport = "Tile-support"
 
     static var all: [String] {
-        PlayerColor.allCases.map(pawn) + (1...6).map(die)
+        PlayerColor.allCases.map(pawn) + PlayerColor.allCases.map(pawnTop) + (1...6).map(die)
             + [dieFlag, diceCup, boardPlaque, woodGrain, maple, darkWood, darkWoodAcross, linen, boardBox, menuTitle, tileStart, tileFriends, tileSettings, tileSupport]
     }
 }

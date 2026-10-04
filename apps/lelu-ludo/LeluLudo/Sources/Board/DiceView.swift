@@ -5,10 +5,13 @@ import SwiftUI
 /// last roll, on a bar in the colour of whoever rolled; before the first roll it shows the flag.
 struct DiceView: View {
     @Environment(LudoSession.self) private var session
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shakes = 0
+    /// The roll shown here: it changes once the die thrown on the board has landed.
+    @State private var shown: Int?
 
     var body: some View {
-        let value = session.lastRoll?.value
+        let value = shown
         Button {
             shakes += 1
             Task { await session.roll() }
@@ -51,6 +54,19 @@ struct DiceView: View {
             .animation(.spring(duration: 0.35), value: value)
         }
         .buttonStyle(.plain)
+        .onAppear { shown = session.lastRoll?.value }
+        .onChange(of: session.rolls) {
+            let value = session.lastRoll?.value
+            if RollingDie.shown(reduceMotion: reduceMotion) {
+                Task {
+                    try? await Task.sleep(for: RollingDie.flight)
+                    shown = value
+                }
+            } else {
+                shown = value
+            }
+        }
+        .onChange(of: session.lastRoll == nil) { _, none in if none { shown = nil } }
         .disabled(!session.canRoll)
         .opacity(session.canRoll || session.isComputerPlaying || value != nil ? 1 : 0.5)
         // Spoken as a number: the star on the 6 is Lelu's branding, not a different result.
