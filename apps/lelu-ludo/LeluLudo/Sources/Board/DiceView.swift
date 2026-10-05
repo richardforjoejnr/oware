@@ -63,7 +63,9 @@ struct DiceView: View {
         .onChange(of: session.rolls) { if !RollingDie.shown { shown = session.lastRoll?.value } }
         .onChange(of: flight.landed) { shown = session.lastRoll?.value }
         .onChange(of: session.lastRoll == nil) { _, none in if none { shown = nil } }
-        .disabled(!session.canRoll)
+        // Not while the last die is still out on the board (pass & play: the next player can't throw
+        // over it).
+        .disabled(!session.canRoll || flight.thrown(session.rolls))
         .opacity(session.canRoll || session.isComputerPlaying || value != nil ? 1 : 0.5)
         // Spoken as a number: the star on the 6 is Lelu's branding, not a different result.
         .accessibilityLabel(value.map { "Die showing \(Pips.spoken($0))" } ?? "Die")
