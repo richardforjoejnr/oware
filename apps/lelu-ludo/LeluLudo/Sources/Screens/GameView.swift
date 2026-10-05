@@ -88,8 +88,9 @@ struct GameView: View {
                                    timing: yours ? .of(style) : .quick,
                                    landed: { flight.land(count) }, returned: { flight.returned(count) })
                             .id(count)
-                            // Catches taps (to skip) only while in the air, never over the tokens after.
-                            .allowsHitTesting(flight.inFlight(count))
+                            // While the die is out (flying, resting, going back), a tap on the board finishes the
+                            // throw at once instead of moving a token under it; after that, taps reach the tokens.
+                            .allowsHitTesting(flight.thrown(count))
                             .simultaneousGesture(TapGesture().onEnded { flight.skip(count) })
                     }
                 }

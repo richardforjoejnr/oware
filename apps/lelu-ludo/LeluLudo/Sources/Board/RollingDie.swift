@@ -40,6 +40,8 @@ struct ThrowTiming: Equatable {
     var returnTrip: Double { isStill ? 0.3 : 0.35 * speed }
     var total: Double { landsAfter + rest + returnTrip }
     var landing: Duration { .milliseconds(Int(landsAfter * 1000)) }
+    /// The whole throw, back in the cup, and a breath: what a move waits for.
+    var whole: Duration { .milliseconds(Int(total * 1000) + 100) }
 }
 
 /// Which throws have landed, shared by the board (the flying die), the tray's die and the status: the

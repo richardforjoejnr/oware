@@ -213,6 +213,9 @@ final class DiceThrowTests: XCTestCase {
         XCTAssertLessThan(LudoSession.Pacing.normal(.off).yourRoll, LudoSession.Pacing.normal(.quick).yourRoll)
         XCTAssertLessThan(LudoSession.Pacing.normal(.quick).yourRoll, LudoSession.Pacing.normal(.full).yourRoll)
         XCTAssertGreaterThan(LudoSession.Pacing.normal(.full).yourRoll, ThrowTiming.full.landing, "the token waits for the die to land")
+        // ...and for the whole throw, die back in the cup, so a move never starts under a flying die.
+        XCTAssertGreaterThanOrEqual(LudoSession.Pacing.normal(.full).yourRoll, .milliseconds(Int(ThrowTiming.full.total * 1000)))
+        XCTAssertGreaterThanOrEqual(LudoSession.Pacing.normal.roll, .milliseconds(Int(ThrowTiming.quick.total * 1000)))
         XCTAssertGreaterThan(LudoSession.Pacing.normal.roll, ThrowTiming.quick.landing, "a computer waits for its die too")
     }
 }
