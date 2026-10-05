@@ -66,7 +66,7 @@ final class LeluLudoUITests: XCTestCase {
         XCTAssertFalse(app.switches["rule-home-kick"].exists, "switches only for Custom")
         app.buttons["rules-custom"].tap()
         XCTAssertTrue(app.switches["rule-home-kick"].waitForExistence(timeout: 3))
-        try app.performAccessibilityAudit(for: XCUIAccessibilityAuditType.all.subtracting([.contrast, .dynamicType, .textClipped]))
+        try audit(app, XCUIAccessibilityAuditType.all.subtracting([.contrast, .dynamicType, .textClipped]))
         app.buttons["rules-classic"].tap()
         // Settings opens under the tiles; scroll back up to the tile, whose label names the rules.
         app.swipeDown()
@@ -90,22 +90,22 @@ final class LeluLudoUITests: XCTestCase {
         XCTAssertTrue(app.images["home-title"].waitForExistence(timeout: 20))
         for tile in ["tile-start", "tile-friends", "tile-learn", "btn-settings"] {
             app.buttons[tile].tap()
-            try app.performAccessibilityAudit(for: checks)
+            try audit(app, checks)
         }
         app.buttons["rules-custom"].tap()
-        try app.performAccessibilityAudit(for: checks)
+        try audit(app, checks)
         app.terminate()
 
         let lesson = launch(["--tutorial"])
         XCTAssertTrue(lesson.buttons["btn-roll"].waitForExistence(timeout: 20))
-        try lesson.performAccessibilityAudit(for: checks)
+        try audit(lesson, checks)
         lesson.terminate()
 
         let game = launch(["--scenario=kick", "--dice=5"])
         let roll = game.buttons["btn-roll"]
         XCTAssertTrue(roll.waitForExistence(timeout: 20))
         roll.tap()
-        try game.performAccessibilityAudit(for: checks)
+        try audit(game, checks)
     }
 
     @MainActor
@@ -224,10 +224,24 @@ final class LeluLudoUITests: XCTestCase {
         let checks = XCUIAccessibilityAuditType.all.subtracting([.contrast, .dynamicType, .textClipped])
         let app = launch([])
         XCTAssertTrue(app.images["home-title"].waitForExistence(timeout: 20))
-        try app.performAccessibilityAudit(for: checks)
+        try audit(app, checks)
         app.terminate()
         let game = launch(["--start-game"])
         XCTAssertTrue(game.buttons["btn-roll"].waitForExistence(timeout: 20))
-        try game.performAccessibilityAudit(for: checks)
+        try audit(game, checks)
+    }
+}
+
+/// The accessibility audit, made steady for slow CI simulators: the screen settles first, and if
+/// Apple's audit gives up on time (XCTest error -56, "Audit failed to complete in time") it is run
+/// once more. A real accessibility issue still fails the test, as before.
+@MainActor
+func audit(_ app: XCUIApplication, _ types: XCUIAccessibilityAuditType) throws {
+    sleep(1)
+    do {
+        try app.performAccessibilityAudit(for: types)
+    } catch let error as NSError where error.code == -56 {
+        sleep(2)
+        try app.performAccessibilityAudit(for: types)
     }
 }
