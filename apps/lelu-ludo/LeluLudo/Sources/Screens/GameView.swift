@@ -108,6 +108,7 @@ struct GameView: View {
         // words squeezed the board to a thumbnail and the plaques cut their words short.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .environment(flight)
+        .onAppear { flight.settle(at: session.rolls) }
         // A light knock as the die lands on the board.
         .sensoryFeedback(.impact(weight: .light), trigger: flight.landed) { _, _ in animated && settings.effectiveHaptics }
         // Your throw in Settings applies at once.

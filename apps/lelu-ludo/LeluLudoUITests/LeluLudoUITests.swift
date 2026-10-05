@@ -174,6 +174,35 @@ final class LeluLudoUITests: XCTestCase {
         XCTAssertTrue(loaded || app.staticTexts["tip-jar-status"].exists, "the jar shows its tips or why not")
     }
 
+    /// Owner's bug (2026-10-05): after a roll, Home, then a new game, the cup stayed disabled for good.
+    @MainActor
+    func testANewGameAfterRollingCanRoll() throws {
+        let app = launch(["--dice=3", "--start-game"])
+        let roll = app.buttons["btn-roll"]
+        XCTAssertTrue(roll.waitForExistence(timeout: 20))
+        roll.tap()   // a 3: nothing to move; the computer plays and it is your roll again
+        expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: roll)
+        waitForExpectations(timeout: 20)
+        app.buttons["btn-home"].tap()
+        let start = app.buttons["tile-start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 20))
+        start.tap()
+        let play = app.buttons["btn-play-computer"]
+        XCTAssertTrue(play.waitForExistence(timeout: 10))
+        play.tap()
+        XCTAssertTrue(roll.waitForExistence(timeout: 20))
+        expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: roll)
+        waitForExpectations(timeout: 10)   // the cup can be tapped in the new game
+        // And after Home and Continue too.
+        app.buttons["btn-home"].tap()
+        let resume = app.buttons["btn-continue"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 20))
+        resume.tap()
+        XCTAssertTrue(roll.waitForExistence(timeout: 20))
+        expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: roll)
+        waitForExpectations(timeout: 10)
+    }
+
     @MainActor
     func testPassAndPlayFromTheMenu() throws {
         let app = launch(["--dice=3"])
