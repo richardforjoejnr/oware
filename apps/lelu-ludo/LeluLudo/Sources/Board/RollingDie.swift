@@ -59,6 +59,12 @@ final class DieFlight {
     func land(_ roll: Int) { landed = max(landed, roll) }
     func returned(_ roll: Int) { back = max(back, roll); land(roll) }
     func skip(_ roll: Int) { skipped = max(skipped, roll); returned(roll) }
+    /// A game screen opening (a new game, Continue, a lesson): every roll so far is done with. The
+    /// session counts rolls for as long as the app runs, while each game screen starts its own
+    /// DieFlight, so without this an earlier roll looked like a die still out, and the cup stayed
+    /// disabled for good (owner's bug, 2026-10-05).
+    func settle(at rolls: Int) { returned(rolls); skipped = max(skipped, rolls) }
+
     /// Whether the tray's die is out being thrown.
     func thrown(_ roll: Int) -> Bool { roll > back }
     func inFlight(_ roll: Int) -> Bool { roll > landed }

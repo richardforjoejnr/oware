@@ -197,6 +197,16 @@ final class DiceThrowTests: XCTestCase {
         XCTAssertFalse(flight.thrown(2), "skipping brings it straight back")
     }
 
+    /// A game screen opening after earlier rolls (new game, Continue, lesson) must not wait for a die.
+    func testANewGameScreenSettlesEarlierRolls() {
+        let flight = DieFlight()
+        XCTAssertTrue(flight.thrown(7), "rolls from an earlier game look like a die still out")
+        flight.settle(at: 7)
+        XCTAssertFalse(flight.thrown(7), "settled: the cup can be tapped")
+        XCTAssertTrue(flight.thrown(8), "the next roll is thrown as usual")
+        XCTAssertEqual(flight.skipped, 7, "and no old throw is drawn on the board")
+    }
+
     func testTheThrowSettingIsRememberedAndPacesYourAutoMoves() {
         let d = TestSupport.defaults()
         let settings = AppSettings(defaults: d, testMode: false)
