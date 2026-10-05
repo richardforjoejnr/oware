@@ -217,3 +217,19 @@ final class OnlyForwardMoveTests: XCTestCase {
         XCTAssertEqual(s.state.tokens(of: .red), [-1, -1, -1, -1], "coming out is yours to tap")
     }
 }
+
+/// Smooth turns (owner, 2026-10-05): a move or the next throw waits for the last throw to finish.
+@MainActor
+final class ThrowPacingTests: XCTestCase {
+    func testWithNoMoveTheComputersWaitForYourThrowToFinish() async {
+        let store = TestSupport.store()
+        store.save(SavedGame(setup: GameSetup(seats: [.red: .human, .black: .computer(.novice)]),
+                             state: GameState(players: [.red, .black]), aiSeed: 1))
+        let s = LudoSession(store: store, dice: ScriptedDice([3, 3]))
+        s.pacing = .init(computer: .zero, step: .zero, roll: .zero, yourRoll: .milliseconds(300))
+        let start = ContinuousClock.now
+        await s.roll()   // a 3: nobody out, so the turn passes to Black
+        XCTAssertGreaterThanOrEqual(ContinuousClock.now - start, .milliseconds(300), "Black waited for your die")
+        XCTAssertEqual(s.rolls, 2, "and then Black rolled")
+    }
+}

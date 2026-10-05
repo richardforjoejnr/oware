@@ -27,16 +27,18 @@ final class LudoSession {
         var roll: Duration
         /// While your die is thrown, before a move that plays itself (Novice, one move forward).
         var yourRoll: Duration
+        // A move waits for the whole throw: the die lands, rests and is back in the cup (owner,
+        // 2026-10-05: moving as it landed looked like two throws at once).
         static let normal = Pacing(computer: .milliseconds(600), step: .milliseconds(130),
-                                   roll: ThrowTiming.quick.landing + .milliseconds(150),
-                                   yourRoll: ThrowTiming.full.landing + .milliseconds(150))
+                                   roll: ThrowTiming.quick.whole, yourRoll: ThrowTiming.full.whole)
         static let instant = Pacing(computer: .zero, step: .zero, roll: .zero, yourRoll: .zero)
 
         /// Normal pacing, with your throw the full or quick one.
         static func normal(_ style: DiceAnimation) -> Pacing {
             var p = normal
-            // Off: the die only fades in, so a short wait is enough to see it.
-            p.yourRoll = style == .off ? .milliseconds(400) : ThrowTiming.of(style).landing + .milliseconds(150)
+            // Off: nothing is thrown, so a short wait is enough to see the roll on the tray's die.
+            p.yourRoll = style == .off ? .milliseconds(400) : ThrowTiming.of(style).whole
+            p.roll = style == .off ? .milliseconds(400) : ThrowTiming.quick.whole
             return p
         }
     }
@@ -303,6 +305,13 @@ final class LudoSession {
             guard game == generation else { return }
             await play(move)   // plays the computers' turns after it
             return
+        }
+        // A roll with no move passes the turn at once: let this throw finish before a computer
+        // throws, so there are never two dice on the board.
+        if !humanToMove, pacing.yourRoll > .zero {
+            let game = generation
+            try? await Task.sleep(for: pacing.yourRoll)
+            guard game == generation else { return }
         }
         await runComputerTurns()
     }
