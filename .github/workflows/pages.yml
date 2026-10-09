@@ -1,8 +1,8 @@
 name: Site
 
 # The public website on AWS (S3 + CloudFront, infra/site): privacy and support pages App Review
-# links to, the What's new page from the GitHub Releases, and test reports from main's CI and E2E
-# runs. The code repository is private; only this built site is public.
+# links to, the What's new page from the GitHub Releases, and each app's test report from main's
+# runs (Lelu Oware: CI and E2E; Lelu Ludo: Lelu Ludo CI) at /reports/<app>/. The code repository is private; only this built site is public.
 # AWS access works as in aws-cdk-boilerplate: secrets AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY.
 # Skipped until the repository variable SITE_ON_AWS is "true". SITE_DOMAIN (a variable) is the
 # domain bought in Route 53; leave it unset to serve the site at its CloudFront address.
@@ -13,7 +13,7 @@ on:
   release:
     types: [published]
   workflow_run:
-    workflows: [CI, "E2E (Maestro)"]
+    workflows: [CI, "E2E (Maestro)", "Lelu Ludo CI"]
     types: [completed]
     branches: [main]
   workflow_dispatch:
@@ -56,21 +56,32 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          mkdir -p artifacts
-          for wf in "CI" "E2E (Maestro)"; do
-            id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --branch main --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId')
-            if [ -n "$id" ] && [ "$id" != "null" ]; then
-              echo "$wf → run $id"
-              gh run download "$id" -R "$GITHUB_REPOSITORY" -D "artifacts/$(echo "$wf" | tr ' ()' '___')" || echo "no artifacts for $wf"
-              echo "$id" >> artifacts/runs.txt
-            fi
-          done
+          # Each app's report is built from its own workflows' results, kept in its own folder.
+          fetch() {
+            local app="$1"; shift
+            mkdir -p "artifacts/$app"
+            for wf in "$@"; do
+              id=$(gh run list -R "$GITHUB_REPOSITORY" --workflow "$wf" --branch main --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+              if [ -n "$id" ] && [ "$id" != "null" ]; then
+                echo "$app: $wf → run $id"
+                gh run download "$id" -R "$GITHUB_REPOSITORY" -D "artifacts/$app/$(echo "$wf" | tr ' ()' '___')" || echo "no artifacts for $wf"
+                echo "$id" >> "artifacts/$app/runs.txt"
+              fi
+            done
+          }
+          fetch lelu-oware "CI" "E2E (Maestro)"
+          fetch lelu-ludo "Lelu Ludo CI"
       - name: Build the report pages
         run: |
-          # The run link is for the owner (the repository is private); the report itself is public.
-          run_id=$(tail -1 artifacts/runs.txt 2>/dev/null || echo "")
-          url=""; [ -n "$run_id" ] && url="https://github.com/$GITHUB_REPOSITORY/actions/runs/$run_id"
-          python3 scripts/build-reports.py artifacts _site/reports/lelu-oware --app "Lelu Oware" --run-url "$url" --sha "$GITHUB_SHA"
+          # The run link is for the owner; the report itself is public.
+          build() {
+            local app="$1" name="$2"
+            run_id=$(tail -1 "artifacts/$app/runs.txt" 2>/dev/null || echo "")
+            url=""; [ -n "$run_id" ] && url="https://github.com/$GITHUB_REPOSITORY/actions/runs/$run_id"
+            python3 scripts/build-reports.py "artifacts/$app" "_site/reports/$app" --app "$name" --run-url "$url" --sha "$GITHUB_SHA"
+          }
+          build lelu-oware "Lelu Oware"
+          build lelu-ludo "Lelu Ludo"
       - name: Short URLs (/lelu-oware/privacy, as on GitHub Pages)
         run: python3 scripts/site_pretty_urls.py _site
       - uses: actions/setup-node@v4
