@@ -138,6 +138,50 @@ def main(app_dir: str) -> int:
     # Launch screen (HIG launching; required for iOS apps).
     check("UILaunchScreen" in info or "UILaunchStoryboardName" in info, "A launch screen is configured")
 
+    # 7. What App Review asks a new developer for (guideline 2.1 "Information Needed", 2026-10-09),
+    #    and the store setup that has to match the binary.
+    tip_ids = re.findall(r'"(com\.[\w.]+\.tip\.\w+)"', code)
+    uses_gamekit = bool(re.search(r"^import GameKit", code, re.M))
+    # Review notes: the answers App Review asked for, kept with the app and sent with every version.
+    notes_path = app / "fastlane" / "review_notes.md"
+    notes = notes_path.read_text() if notes_path.exists() else ""
+    check(bool(notes), "Review notes exist (fastlane/review_notes.md)")
+    for topic in ("Purpose and audience", "Setup and main features", "External services",
+                  "Regional differences", "Regulated industry or third-party material"):
+        check(f"**{topic}." in notes, f"Review notes answer: {topic}")
+    check(not re.search(r"owner to fill|TODO|TBD|lorem", notes, re.I), "Review notes have no placeholders")
+    if tip_ids:
+        check("**Paid content." in notes and "In-App Purchase" in notes, "Review notes describe the In-App Purchases")
+    if uses_gamekit:
+        check("Game Center" in notes, "Review notes mention Game Center")
+    if "TelemetryDeck" in project:
+        check("TelemetryDeck" in notes, "Review notes name the analytics service")
+    # 3.1.1: every tip the app sells is set up in its StoreKit configuration (and so in App Store
+    # Connect, which the configuration mirrors), to be submitted with the version.
+    storekit = "\n".join(p.read_text() for p in (src / "Resources").glob("*.storekit"))
+    for pid in tip_ids:
+        check(f'"{pid}"' in storekit, f"Tip {pid.rsplit('.', 1)[-1]} is in the StoreKit configuration")
+    # Game Center: the entitlement and the code agree. A store record expecting Game Center from a
+    # binary without the key is refused ("You must add the com.apple.developer.game-center key").
+    ents = set().union(*(plistlib.loads(e.read_bytes()) for e in src.glob("*.entitlements")))
+    check(uses_gamekit == ("com.apple.developer.game-center" in ents),
+          "Game Center entitlement matches the code" + ("" if uses_gamekit else
+          " (none: keep Game Center switched off on the App Store Connect version page)"))
+    # 2.3.3: screenshots show the app in use, in sizes the store takes, for every device it runs on.
+    shots = sorted((app / "fastlane" / "screenshots").glob("*/*.png"))
+    if shots:
+        sizes = {"iPhone": {(1320, 2868), (1290, 2796), (1284, 2778), (1242, 2688)},
+                 "iPad": {(2064, 2752), (2048, 2732)}}
+        for device, ok_sizes in sizes.items():
+            mine = [p for p in shots if p.name.startswith(device)]
+            if device == "iPad" and '"1,2"' not in project:
+                continue
+            check(len(mine) >= 3, f"At least 3 {device} screenshots ({len(mine)})")
+            for shot in mine:
+                w, h = struct.unpack(">II", shot.read_bytes()[16:24])
+                check((w, h) in ok_sizes or (h, w) in ok_sizes, f"Screenshot {shot.name} is a store size ({w}×{h})")
+        check(not any(re.search(r"splash|launch", p.name, re.I) for p in shots), "No screenshot is just the splash (2.3.3)")
+
     for p in passes:
         print(f"  ✓ {p}")
     for f in failures:

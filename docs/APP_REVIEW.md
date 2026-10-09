@@ -8,6 +8,13 @@ guideline 2.1: crashes, placeholder content, incomplete information).
 
 ## Checked on every PR and before every release
 
+Also checked (section 7 of the script, from App Review's 2.1 "Information Needed" request on Lelu
+Ludo's first submission): review notes that answer purpose and audience, setup and features, paid
+content, external services, regions and third-party material, and agree with the code (In-App
+Purchase, Game Center, analytics); every tip sold is in the StoreKit configuration; the Game Center
+entitlement matches GameKit use; screenshots are store sizes, three or more per device, iPad ones if
+the app runs on iPad, and none is the splash.
+
 `scripts/release_readiness.py` (CI job "App Store readiness", and the first step of App Store Release):
 
 | Guideline | Check |
@@ -39,10 +46,19 @@ In App Store Connect:
 - **Accessibility Nutrition Labels**: declare what the app supports (VoiceOver, Larger Text,
   Sufficient Contrast, Reduced Motion, Differentiate Without Color). See the HIG accessibility page.
 - **Screenshots** show the app in use (2.3.3), match each device size, and fit a 4+ rating (2.3.8).
-- **Review notes** describe anything new "with specificity" (2.3.1(a)); generic notes are rejected.
+- **Review notes**: paste `apps/<app>/fastlane/review_notes.md` into App Review Information ▸ Notes
+  (the check keeps it complete and in line with the app), and describe anything new "with
+  specificity" (2.3.1(a)); generic notes are rejected.
+- **Category**: a primary category, and for Games at least one game sub-category (e.g. Board), saved.
+- **Game Center** on the version page matches the app: switched **off** unless the app has the
+  Game Center entitlement (the check prints which). On with no entitlement, "Add for Review" refuses.
+- **Privacy Policy URL** under App Privacy, and the App Privacy answers published by an Admin.
 - **Contact details** for App Review are current.
 
 Outside App Store Connect:
+- **A screen recording on a physical device** with the latest iOS, from launching the app through
+  its main flow and any paid content (the tip jar). App Review asks newer developer accounts for it
+  with the notes above (2.1 "Information Needed"); keep the latest one to hand.
 - **Test on a real device** with the latest iOS (2.1). Simulators differ on sound, Reduce Motion and
   stored preferences.
 - **TelemetryDeck**: delete usage statistics older than 12 months, as the privacy policy promises.
