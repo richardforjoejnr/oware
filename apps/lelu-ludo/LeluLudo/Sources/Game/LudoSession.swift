@@ -59,6 +59,10 @@ final class LudoSession {
     private(set) var selectedToken: Int?
     /// What has just happened, newest last, in words (also read out by VoiceOver).
     private(set) var log: [String] = []
+    /// One of your tokens just reached home: the board cheers it ("Eiii! Chale!"). Each has its own
+    /// `id`, so two in a row are two cheers.
+    private(set) var homeCheer: HomeCheer?
+    @ObservationIgnored private var cheers = 0
 
     @ObservationIgnored private let store: GameStore
     @ObservationIgnored private let dice: DiceSource
@@ -95,6 +99,7 @@ final class LudoSession {
         log = []
         lastEvents = []
         lastRoll = nil
+        homeCheer = nil
     }
 
     /// A game loaded on a computer's turn (the app was closed while it played) carries on by itself.
@@ -188,6 +193,8 @@ final class LudoSession {
         log = []
         hasGame = true
         save()
+        // As a restored game does: a position left on a computer's turn carries on by itself.
+        resumeComputerTurns()
     }
 
     func newGame(_ setup: GameSetup) {
@@ -345,6 +352,7 @@ final class LudoSession {
         lastEvents = events
         describe(events)
         sound(events)
+        celebrate(events)
         checkLesson(events, afterMove: true)
         save()
     }
@@ -356,10 +364,31 @@ final class LudoSession {
             case .kicked, .kickedInLane: feedback?.play(.kick)
             case .reachedHome: feedback?.play(.home)
             case .threeSixes: feedback?.play(.threeSixes)
-            case .won: feedback?.play(.win)
+            // A fanfare for a person's win; a computer's win is the game-over card's toppled pawn.
+            case let .won(color) where setup.seat(color) == .human: feedback?.play(.win)
             default: break
             }
         }
+    }
+
+    /// A token of a person's reached home, mid-game: yours against the computer, or each friend's in
+    /// pass & play (2–4 people). Not a computer's (the cheer is for people), and not
+    /// the last token of a game: that one is the win itself.
+    private func celebrate(_ events: [GameEvent]) {
+        guard !state.isOver else { return }
+        for case let .reachedHome(color, token) in events where setup.seat(color) == .human {
+            cheers += 1
+            homeCheer = HomeCheer(color: color, token: token, who: name(color), id: cheers)
+        }
+    }
+
+    /// How a finished game ended, for the people at the phone; nil while it goes on (and in a lesson,
+    /// which has its own ending).
+    var outcome: Outcome? {
+        guard tutorial == nil, let winner = state.winner else { return nil }
+        let people = setup.colors.filter { setup.seat($0) == .human }
+        return Outcome(winner: winner, winnerName: name(winner), youWon: people.contains(winner),
+                       yours: people.count == 1 ? people[0] : nil)
     }
 
     // MARK: On and off the screen
@@ -419,12 +448,16 @@ final class LudoSession {
     private func rollDie() {
         let color = state.toMove
         let value = (lessonDice ?? dice).roll()
+        // The cheer was for the move just played: once the next die is thrown it is over, so the board
+        // does not cheer it again after every later move.
+        homeCheer = nil
         lastRoll = (color, value)
         rolls += 1
         feedback?.play(.roll)
         lastEvents = state.roll(value)
         describe(lastEvents)
         sound(lastEvents)
+        celebrate(lastEvents)
         checkLesson(lastEvents, afterMove: false)
         save()
     }
@@ -467,3 +500,42 @@ final class LudoSession {
         }
     }
 }
+
+/// A token of yours home: which, so the board can cheer at its spot.
+struct HomeCheer: Equatable {
+    let color: PlayerColor
+    let token: Int
+    /// "You", or the colour's name when friends share the phone.
+    let who: String
+    let id: Int
+
+    /// What VoiceOver reads with the cheer.
+    var spoken: String { "\(Outcome.homePhrase) " + (who == "You" ? "Your token is home." : "\(who)'s token is home.") }
+}
+
+/// The end of a game as the game-over card tells it.
+struct Outcome: Equatable {
+    let winner: PlayerColor
+    /// "You", a colour ("Yellow") with friends, or a computer's colour.
+    let winnerName: String
+    /// A person won (with friends, always; against the computer, only you).
+    let youWon: Bool
+    /// Your colour when you alone played the computers (the pawn that topples when you lose).
+    let yours: PlayerColor?
+
+    /// Twi, "you have won" (the owner's spelling, 2026-10-10; a native speaker to confirm, see
+    /// docs/CULTURE_SOURCES.md). Contracted from "wo adi", it also reads "she/he has won".
+    static let winPhrase = "Wadi nkunim!"
+    /// Twi, "you've lost, you've lost!": the teasing the winner gives, as at a Ludo table in Ghana.
+    static let losePhrase = "Wa ri, wa ri!"
+    /// "Eiii! Chale!": a Ghanaian cheer (excitement; "chale", friend), for a token reaching home.
+    static let homePhrase = "Eiii! Chale!"
+
+    var phrase: String { youWon ? Self.winPhrase : Self.losePhrase }
+    /// The English under the Twi.
+    var meaning: String {
+        if youWon { return winnerName == "You" ? "You win!" : "\(winnerName) wins!" }
+        return "You've lost. \(winnerName) wins."
+    }
+}
+

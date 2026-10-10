@@ -35,8 +35,23 @@ enum Art {
     /// The four-loop knot from the plaque art, single colour, to tint (KnotGlyph).
     static let knot = "Knot"
 
+    // The win, lose and home-run art (art/make_celebration.py). Bubbles and ribbons are blank: the
+    // app sets the words.
+    /// A pawn of this colour cheering, with little marks of excitement.
+    static func cheer(_ color: PlayerColor) -> String { "Cheer-\(color.name.lowercased())" }
+    /// A pawn of this colour knocked over.
+    static func toppled(_ color: PlayerColor) -> String { "Toppled-\(color.name.lowercased())" }
+    static let bubbleYellow = "Bubble-yellow"
+    static let ribbonGreen = "Ribbon-green"
+    static let ribbonRed = "Ribbon-red"
+    static let glowRing = "Glow-ring"
+    static let glowRays = "Glow-rays"
+    static let glowSparkles = "Glow-sparkles"
+
     static var all: [String] {
         PlayerColor.allCases.map(pawn) + PlayerColor.allCases.map(pawnTop) + (1...6).map(die)
             + [dieFlag, diceCup, boardPlaque, woodGrain, maple, darkWood, darkWoodAcross, linen, boardBox, menuTitle, launchSplash, splashContent, tileStart, tileFriends, tileSettings, tileLearn, tileSupport, knot]
+            + PlayerColor.allCases.map(cheer) + PlayerColor.allCases.map(toppled)
+            + [bubbleYellow, ribbonGreen, ribbonRed, glowRing, glowRays, glowSparkles]
     }
 }

@@ -105,6 +105,13 @@ enum Scenario: String {
     case kick
     /// Four people passing one phone, `midgame`'s board, Yellow to roll.
     case passAndPlay = "pass-and-play"
+    /// You (red) against Black: three tokens home, the last on the second square before home. A 3 wins.
+    case winNext = "win-next"
+    /// The same, the other way round: Black (a computer) wins with a 3, and you lose.
+    case loseNext = "lose-next"
+    /// You (red) with two tokens home and one on the second square before home: a 3 brings it in
+    /// mid-game ("Eiii! Chale!").
+    case homeNext = "home-next"
 
     var game: (GameSetup, GameState) {
         let all: [PlayerColor] = [.red, .yellow, .black, .green]
@@ -135,6 +142,21 @@ enum Scenario: String {
         case .passAndPlay:
             return (GameSetup.passAndPlay(players: 4, rules: .ghanaClassic),
                     GameState.arranged(players: all, toMove: .yellow, tokens: spread))
+        case .winNext, .loseNext, .homeNext:
+            let home = Board.home, yard = Board.yard, near = Board.home - 3
+            let nearlyDone = [home, home, home, near]
+            let seats: [PlayerColor: Seat] = [.red: .human, .black: .computer(.novice)]
+            switch self {
+            case .winNext:
+                return (GameSetup(seats: seats), GameState.arranged(players: [.red, .black], toMove: .red,
+                                                                     tokens: [.red: nearlyDone, .black: [yard, yard, yard, yard]]))
+            case .loseNext:
+                return (GameSetup(seats: seats), GameState.arranged(players: [.red, .black], toMove: .black,
+                                                                     tokens: [.red: [yard, yard, yard, yard], .black: nearlyDone]))
+            default:
+                return (GameSetup(seats: seats), GameState.arranged(players: [.red, .black], toMove: .red,
+                                                                     tokens: [.red: [home, home, near, yard], .black: [yard, yard, yard, yard]]))
+            }
         }
     }
 }

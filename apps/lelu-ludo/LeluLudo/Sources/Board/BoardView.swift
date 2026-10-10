@@ -63,6 +63,12 @@ struct BoardView: View {
                 .frame(width: side, height: side)
                 .animation(.easeInOut(duration: 0.35), value: session.state)
                 .animation(.linear(duration: 0.12), value: session.motion)   // one square at a time
+                // One of your tokens home: "Eiii! Chale!" over it for a moment (it never takes a tap).
+                // Shown once the token has walked in, not while it is still on its way.
+                if let cheer = session.homeCheer, session.motion == nil {
+                    HomeCheerView(cheer: cheer, layout: layout)
+                        .frame(width: side, height: side)
+                }
             }
             .frame(width: side, height: side)
             .frame(maxWidth: .infinity, maxHeight: .infinity)

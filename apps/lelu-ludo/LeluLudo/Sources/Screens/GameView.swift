@@ -120,6 +120,15 @@ struct GameView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Table())
+        // The game is over (once the last token has walked in): the win or loss, then Play again or the menu.
+        .overlay {
+            if let outcome = session.outcome, session.motion == nil {
+                GameOverCard(outcome: outcome,
+                             playAgain: { session.newGame(session.setup) },
+                             mainMenu: leave)
+                    .transition(.opacity)
+            }
+        }
         .onChange(of: session.log) { _, log in
             if let line = log.last { AccessibilityNotification.Announcement(line).post() }
         }
