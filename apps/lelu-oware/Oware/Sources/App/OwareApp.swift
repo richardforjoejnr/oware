@@ -95,7 +95,7 @@ enum LaunchOptions {
     static var startGame: Bool { flag("--start-game", defaultsKey: "startGame") }
     /// `--demo-move`: with `--start-game`, sow A1 a moment after launch (animation checks).
     static var demoMove: Bool { flag("--demo-move") }
-    /// `--screen=journey|puzzles|heritage`: open on that screen.
+    /// `--screen=journey|puzzles|heritage|lesson`: open on that screen (lesson: its first step).
     static var startScreen: String? { value("--screen=") }
     /// `--demo-stores=N`: with `--start-game`, put N seeds in each store and scatter the rest.
     static var demoStores: Int? { value("--demo-stores=").flatMap(Int.init) }

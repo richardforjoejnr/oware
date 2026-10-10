@@ -63,4 +63,76 @@ final class BoardLayoutTests: XCTestCase {
             XCTAssertTrue(layout.storeRect(.north).maxY < y && y < layout.storeRect(.south).minY, "houses sit between the stores")
         }
     }
+
+    /// Upright phones: each home row has its rail at the board's edge on its own side, and a name
+    /// plaque halfway along it, both clear of every house, count and seed.
+    func testPortraitRailsSitBesideTheirOwnRowsClearOfTheHouses() {
+        for size in [CGSize(width: 402, height: 677), CGSize(width: 375, height: 470), CGSize(width: 440, height: 760),
+                     CGSize(width: 820, height: 1000)] {
+            let layout = BoardLayout(size: size)
+            XCTAssertEqual(layout.orientation, .vertical)
+            guard let south = layout.railRect(.south), let north = layout.railRect(.north),
+                  let southPlaque = layout.plaqueRect(.south), let northPlaque = layout.plaqueRect(.north) else {
+                return XCTFail("\(size): no room for the rails")
+            }
+            XCTAssertGreaterThan(south.minX, layout.houseCenter(0).x, "\(size): your rail is outside your row")
+            XCTAssertLessThan(north.maxX, layout.houseCenter(6).x, "\(size): their rail is outside their row")
+            XCTAssertGreaterThanOrEqual(south.width, 30, "\(size): rail too thin")
+            XCTAssertGreaterThanOrEqual(southPlaque.width, 50, "\(size): plaque too small to read")
+            for shape in [south, north, southPlaque, northPlaque] {
+                XCTAssertTrue(layout.boardRect.contains(shape), "\(size): \(shape) off the board")
+                for house in 0..<12 {
+                    let c = layout.houseCenter(house)
+                    let pit = CGRect(x: c.x - layout.pitSpriteDiameter / 2, y: c.y - layout.pitSpriteDiameter / 2,
+                                     width: layout.pitSpriteDiameter, height: layout.pitSpriteDiameter)
+                    XCTAssertFalse(shape.intersects(pit), "\(size): \(shape) covers house \(house)")
+                    XCTAssertFalse(shape.insetBy(dx: -layout.cell * 0.1, dy: 0).contains(layout.countLabelPoint(house)),
+                                   "\(size): \(shape) covers the count of house \(house)")
+                }
+            }
+            XCTAssertTrue(south.contains(CGPoint(x: south.midX, y: southPlaque.midY)), "\(size): plaque off its rail")
+        }
+    }
+
+    /// A board lying wide (phone on its side, iPad landscape) has its rows near and far, as on a
+    /// real board: no rails.
+    func testNoRailsWhenTheBoardLiesWide() {
+        for size in [CGSize(width: 852, height: 300), CGSize(width: 1180, height: 700)] {
+            let layout = BoardLayout(size: size)
+            XCTAssertNil(layout.railRect(.south), "\(size)")
+            XCTAssertNil(layout.plaqueRect(.north), "\(size)")
+        }
+    }
+
+    func testStripsNameWhoOwnsEachRow() {
+        let vsAI = GameMode.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south)
+        XCTAssertEqual(GameSession.sideName(.south, mode: vsAI), "You")
+        XCTAssertEqual(GameSession.sideName(.north, mode: vsAI), "Computer")
+        let asNorth = GameMode.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .north)
+        XCTAssertEqual(GameSession.sideName(.north, mode: asNorth), "You")
+        XCTAssertEqual(GameSession.sideName(.south, mode: asNorth), "Computer")
+        XCTAssertEqual(GameSession.sideName(.south, mode: .passAndPlay), "Player A")
+        XCTAssertEqual(GameSession.sideName(.north, mode: .passAndPlay), "Player B")
+        XCTAssertEqual(GameSession.sideName(.north, mode: .tutorial(step: 0)), "Nana")
+    }
+
+    /// A house's name and count sit outside its carved ring, never on it, on every board size
+    /// (a lesson's board is shorter, so its houses and rings are smaller). Labels are about 0.25
+    /// cells wide and 0.15 cells tall.
+    func testHouseLabelsClearTheRing() {
+        for size in sizes + [CGSize(width: 402, height: 522), CGSize(width: 375, height: 400)] {
+            let layout = BoardLayout(size: size)
+            let half = CGSize(width: layout.cell * 0.13, height: layout.cell * 0.08)
+            for house in 0..<12 {
+                let c = layout.houseCenter(house)
+                for withName in [false, true] {
+                    for p in [layout.countLabelPoint(house, withName: withName), layout.nameLabelPoint(house)] {
+                        // The label's nearest point to the house centre.
+                        let dx = max(abs(p.x - c.x) - half.width, 0), dy = max(abs(p.y - c.y) - half.height, 0)
+                        XCTAssertGreaterThan(hypot(dx, dy), layout.ringDiameter / 2, "\(size) house \(house) label at \(p) touches its ring")
+                    }
+                }
+            }
+        }
+    }
 }

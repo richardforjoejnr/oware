@@ -94,8 +94,15 @@ final class GameSession {
         return nil
     }
     /// The house the lesson wants tapped next, if any.
-    /// Lessons and riddles talk about houses by name (A3, B1), so the board shows the names.
+    /// The lesson talks about houses by name (A3, B1), so the board shows the names. Riddles never
+    /// do: the gold rings say which houses are yours.
     var namesHouses: Bool {
+        if case .tutorial = mode { return true }
+        return false
+    }
+    /// Lessons and riddles are worked out by counting (where does the last seed land?), and a pile
+    /// of thirteen seeds is hard to count by eye, so the board shows each house's count.
+    var countsSeeds: Bool {
         switch mode {
         case .tutorial, .puzzle: true
         default: false
@@ -113,6 +120,19 @@ final class GameSession {
         case .journey: mode.journeyOpponent?.name ?? "Journey"
         case .puzzle: "Ananse"
         case .tutorial: "Nana"
+        }
+    }
+    /// Who owns a home row, as carved on the strip beside it: "You" for the human against anyone,
+    /// "Computer" for a level (its level is in the top bar), and A and B when two share the phone.
+    func sideName(_ player: Player) -> String { Self.sideName(player, mode: mode) }
+
+    nonisolated static func sideName(_ player: Player, mode: GameMode) -> String {
+        switch mode {
+        case .passAndPlay: player == .south ? "Player A" : "Player B"
+        case let .versusAI(_, _, human): player == human ? "You" : "Computer"
+        case .journey: player == .south ? "You" : mode.journeyOpponent?.name ?? "Them"
+        case .puzzle: player == .south ? "You" : "Ananse"
+        case .tutorial: player == .south ? "You" : "Nana"
         }
     }
     var opponentRole: String? {

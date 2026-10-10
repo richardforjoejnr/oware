@@ -30,6 +30,17 @@ struct BoardView: View {
                         .accessibilityLabel("Store \(player.label)")
                         .accessibilityValue("\(session.state.store(of: player)) seeds")
                 }
+                // The plaques on the rails: whose row is whose, read out as well as drawn.
+                ForEach(Player.allCases, id: \.rawValue) { player in
+                    if let rect = layout.plaqueRect(player) {
+                        Color.clear
+                            .frame(width: rect.width, height: rect.height)
+                            .position(x: rect.midX, y: rect.midY)
+                            .accessibilityElement()
+                            .accessibilityIdentifier("plaque-\(player.label)")
+                            .accessibilityLabel(plaqueLabel(player))
+                    }
+                }
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("board")
@@ -55,14 +66,22 @@ struct BoardView: View {
         }
     }
 
+    /// "You: row A" or, in Nam-Nam, "Computer: 7 houses" (houses change hands there).
+    private func plaqueLabel(_ player: Player) -> String {
+        let name = session.sideName(player)
+        guard session.state.rules.variant == .namNam else { return "\(name): row \(player.label)" }
+        let held = session.state.houses(of: player).count
+        return "\(name): \(held) \(held == 1 ? "house" : "houses")"
+    }
+
     private func configureScene() {
         scene.theme = settings.boardTheme
         scene.setHighlight(house: session.highlightedHouse)
         scene.animationSpeed = settings.effectiveSpeed
         scene.calmMotion = settings.calmMotion
-        let labelled = settings.labelsHouses(namesHouses: session.namesHouses)
-        scene.showCounts = labelled
-        scene.showHouseNames = labelled
+        scene.showCounts = settings.labelsHouses(required: session.countsSeeds)
+        scene.showHouseNames = settings.labelsHouses(required: session.namesHouses)
+        scene.sideNames = Player.allCases.map { session.sideName($0) }
         SoundPlayer.shared.enabled = settings.effectiveSound
         Haptics.shared.enabled = settings.effectiveHaptics
     }

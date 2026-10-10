@@ -45,6 +45,11 @@ struct BoardLayout: Equatable {
     /// The carved pit sprite's footprint: a little wider than the hollow, always short of the
     /// next pit so neighbouring rims never touch.
     var pitSpriteDiameter: CGFloat { min(houseRadius * 2.3, pitch * 0.9) }
+    /// The carved ring round each house (its holder's colour), a little wider than the pit.
+    var ringDiameter: CGFloat { pitSpriteDiameter * 1.1 }
+    /// How far a house's name and count sit from its centre: just outside the ring, so they never
+    /// touch it. Across the board (upright) a label's width must clear it, along it only its height.
+    var labelOffset: CGFloat { ringDiameter / 2 + cell * (orientation == .vertical ? 0.2 : 0.11) }
     var seedRadius: CGFloat { cell * 0.095 }
     /// Corner radius of the slab.
     var cornerRadius: CGFloat { cell * 0.45 }
@@ -100,6 +105,33 @@ struct BoardLayout: Equatable {
         }
     }
 
+    /// The carved rail along a player's home row, at the board's long edge (South's on the right,
+    /// North's on the left): it says whose row is whose when the phone is held upright and the rows
+    /// run side by side. Nil when the board lies wide (the rows then lie near and far, as on a
+    /// real board) or is too narrow to fit one clear of the houses and their counts.
+    func railRect(_ player: Player) -> CGRect? {
+        guard orientation == .vertical, railRoom >= 30 else { return nil }
+        let width = min(railRoom, max(cell * 0.6, 40))
+        let x = player == .south ? boardRect.maxX - railInset - width : boardRect.minX + railInset
+        return CGRect(x: x, y: boardRect.minY + railInset, width: width, height: boardRect.height - railInset * 2)
+    }
+
+    /// The name plaque on a rail, halfway along it; wider than the rail, reaching in toward the
+    /// houses (never onto them). The plaque art is 258 × 600.
+    func plaqueRect(_ player: Player) -> CGRect? {
+        guard let rail = railRect(player) else { return nil }
+        let width = min(railRoom, rail.width * 1.7)
+        let height = width * 600 / 258
+        let x = player == .south ? rail.maxX - width : rail.minX
+        return CGRect(x: x, y: boardRect.midY - height / 2, width: width, height: height)
+    }
+
+    private var railInset: CGFloat { cell * 0.05 }
+    /// Room between the board's long edge and the houses' counts.
+    private var railRoom: CGFloat {
+        boardRect.width / 2 - (cell * 0.86 + labelOffset + cell * 0.16) - railInset
+    }
+
     /// The store's count sits at the bowl's outer end, clear of the seeds.
     func storeLabelPoint(_ player: Player) -> CGPoint {
         let r = storeRect(player)
@@ -116,9 +148,9 @@ struct BoardLayout: Equatable {
         let shift = withName ? houseRadius * 0.34 : 0
         switch orientation {
         case .horizontal:
-            return CGPoint(x: c.x + shift, y: c.y + (Player.south.owns(house) ? houseRadius * 1.16 : -houseRadius * 1.16))
+            return CGPoint(x: c.x + shift, y: c.y + (Player.south.owns(house) ? labelOffset : -labelOffset))
         case .vertical:
-            return CGPoint(x: c.x + (Player.south.owns(house) ? houseRadius * 1.24 : -houseRadius * 1.24), y: c.y + shift)
+            return CGPoint(x: c.x + (Player.south.owns(house) ? labelOffset : -labelOffset), y: c.y + shift)
         }
     }
 
