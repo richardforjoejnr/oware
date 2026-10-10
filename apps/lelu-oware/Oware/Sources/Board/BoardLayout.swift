@@ -100,6 +100,28 @@ struct BoardLayout: Equatable {
         }
     }
 
+    /// The strip of board along a player's home row, between their houses (and the counts beside
+    /// them) and the carved frame: where the row's owner is named, so a phone held upright still
+    /// shows whose side is whose. Nil when the board is too tight for a readable strip (a phone
+    /// on its side, where the rows already lie near and far as on a real board).
+    func railRect(_ player: Player) -> CGRect? {
+        let frame = cell * 0.34                       // the carved Kente band and its inset
+        let inner = cell * 0.86 + houseRadius * 1.24 + cell * 0.16
+        let span = CGFloat(6) * pitch
+        switch orientation {
+        case .vertical:
+            let outer = boardRect.width / 2 - frame - cell * 0.06
+            guard outer - inner >= max(30, cell * 0.4) else { return nil }
+            let x = player == .south ? boardRect.midX + inner : boardRect.midX - outer
+            return CGRect(x: x, y: boardRect.midY - span / 2, width: outer - inner, height: span)
+        case .horizontal:
+            let outer = boardRect.height / 2 - frame - cell * 0.06
+            guard outer - inner >= max(30, cell * 0.4) else { return nil }
+            let y = player == .south ? boardRect.midY + inner : boardRect.midY - outer
+            return CGRect(x: boardRect.midX - span / 2, y: y, width: span, height: outer - inner)
+        }
+    }
+
     /// The store's count sits at the bowl's outer end, clear of the seeds.
     func storeLabelPoint(_ player: Player) -> CGPoint {
         let r = storeRect(player)

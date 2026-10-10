@@ -33,8 +33,11 @@ final class BoardScene: SKScene, BoardAnimator {
     private var lastBandSizes: [CGSize] = []
     private var lastScorched = false
     private let rusticLayer = SKNode()
-    /// Nam-Nam: marks houses held by the player who does not usually own that row.
+    /// Whose each house is: a ring in its holder's colour round every house, and a named strip
+    /// along each home row (see `drawSides`).
     private let territoryLayer = SKNode()
+    /// The names on the strips beside each home row, indexed by `Player.rawValue` ("You", "Computer").
+    var sideNames = ["", ""] { didSet { if built, sideNames != oldValue { drawSides(current) } } }
     /// Seeds being carried while sowing; hovers over the board between houses.
     private let handNode = SKNode()
     private var lastFrameTexture = ""
@@ -478,7 +481,7 @@ final class BoardScene: SKScene, BoardAnimator {
         // The nodes below are about to go, and a removed node's action never completes: let go of
         // anything still waiting on one (a grand-slam pulse outliving its move).
         releasePending()
-        drawTerritory(state)
+        drawSides(state)
         hand.forEach { $0.removeFromParent() }
         hand = []
         handNode.removeAllChildren()
@@ -506,26 +509,67 @@ final class BoardScene: SKScene, BoardAnimator {
         updateLabels(state)
     }
 
-    /// A ring around every house held across the row, in its holder's colour: gold for South (A,
-    /// you against the computer), terracotta for North (B). The count of rings on a row is how many
-    /// houses have changed hands.
-    private func drawTerritory(_ state: GameState) {
+    /// The colour each side's houses and strip are marked in: gold for South (A, you against the
+    /// computer), terracotta for North (B).
+    static func sideColor(_ player: Player, alpha: CGFloat = 1) -> UIColor {
+        player == .south
+            ? UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: alpha)
+            : UIColor(red: 0.78, green: 0.32, blue: 0.2, alpha: alpha)
+    }
+
+    /// On a phone held upright the two rows run up the screen side by side, and nothing about a
+    /// carved bowl says whose it is (on a real board, your row is the one in front of you). So:
+    /// - a ring round every house in its holder's colour, solid for South and dashed for North, so
+    ///   it never rests on colour alone. In Nam-Nam a house that changes hands changes ring, and a
+    ///   row's odd ones out are the houses held across it;
+    /// - a strip along each home row, in the row's colour, carved with its owner's name (and, in
+    ///   Nam-Nam, how many houses they hold);
+    /// - the side to move in full colour, the other side faded.
+    private func drawSides(_ state: GameState) {
         territoryLayer.removeAllChildren()
-        guard state.rules.variant == .namNam else { return }
-        for house in 0..<GameState.houseCount where state.owner(of: house) != (house < 6 ? .south : .north) {
+        let toMove: Player? = state.isOver ? nil : state.sideToMove
+        for house in 0..<GameState.houseCount {
+            let owner = state.owner(of: house)
             let c = layout.sk(layout.houseCenter(house))
             let r = layout.pitSpriteDiameter / 2 * 1.04
-            // South's rings are solid, North's dashed, so ownership never rests on colour alone.
             let circle = CGPath(ellipseIn: CGRect(x: -r, y: -r, width: r * 2, height: r * 2), transform: nil)
-            let path = state.owner(of: house) == .south ? circle : circle.copy(dashingWithPhase: 0, lengths: [7, 5])
+            let path = owner == .south ? circle : circle.copy(dashingWithPhase: 0, lengths: [7, 5])
             let ring = SKShapeNode(path: path)
             ring.position = c
             ring.fillColor = .clear
-            ring.strokeColor = state.owner(of: house) == .south
-                ? UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: 0.9)
-                : UIColor(red: 0.78, green: 0.32, blue: 0.2, alpha: 0.9)
-            ring.lineWidth = 2
+            ring.strokeColor = Self.sideColor(owner, alpha: owner == toMove ? 0.95 : 0.6)
+            ring.lineWidth = owner == toMove ? 2.5 : 1.5
             territoryLayer.addChild(ring)
+        }
+        for player in Player.allCases {
+            guard let rail = layout.railRect(player) else { continue }
+            let active = player == toMove
+            let rect = layout.sk(rail)
+            let strip = SKShapeNode(rect: rect, cornerRadius: min(rect.width, rect.height) * 0.3)
+            strip.fillColor = Self.sideColor(player, alpha: active ? 0.16 : 0.08)
+            strip.strokeColor = Self.sideColor(player, alpha: active ? 0.85 : 0.45)
+            strip.lineWidth = 1.5
+            territoryLayer.addChild(strip)
+
+            var text = sideNames[player.rawValue]
+            if state.rules.variant == .namNam {
+                let held = state.houses(of: player).count
+                text += (text.isEmpty ? "" : "  ·  ") + "\(held) \(held == 1 ? "house" : "houses")"
+            }
+            guard !text.isEmpty else { continue }
+            let label = SKLabelNode(fontNamed: "Georgia-Bold")
+            label.text = text
+            label.fontColor = active ? UIColor(red: 0.96, green: 0.90, blue: 0.78, alpha: 1) : UIColor(red: 0.96, green: 0.90, blue: 0.78, alpha: 0.6)
+            label.verticalAlignmentMode = .center
+            label.horizontalAlignmentMode = .center
+            // Carved along the strip: up the board when it stands upright (both strips read the
+            // same way, bottom to top), straight across when it lies wide.
+            let thickness = min(rect.width, rect.height), length = max(rect.width, rect.height)
+            label.fontSize = min(thickness * 0.5, layout.cell * 0.3)
+            if label.frame.width > length * 0.9 { label.fontSize *= length * 0.9 / label.frame.width }
+            label.position = CGPoint(x: rect.midX, y: rect.midY)
+            if layout.orientation == .vertical { label.zRotation = .pi / 2 }
+            territoryLayer.addChild(label)
         }
     }
 

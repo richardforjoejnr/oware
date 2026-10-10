@@ -115,6 +115,19 @@ final class GameSession {
         case .tutorial: "Nana"
         }
     }
+    /// Who owns a home row, as carved on the strip beside it: "You" for the human against anyone,
+    /// "Computer" for a level (its level is in the top bar), and A and B when two share the phone.
+    func sideName(_ player: Player) -> String { Self.sideName(player, mode: mode) }
+
+    nonisolated static func sideName(_ player: Player, mode: GameMode) -> String {
+        switch mode {
+        case .passAndPlay: player == .south ? "Player A" : "Player B"
+        case let .versusAI(_, _, human): player == human ? "You" : "Computer"
+        case .journey: player == .south ? "You" : mode.journeyOpponent?.name ?? "Them"
+        case .puzzle: player == .south ? "You" : "Ananse"
+        case .tutorial: player == .south ? "You" : "Nana"
+        }
+    }
     var opponentRole: String? {
         switch mode {
         case .versusAI: "computer"
