@@ -244,4 +244,45 @@ struct ReferenceTests {
         if rules.forwardSideKick { #expect(played[.sideKickForward, default: 0] > 0, "side kicks played: \(played)") }
         if rules.backSideKick { #expect(played[.sideKickBack, default: 0] > 0, "\(played)") }
     }
+
+    /// Back kicks above all: when one is offered it is played (half the time; always kicking makes a
+    /// game last for ever), so the comparison sees hundreds of them in every rule set that has them (stacking modes, safe squares, the other kicks on and off).
+    static let backKickRuleSets: [RuleSet] = [
+        .ghana,
+        RuleSet(stacking: .safe), RuleSet(stacking: .notAllowed),
+        RuleSet(startSquaresSafe: true, starSquaresSafe: true),
+        RuleSet(kickOrHomeEarnsRoll: false, threeSixesForfeit: false),
+        RuleSet(homeKick: false, forwardSideKick: false, backSideKick: false),
+    ]
+
+    @Test("Back-kick-heavy random games: engine and reference agree on every move", arguments: backKickRuleSets)
+    func backKickHeavyGames(rules: RuleSet) throws {
+        var backKicks = 0
+        let kinds: [Move.Kind: Int] = [.enter: 0, .forward: 1, .backKick: 2, .homeKick: 3, .walkOut: 4, .sideKickForward: 5, .sideKickBack: 6]
+        for seed in 0..<30 {
+            var rng = LCG(s: UInt64(seed) &* 40503 &+ 11)
+            let players = Array(PlayerColor.allCases.prefix(2 + seed % 3))
+            var engine = GameState(players: players, rules: rules)
+            var ref = ReferenceLudo(players: players, rules: rules)
+            var rolls = 0
+            while !engine.isOver && rolls < 20_000 {
+                let v = Int.random(in: 1...6, using: &rng)
+                engine.roll(v); ref.doRoll(v); rolls += 1
+                let moves = engine.legalMoves()
+                let legal = Set(moves.map { [$0.token, $0.from, $0.to, $0.visit?.owner.rawValue ?? -1, $0.visit?.depth ?? 0, kinds[$0.kind]!] })
+                try #require(legal == ref.moves(), "seed \(seed) roll \(rolls): engine \(legal) vs reference \(ref.moves())")
+                let kick = Bool.random(using: &rng) ? moves.first(where: { $0.kind == .backKick }) : nil
+                if let pick = kick ?? moves.randomElement(using: &rng) {
+                    if pick.kind == .backKick { backKicks += 1 }
+                    try engine.apply(pick); ref.play(token: pick.token, to: pick.to, guestOf: pick.visit?.owner, depth: pick.visit?.depth ?? 0)
+                }
+                for c in PlayerColor.allCases {
+                    try #require(engine.tokens(of: c) == ref.progress(c), "seed \(seed) roll \(rolls) \(c)")
+                }
+                try #require(engine.toMove == ref.toMove && engine.winner == ref.winner, "seed \(seed) roll \(rolls)")
+            }
+            #expect(engine.winner != nil)
+        }
+        #expect(backKicks > 150, "back kicks played: \(backKicks)")
+    }
 }
