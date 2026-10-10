@@ -36,7 +36,8 @@ final class AppSettings {
         didSet { defaults.set(showHouseLabels, forKey: "showHouseLabels") }
     }
     /// Whether the board labels its houses: the setting, or always in lessons and riddles.
-    func labelsHouses(namesHouses: Bool) -> Bool { showHouseLabels || namesHouses }
+    /// A house label (its name, or its count) shows when switched on, or when the screen needs it.
+    func labelsHouses(required: Bool) -> Bool { showHouseLabels || required }
     /// Grand-slam convention for new games (Abapa forfeit by default).
     var grandSlamRule: RuleSet.GrandSlamRule {
         didSet { defaults.set(grandSlamRule.rawValue, forKey: "grandSlamRule") }

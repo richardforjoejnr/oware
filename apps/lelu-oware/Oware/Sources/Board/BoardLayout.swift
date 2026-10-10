@@ -45,6 +45,11 @@ struct BoardLayout: Equatable {
     /// The carved pit sprite's footprint: a little wider than the hollow, always short of the
     /// next pit so neighbouring rims never touch.
     var pitSpriteDiameter: CGFloat { min(houseRadius * 2.3, pitch * 0.9) }
+    /// The carved ring round each house (its holder's colour), a little wider than the pit.
+    var ringDiameter: CGFloat { pitSpriteDiameter * 1.1 }
+    /// How far a house's name and count sit from its centre: just outside the ring, so they never
+    /// touch it. Across the board (upright) a label's width must clear it, along it only its height.
+    var labelOffset: CGFloat { ringDiameter / 2 + cell * (orientation == .vertical ? 0.2 : 0.11) }
     var seedRadius: CGFloat { cell * 0.095 }
     /// Corner radius of the slab.
     var cornerRadius: CGFloat { cell * 0.45 }
@@ -124,7 +129,7 @@ struct BoardLayout: Equatable {
     private var railInset: CGFloat { cell * 0.05 }
     /// Room between the board's long edge and the houses' counts.
     private var railRoom: CGFloat {
-        boardRect.width / 2 - (cell * 0.86 + houseRadius * 1.24 + cell * 0.16) - railInset
+        boardRect.width / 2 - (cell * 0.86 + labelOffset + cell * 0.16) - railInset
     }
 
     /// The store's count sits at the bowl's outer end, clear of the seeds.
@@ -143,9 +148,9 @@ struct BoardLayout: Equatable {
         let shift = withName ? houseRadius * 0.34 : 0
         switch orientation {
         case .horizontal:
-            return CGPoint(x: c.x + shift, y: c.y + (Player.south.owns(house) ? houseRadius * 1.16 : -houseRadius * 1.16))
+            return CGPoint(x: c.x + shift, y: c.y + (Player.south.owns(house) ? labelOffset : -labelOffset))
         case .vertical:
-            return CGPoint(x: c.x + (Player.south.owns(house) ? houseRadius * 1.24 : -houseRadius * 1.24), y: c.y + shift)
+            return CGPoint(x: c.x + (Player.south.owns(house) ? labelOffset : -labelOffset), y: c.y + shift)
         }
     }
 

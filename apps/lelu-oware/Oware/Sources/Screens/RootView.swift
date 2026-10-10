@@ -85,6 +85,9 @@ struct RootView: View {
             case "journey": screen = .journey
             case "puzzles": screen = .puzzles
             case "heritage": screen = .heritage
+            case "lesson":
+                session.startTutorial(step: 0, variant: settings.rules.variant)
+                screen = .game
             default: break
             }
             if LaunchOptions.startGame, screen == .home {

@@ -32,7 +32,7 @@ struct RiddleCard: View {
                 }
                 section("The riddle", Self.question(for: puzzle))
                 section("Goal", Self.goal(for: puzzle))
-                section("How to answer", "Your houses are A1 to A6 (their names are shown in gold on the board). Tap the house you would sow from. A wrong answer leaves the board as it was; tap Reset to look again.")
+                section("How to answer", "Your houses are the ones ringed in gold; the small number beside each house is how many seeds it holds. Tap the house you would sow from. A wrong answer leaves the board as it was; tap Reset to look again.")
                 section(rules == .namNam ? "Nam-Nam captures" : "Abapa captures", Self.captureReminder(rules))
             }
             .padding(24)

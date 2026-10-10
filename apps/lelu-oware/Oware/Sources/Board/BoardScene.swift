@@ -553,7 +553,7 @@ final class BoardScene: SKScene, BoardAnimator {
         for house in 0..<GameState.houseCount {
             let owner = state.owner(of: house)
             let ring = SKSpriteNode(texture: ringTextures[owner.rawValue])
-            let d = layout.pitSpriteDiameter * 1.1
+            let d = layout.ringDiameter
             ring.size = CGSize(width: d, height: d)
             ring.position = layout.sk(layout.houseCenter(house))
             ring.alpha = owner == toMove ? 1 : 0.6

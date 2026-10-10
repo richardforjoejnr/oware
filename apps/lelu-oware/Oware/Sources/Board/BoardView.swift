@@ -79,9 +79,8 @@ struct BoardView: View {
         scene.setHighlight(house: session.highlightedHouse)
         scene.animationSpeed = settings.effectiveSpeed
         scene.calmMotion = settings.calmMotion
-        let labelled = settings.labelsHouses(namesHouses: session.namesHouses)
-        scene.showCounts = labelled
-        scene.showHouseNames = labelled
+        scene.showCounts = settings.labelsHouses(required: session.countsSeeds)
+        scene.showHouseNames = settings.labelsHouses(required: session.namesHouses)
         scene.sideNames = Player.allCases.map { session.sideName($0) }
         SoundPlayer.shared.enabled = settings.effectiveSound
         Haptics.shared.enabled = settings.effectiveHaptics

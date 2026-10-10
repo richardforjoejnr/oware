@@ -115,4 +115,24 @@ final class BoardLayoutTests: XCTestCase {
         XCTAssertEqual(GameSession.sideName(.north, mode: .passAndPlay), "Player B")
         XCTAssertEqual(GameSession.sideName(.north, mode: .tutorial(step: 0)), "Nana")
     }
+
+    /// A house's name and count sit outside its carved ring, never on it, on every board size
+    /// (a lesson's board is shorter, so its houses and rings are smaller). Labels are about 0.25
+    /// cells wide and 0.15 cells tall.
+    func testHouseLabelsClearTheRing() {
+        for size in sizes + [CGSize(width: 402, height: 522), CGSize(width: 375, height: 400)] {
+            let layout = BoardLayout(size: size)
+            let half = CGSize(width: layout.cell * 0.13, height: layout.cell * 0.08)
+            for house in 0..<12 {
+                let c = layout.houseCenter(house)
+                for withName in [false, true] {
+                    for p in [layout.countLabelPoint(house, withName: withName), layout.nameLabelPoint(house)] {
+                        // The label's nearest point to the house centre.
+                        let dx = max(abs(p.x - c.x) - half.width, 0), dy = max(abs(p.y - c.y) - half.height, 0)
+                        XCTAssertGreaterThan(hypot(dx, dy), layout.ringDiameter / 2, "\(size) house \(house) label at \(p) touches its ring")
+                    }
+                }
+            }
+        }
+    }
 }
