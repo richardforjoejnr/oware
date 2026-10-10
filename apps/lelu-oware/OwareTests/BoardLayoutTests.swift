@@ -64,37 +64,44 @@ final class BoardLayoutTests: XCTestCase {
         }
     }
 
-    /// Upright phones: each home row has a named strip beside it, on its own side of the board,
-    /// clear of every house, count and the carved frame.
-    func testPortraitStripsSitBesideTheirOwnRowsClearOfTheHouses() {
-        for size in [CGSize(width: 402, height: 677), CGSize(width: 375, height: 470), CGSize(width: 440, height: 760)] {
+    /// Upright phones: each home row has its rail at the board's edge on its own side, and a name
+    /// plaque halfway along it, both clear of every house, count and seed.
+    func testPortraitRailsSitBesideTheirOwnRowsClearOfTheHouses() {
+        for size in [CGSize(width: 402, height: 677), CGSize(width: 375, height: 470), CGSize(width: 440, height: 760),
+                     CGSize(width: 820, height: 1000)] {
             let layout = BoardLayout(size: size)
             XCTAssertEqual(layout.orientation, .vertical)
-            guard let south = layout.railRect(.south), let north = layout.railRect(.north) else {
-                return XCTFail("\(size): no room for the strips")
+            guard let south = layout.railRect(.south), let north = layout.railRect(.north),
+                  let southPlaque = layout.plaqueRect(.south), let northPlaque = layout.plaqueRect(.north) else {
+                return XCTFail("\(size): no room for the rails")
             }
-            XCTAssertGreaterThan(south.minX, layout.houseCenter(0).x, "\(size): your strip is outside your row")
-            XCTAssertLessThan(north.maxX, layout.houseCenter(6).x, "\(size): their strip is outside their row")
-            XCTAssertGreaterThanOrEqual(south.width, 30, "\(size): wide enough to read")
-            for strip in [south, north] {
-                XCTAssertTrue(layout.boardRect.insetBy(dx: layout.cell * 0.34, dy: 0).contains(strip), "\(size): strip under the frame")
+            XCTAssertGreaterThan(south.minX, layout.houseCenter(0).x, "\(size): your rail is outside your row")
+            XCTAssertLessThan(north.maxX, layout.houseCenter(6).x, "\(size): their rail is outside their row")
+            XCTAssertGreaterThanOrEqual(south.width, 30, "\(size): rail too thin")
+            XCTAssertGreaterThanOrEqual(southPlaque.width, 50, "\(size): plaque too small to read")
+            for shape in [south, north, southPlaque, northPlaque] {
+                XCTAssertTrue(layout.boardRect.contains(shape), "\(size): \(shape) off the board")
                 for house in 0..<12 {
                     let c = layout.houseCenter(house)
-                    let count = layout.countLabelPoint(house)
                     let pit = CGRect(x: c.x - layout.pitSpriteDiameter / 2, y: c.y - layout.pitSpriteDiameter / 2,
                                      width: layout.pitSpriteDiameter, height: layout.pitSpriteDiameter)
-                    XCTAssertFalse(strip.intersects(pit), "\(size): strip covers house \(house)")
-                    XCTAssertFalse(strip.insetBy(dx: -layout.cell * 0.1, dy: 0).contains(count), "\(size): strip covers count \(house)")
+                    XCTAssertFalse(shape.intersects(pit), "\(size): \(shape) covers house \(house)")
+                    XCTAssertFalse(shape.insetBy(dx: -layout.cell * 0.1, dy: 0).contains(layout.countLabelPoint(house)),
+                                   "\(size): \(shape) covers the count of house \(house)")
                 }
             }
+            XCTAssertTrue(south.contains(CGPoint(x: south.midX, y: southPlaque.midY)), "\(size): plaque off its rail")
         }
     }
 
-    /// A phone on its side has no room beside the rows: no strip rather than a cramped one.
-    func testNoStripWhenTheBoardIsTooTight() {
-        let layout = BoardLayout(size: CGSize(width: 852, height: 300))
-        XCTAssertNil(layout.railRect(.south))
-        XCTAssertNil(layout.railRect(.north))
+    /// A board lying wide (phone on its side, iPad landscape) has its rows near and far, as on a
+    /// real board: no rails.
+    func testNoRailsWhenTheBoardLiesWide() {
+        for size in [CGSize(width: 852, height: 300), CGSize(width: 1180, height: 700)] {
+            let layout = BoardLayout(size: size)
+            XCTAssertNil(layout.railRect(.south), "\(size)")
+            XCTAssertNil(layout.plaqueRect(.north), "\(size)")
+        }
     }
 
     func testStripsNameWhoOwnsEachRow() {

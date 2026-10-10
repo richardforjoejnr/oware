@@ -33,9 +33,14 @@ final class BoardScene: SKScene, BoardAnimator {
     private var lastBandSizes: [CGSize] = []
     private var lastScorched = false
     private let rusticLayer = SKNode()
-    /// Whose each house is: a ring in its holder's colour round every house, and a named strip
-    /// along each home row (see `drawSides`).
+    /// Whose each house is: a carved ring in its holder's colour round every house, and the name
+    /// plaques on the rails (see `drawSides`).
     private let territoryLayer = SKNode()
+    /// The carved rails along the two home rows (upright boards only), indexed by `Player.rawValue`.
+    private var railNodes: [SKSpriteNode] = []
+    private let railTextures = [SKTexture(imageNamed: "railGold"), SKTexture(imageNamed: "railRed")]
+    private let plaqueTextures = [SKTexture(imageNamed: "plaqueGold"), SKTexture(imageNamed: "plaqueRed")]
+    private let ringTextures = [SKTexture(imageNamed: "ringGold"), SKTexture(imageNamed: "ringRed")]
     /// The names on the strips beside each home row, indexed by `Player.rawValue` ("You", "Computer").
     var sideNames = ["", ""] { didSet { if built, sideNames != oldValue { drawSides(current) } } }
     /// Seeds being carried while sowing; hovers over the board between houses.
@@ -117,6 +122,12 @@ final class BoardScene: SKScene, BoardAnimator {
             addChild(rim)
             rimNodes.append(rim)
         }
+        for player in Player.allCases {
+            let rail = SKSpriteNode(texture: railTextures[player.rawValue])
+            rail.zPosition = 0.2
+            addChild(rail)
+            railNodes.append(rail)
+        }
         rusticLayer.zPosition = 0.5
         addChild(rusticLayer)
         territoryLayer.zPosition = 1.5
@@ -192,8 +203,9 @@ final class BoardScene: SKScene, BoardAnimator {
             relayout()
             return
         }
-        for rim in rimNodes {
-            rim.isHidden = !theme.carvedFrame
+        for (k, rim) in rimNodes.enumerated() {
+            // Upright, the rails take the long sides (bands 0 and 1) instead.
+            rim.isHidden = !theme.carvedFrame || (k < 2 && layout.railRect(.south) != nil)
             rim.alpha = theme.rimOpacity
             rim.color = theme.uiTint
             rim.colorBlendFactor = theme.tintStrength * 0.6
@@ -255,7 +267,10 @@ final class BoardScene: SKScene, BoardAnimator {
         let bandThickness = layout.cell * 0.30
         let inset = layout.cell * 0.04
         let longSide = layout.orientation == .horizontal ? r.width - inset * 2 : r.height - inset * 2
-        let shortSide = (layout.orientation == .horizontal ? r.height : r.width) - inset * 2 - bandThickness * 2
+        // With the rails up the long sides, the end bands run between them instead.
+        let railWidth = layout.railRect(.south)?.width
+        let shortSide = (layout.orientation == .horizontal ? r.height : r.width) - inset * 2
+            - (railWidth.map { $0 * 2 + layout.cell * 0.04 } ?? bandThickness * 2)
         let sizes = [CGSize(width: longSide, height: bandThickness), CGSize(width: longSide, height: bandThickness),
                      CGSize(width: shortSide, height: bandThickness), CGSize(width: shortSide, height: bandThickness)]
         if sizes != lastBandSizes {
@@ -279,6 +294,14 @@ final class BoardScene: SKScene, BoardAnimator {
             rimNodes[3].zRotation = .pi;      rimNodes[3].position = CGPoint(x: r.midX, y: r.minY + inset + half)
         }
 
+        for player in Player.allCases {
+            let rail = railNodes[player.rawValue]
+            rail.isHidden = layout.railRect(player) == nil
+            if let rect = layout.railRect(player).map(layout.sk) {
+                rail.size = rect.size
+                rail.position = CGPoint(x: rect.midX, y: rect.midY)
+            }
+        }
         buildRusticDetails(in: r)
         for i in 0..<12 {
             let c = layout.sk(layout.houseCenter(i))
@@ -509,67 +532,70 @@ final class BoardScene: SKScene, BoardAnimator {
         updateLabels(state)
     }
 
-    /// The colour each side's houses and strip are marked in: gold for South (A, you against the
-    /// computer), terracotta for North (B).
+    /// The colour each side is marked in (as on its rail and rings): gold for South (A, you
+    /// against the computer), red for North (B).
     static func sideColor(_ player: Player, alpha: CGFloat = 1) -> UIColor {
         player == .south
             ? UIColor(red: 0.85, green: 0.65, blue: 0.13, alpha: alpha)
-            : UIColor(red: 0.78, green: 0.32, blue: 0.2, alpha: alpha)
+            : UIColor(red: 0.78, green: 0.25, blue: 0.16, alpha: alpha)
     }
 
     /// On a phone held upright the two rows run up the screen side by side, and nothing about a
     /// carved bowl says whose it is (on a real board, your row is the one in front of you). So:
-    /// - a ring round every house in its holder's colour, solid for South and dashed for North, so
-    ///   it never rests on colour alone. In Nam-Nam a house that changes hands changes ring, and a
-    ///   row's odd ones out are the houses held across it;
-    /// - a strip along each home row, in the row's colour, carved with its owner's name (and, in
-    ///   Nam-Nam, how many houses they hold);
-    /// - the side to move in full colour, the other side faded.
+    /// - a carved ring round every house in its holder's colour. In Nam-Nam a house that changes
+    ///   hands changes ring, so a row's odd ones out are the houses held across it;
+    /// - a carved rail along each home row (built in `relayout`) with a plaque halfway: its owner's
+    ///   name and, in Nam-Nam, how many houses they hold;
+    /// - the side to move at full strength, the other side dimmed.
     private func drawSides(_ state: GameState) {
         territoryLayer.removeAllChildren()
         let toMove: Player? = state.isOver ? nil : state.sideToMove
         for house in 0..<GameState.houseCount {
             let owner = state.owner(of: house)
-            let c = layout.sk(layout.houseCenter(house))
-            let r = layout.pitSpriteDiameter / 2 * 1.04
-            let circle = CGPath(ellipseIn: CGRect(x: -r, y: -r, width: r * 2, height: r * 2), transform: nil)
-            let path = owner == .south ? circle : circle.copy(dashingWithPhase: 0, lengths: [7, 5])
-            let ring = SKShapeNode(path: path)
-            ring.position = c
-            ring.fillColor = .clear
-            ring.strokeColor = Self.sideColor(owner, alpha: owner == toMove ? 0.95 : 0.6)
-            ring.lineWidth = owner == toMove ? 2.5 : 1.5
+            let ring = SKSpriteNode(texture: ringTextures[owner.rawValue])
+            let d = layout.pitSpriteDiameter * 1.1
+            ring.size = CGSize(width: d, height: d)
+            ring.position = layout.sk(layout.houseCenter(house))
+            ring.alpha = owner == toMove ? 1 : 0.6
             territoryLayer.addChild(ring)
         }
         for player in Player.allCases {
-            guard let rail = layout.railRect(player) else { continue }
             let active = player == toMove
-            let rect = layout.sk(rail)
-            let strip = SKShapeNode(rect: rect, cornerRadius: min(rect.width, rect.height) * 0.3)
-            strip.fillColor = Self.sideColor(player, alpha: active ? 0.16 : 0.08)
-            strip.strokeColor = Self.sideColor(player, alpha: active ? 0.85 : 0.45)
-            strip.lineWidth = 1.5
-            territoryLayer.addChild(strip)
+            railNodes[player.rawValue].alpha = active ? 1 : 0.7
+            guard let rect = layout.plaqueRect(player).map(layout.sk) else { continue }
+            let plaque = SKSpriteNode(texture: plaqueTextures[player.rawValue])
+            plaque.size = rect.size
+            plaque.position = CGPoint(x: rect.midX, y: rect.midY)
+            plaque.alpha = active ? 1 : 0.8
+            plaque.zPosition = 0.1
+            territoryLayer.addChild(plaque)
 
-            var text = sideNames[player.rawValue]
+            // The plaque's panel runs from 23 % to 77 % of its height, divided by two brass bars at
+            // 41 % and 67 %: the name above the bars and the count of houses between them (Nam-Nam),
+            // or the name alone between the bars.
+            let ink = UIColor(red: 0.96, green: 0.90, blue: 0.78, alpha: active ? 1 : 0.75)
+            let width = rect.width * 0.72
+            func label(_ text: String, font: String, size: CGFloat, at fraction: CGFloat) {
+                let node = SKLabelNode(fontNamed: font)
+                node.text = text
+                node.fontColor = ink
+                node.fontSize = size
+                node.verticalAlignmentMode = .center
+                node.horizontalAlignmentMode = .center
+                if node.frame.width > width { node.fontSize *= width / node.frame.width }
+                node.position = CGPoint(x: rect.midX, y: rect.maxY - rect.height * fraction)
+                node.zPosition = 0.2
+                territoryLayer.addChild(node)
+            }
+            let name = sideNames[player.rawValue]
             if state.rules.variant == .namNam {
                 let held = state.houses(of: player).count
-                text += (text.isEmpty ? "" : "  ·  ") + "\(held) \(held == 1 ? "house" : "houses")"
+                label(name, font: "AvenirNextCondensed-DemiBold", size: rect.width * 0.22, at: 0.32)
+                label("\(held)", font: "Georgia-Bold", size: rect.width * 0.4, at: 0.54)
+                label(held == 1 ? "house" : "houses", font: "Georgia", size: rect.width * 0.17, at: 0.715)
+            } else {
+                label(name, font: "AvenirNextCondensed-DemiBold", size: rect.width * 0.26, at: 0.54)
             }
-            guard !text.isEmpty else { continue }
-            let label = SKLabelNode(fontNamed: "Georgia-Bold")
-            label.text = text
-            label.fontColor = active ? UIColor(red: 0.96, green: 0.90, blue: 0.78, alpha: 1) : UIColor(red: 0.96, green: 0.90, blue: 0.78, alpha: 0.6)
-            label.verticalAlignmentMode = .center
-            label.horizontalAlignmentMode = .center
-            // Carved along the strip: up the board when it stands upright (both strips read the
-            // same way, bottom to top), straight across when it lies wide.
-            let thickness = min(rect.width, rect.height), length = max(rect.width, rect.height)
-            label.fontSize = min(thickness * 0.5, layout.cell * 0.3)
-            if label.frame.width > length * 0.9 { label.fontSize *= length * 0.9 / label.frame.width }
-            label.position = CGPoint(x: rect.midX, y: rect.midY)
-            if layout.orientation == .vertical { label.zRotation = .pi / 2 }
-            territoryLayer.addChild(label)
         }
     }
 

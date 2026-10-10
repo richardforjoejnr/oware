@@ -100,26 +100,31 @@ struct BoardLayout: Equatable {
         }
     }
 
-    /// The strip of board along a player's home row, between their houses (and the counts beside
-    /// them) and the carved frame: where the row's owner is named, so a phone held upright still
-    /// shows whose side is whose. Nil when the board is too tight for a readable strip (a phone
-    /// on its side, where the rows already lie near and far as on a real board).
+    /// The carved rail along a player's home row, at the board's long edge (South's on the right,
+    /// North's on the left): it says whose row is whose when the phone is held upright and the rows
+    /// run side by side. Nil when the board lies wide (the rows then lie near and far, as on a
+    /// real board) or is too narrow to fit one clear of the houses and their counts.
     func railRect(_ player: Player) -> CGRect? {
-        let frame = cell * 0.34                       // the carved Kente band and its inset
-        let inner = cell * 0.86 + houseRadius * 1.24 + cell * 0.16
-        let span = CGFloat(6) * pitch
-        switch orientation {
-        case .vertical:
-            let outer = boardRect.width / 2 - frame - cell * 0.06
-            guard outer - inner >= max(30, cell * 0.4) else { return nil }
-            let x = player == .south ? boardRect.midX + inner : boardRect.midX - outer
-            return CGRect(x: x, y: boardRect.midY - span / 2, width: outer - inner, height: span)
-        case .horizontal:
-            let outer = boardRect.height / 2 - frame - cell * 0.06
-            guard outer - inner >= max(30, cell * 0.4) else { return nil }
-            let y = player == .south ? boardRect.midY + inner : boardRect.midY - outer
-            return CGRect(x: boardRect.midX - span / 2, y: y, width: span, height: outer - inner)
-        }
+        guard orientation == .vertical, railRoom >= 30 else { return nil }
+        let width = min(railRoom, max(cell * 0.6, 40))
+        let x = player == .south ? boardRect.maxX - railInset - width : boardRect.minX + railInset
+        return CGRect(x: x, y: boardRect.minY + railInset, width: width, height: boardRect.height - railInset * 2)
+    }
+
+    /// The name plaque on a rail, halfway along it; wider than the rail, reaching in toward the
+    /// houses (never onto them). The plaque art is 258 × 600.
+    func plaqueRect(_ player: Player) -> CGRect? {
+        guard let rail = railRect(player) else { return nil }
+        let width = min(railRoom, rail.width * 1.7)
+        let height = width * 600 / 258
+        let x = player == .south ? rail.maxX - width : rail.minX
+        return CGRect(x: x, y: boardRect.midY - height / 2, width: width, height: height)
+    }
+
+    private var railInset: CGFloat { cell * 0.05 }
+    /// Room between the board's long edge and the houses' counts.
+    private var railRoom: CGFloat {
+        boardRect.width / 2 - (cell * 0.86 + houseRadius * 1.24 + cell * 0.16) - railInset
     }
 
     /// The store's count sits at the bowl's outer end, clear of the seeds.
