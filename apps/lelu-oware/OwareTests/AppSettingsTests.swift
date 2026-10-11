@@ -21,20 +21,31 @@ final class AppSettingsTests: XCTestCase {
         XCTAssertEqual(settings.animationSpeed, .normal, "the player's own preference is untouched")
     }
 
-    /// House names and per-house counts: off in ordinary games unless switched on, always in lessons
-    /// and riddles (their text names houses). The stores' score is not part of this setting.
-    func testHouseLabelsAreOffInGamesButAlwaysInLessonsAndRiddles() {
+    /// House names and per-house counts: off in ordinary games unless switched on. The lesson
+    /// names houses, so it always shows both; riddles never name a house but are solved by counting,
+    /// so they show the counts only. The stores' score is not part of this setting.
+    func testHouseLabelsAreOffInGamesNamesInLessonsCountsInRiddles() throws {
         let settings = AppSettings(defaults: freshDefaults(), testMode: false)
         XCTAssertFalse(settings.showHouseLabels, "off by default")
         let session = TestSupport.session()
         session.newGame(.versusAI(difficulty: .beginner, personality: .balanced, humanPlays: .south))
-        XCTAssertFalse(settings.labelsHouses(namesHouses: session.namesHouses), "a game shows no labels")
+        XCTAssertFalse(settings.labelsHouses(required: session.namesHouses), "a game shows no names")
+        XCTAssertFalse(settings.labelsHouses(required: session.countsSeeds), "a game shows no counts")
         session.startTutorial(step: 0, variant: .abapa)
-        XCTAssertTrue(settings.labelsHouses(namesHouses: session.namesHouses), "the lesson always does")
+        XCTAssertTrue(settings.labelsHouses(required: session.namesHouses), "the lesson names houses")
+        XCTAssertTrue(settings.labelsHouses(required: session.countsSeeds), "the lesson counts seeds")
+        let library = PuzzleLibrary(defaults: TestSupport.defaults(), bundle: Bundle(for: GameSession.self))
+        let puzzle = try XCTUnwrap(library.puzzles.first)
+        session.startPuzzle(puzzle)
+        XCTAssertFalse(settings.labelsHouses(required: session.namesHouses), "a riddle names no houses")
+        XCTAssertTrue(settings.labelsHouses(required: session.countsSeeds), "a riddle counts seeds")
         settings.showHouseLabels = true
         XCTAssertTrue(AppSettings(defaults: settings.defaultsForTesting, testMode: false).showHouseLabels, "the choice persists")
         session.newGame(.passAndPlay)
-        XCTAssertTrue(settings.labelsHouses(namesHouses: session.namesHouses), "switched on, games show them")
+        XCTAssertTrue(settings.labelsHouses(required: session.namesHouses), "switched on, games show names")
+        XCTAssertTrue(settings.labelsHouses(required: session.countsSeeds), "switched on, games show counts")
+        session.startPuzzle(puzzle)
+        XCTAssertTrue(settings.labelsHouses(required: session.namesHouses), "switched on, riddles show names too")
     }
 
     func testNamNamIsTheDefaultRuleSetForNewGames() {

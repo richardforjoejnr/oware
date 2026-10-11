@@ -194,7 +194,8 @@ struct GameView: View {
         let seeds = session.state.store(of: opponentSide)
         let active = !session.isGameOver && session.state.sideToMove == opponentSide
         return HStack(spacing: 10) {
-            badge(letter: String(session.opponentName.prefix(1)), active: active)
+            badge(letter: String(session.opponentName.prefix(1)), active: active,
+                  side: passAndPlaySide?.opponent ?? opponentSide)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {
                     Text(session.opponentName)
@@ -247,14 +248,16 @@ struct GameView: View {
         .accessibilityHidden(true)
     }
 
-    private func badge(letter: String, active: Bool) -> some View {
-        ZStack {
+    /// The player's initial, ringed in their side's colour (as their houses are on the board).
+    private func badge(letter: String, active: Bool, side: Player) -> some View {
+        let colour = Color(uiColor: BoardScene.sideColor(side))
+        return ZStack {
             Circle()
                 .fill(Theme.ember)
-                .overlay(Circle().stroke(active ? Theme.gold : Theme.ivoryDim.opacity(0.35), lineWidth: active ? 1.5 : 1))
+                .overlay(Circle().stroke(colour.opacity(active ? 1 : 0.5), lineWidth: active ? 2 : 1))
             Text(letter)
                 .font(Theme.body(15))
-                .foregroundStyle(active ? Theme.gold : Theme.ivoryDim)
+                .foregroundStyle(active ? Theme.ivory : Theme.ivoryDim)
         }
         .frame(width: 28, height: 28)
         .animation(.easeInOut(duration: 0.3), value: active)
@@ -380,7 +383,7 @@ struct GameView: View {
             return mine
         }()
         return HStack(spacing: 8) {
-            badge(letter: String(name.prefix(1)), active: active)
+            badge(letter: String(name.prefix(1)), active: active, side: passAndPlaySide ?? .south)
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 5) {
                     Text(name)
