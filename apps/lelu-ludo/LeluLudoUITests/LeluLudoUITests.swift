@@ -259,6 +259,54 @@ final class LeluLudoUITests: XCTestCase {
         XCTAssertTrue(game.buttons["btn-roll"].waitForExistence(timeout: 20))
         try audit(game, checks)
     }
+
+    /// The last token home with a 3: the win card, in Twi and English, with Play again and the menu.
+    @MainActor
+    func testWinningShowsTheWinCardAndPlayAgainStartsAfresh() throws {
+        let app = launch(["--scenario=win-next", "--dice=3"])
+        let roll = app.buttons["btn-roll"]
+        XCTAssertTrue(roll.waitForExistence(timeout: 20))
+        roll.tap()
+        let title = app.descendants(matching: .any)["game-over-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 10))
+        XCTAssertTrue(title.label.contains("Wadi nkunim!") && title.label.contains("You win!"), title.label)
+        sleep(1)
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "win"
+        shot.lifetime = .keepAlways
+        add(shot)
+        try audit(app, XCUIAccessibilityAuditType.all.subtracting([.contrast, .dynamicType, .textClipped]))
+        app.buttons["btn-play-again"].tap()
+        XCTAssertTrue(title.waitForNonExistence(timeout: 5), "a new game, no card")
+        XCTAssertTrue(roll.waitForExistence(timeout: 5))
+    }
+
+    /// The computer's last token home: your loss, and the menu.
+    @MainActor
+    func testLosingShowsTheLoseCard() throws {
+        let app = launch(["--scenario=lose-next", "--dice=3"])
+        let title = app.descendants(matching: .any)["game-over-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 20))
+        XCTAssertTrue(title.label.contains("Wa ri, wa ri!") && title.label.contains("You've lost"), title.label)
+        app.buttons["btn-main-menu"].tap()
+        XCTAssertTrue(app.buttons["tile-start"].waitForExistence(timeout: 5), "back at the menu")
+    }
+
+    /// One of your tokens home mid-game: "Eiii! Chale!" over it, and the game goes on.
+    @MainActor
+    func testATokenHomeIsCheered() throws {
+        let app = launch(["--scenario=home-next", "--dice=3,1,1,1"])
+        let roll = app.buttons["btn-roll"]
+        XCTAssertTrue(roll.waitForExistence(timeout: 20))
+        roll.tap()
+        let cheer = app.descendants(matching: .any)["home-cheer"]
+        XCTAssertTrue(cheer.waitForExistence(timeout: 5))
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "home-cheer"
+        shot.lifetime = .keepAlways
+        add(shot)
+        XCTAssertFalse(app.descendants(matching: .any)["game-over"].exists, "the game goes on")
+    }
 }
 
 /// The accessibility audit, made steady for slow CI simulators: the screen settles first, and if
