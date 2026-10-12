@@ -66,6 +66,14 @@ struct SettingsPanels: View {
                         }
                     }
                     WoodRow {
+                        VStack(alignment: .leading, spacing: 4) {
+                            WoodToggle(title: "Music", isOn: $settings.musicOn).accessibilityIdentifier("setting-music")
+                            Text("Quiet music on the menu and during a game. It also follows Silent mode, and stays off while your own music or podcast plays.")
+                                .font(.system(.footnote, design: .serif))
+                                .foregroundStyle(Palette.ivory.opacity(0.8))
+                        }
+                    }
+                    WoodRow {
                         WoodToggle(title: "Haptics", isOn: $settings.hapticsOn).accessibilityIdentifier("setting-haptics")
                     }
                     WoodRow(divider: false) {

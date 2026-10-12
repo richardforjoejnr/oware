@@ -364,8 +364,9 @@ final class LudoSession {
             case .kicked, .kickedInLane: feedback?.play(.kick)
             case .reachedHome: feedback?.play(.home)
             case .threeSixes: feedback?.play(.threeSixes)
-            // A fanfare for a person's win; a computer's win is the game-over card's toppled pawn.
+            // A fanfare for a person's win; when a computer wins against you, the losing fall.
             case let .won(color) where setup.seat(color) == .human: feedback?.play(.win)
+            case .won: feedback?.play(.lose)
             default: break
             }
         }

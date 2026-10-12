@@ -39,6 +39,8 @@ final class AppSettings {
         didSet { if let data = try? JSONEncoder().encode(custom) { defaults.set(data, forKey: "customRules") } }
     }
     var soundOn: Bool { didSet { defaults.set(soundOn, forKey: "soundOn") } }
+    /// The music, apart from the sound effects: some players want the clicks without a tune.
+    var musicOn: Bool { didSet { defaults.set(musicOn, forKey: "musicOn") } }
     var hapticsOn: Bool { didSet { defaults.set(hapticsOn, forKey: "hapticsOn") } }
     /// "Throw dice on board" (owner, 2026-10-04): on, your die is thrown onto the board; off, it just
     /// appears there. On by default.
@@ -51,6 +53,7 @@ final class AppSettings {
     /// Test launches are silent without touching what the player chose.
     let testMode: Bool
     var effectiveSound: Bool { soundOn && !testMode }
+    var effectiveMusic: Bool { musicOn && !testMode }
     var effectiveHaptics: Bool { hapticsOn && !testMode }
 
     /// The rules for the next game.
@@ -74,6 +77,7 @@ final class AppSettings {
         if stored.entryRolls.isEmpty || !stored.entryRolls.isSubset(of: 1...6) { stored.entryRolls = [6] }
         custom = stored
         soundOn = defaults.object(forKey: "soundOn") as? Bool ?? true
+        musicOn = defaults.object(forKey: "musicOn") as? Bool ?? true
         hapticsOn = defaults.object(forKey: "hapticsOn") as? Bool ?? true
         throwDiceOnBoard = defaults.object(forKey: "throwDiceOnBoard") as? Bool ?? true
     }
