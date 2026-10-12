@@ -144,7 +144,9 @@ private struct ReferenceLudo {
                 }
             }
         }
-        return out
+        // A side kick ending where a forward move or back kick by the same roll ends is that move.
+        let straight = Set(out.filter { $0[5] == 1 || $0[5] == 2 }.map { [$0[0], $0[2]] })
+        return out.filter { !(($0[5] == 5 || $0[5] == 6) && straight.contains([$0[0], $0[2]])) }
     }
 
     mutating func doRoll(_ v: Int) {

@@ -136,7 +136,14 @@ public struct GameState: Sendable, Codable, Hashable {
                 moves += sideKickMoves(token: i, progress: p, roll: r)
             }
         }
-        return moves
+        // Round a corner, a side kick can land on the very square a straight move by the roll lands
+        // on (forward 3 then across = back 3; back 2 then across = forward 2), kicking the same token:
+        // one move under two names, offered twice. It is listed once, as the straight move. A side kick
+        // whose straight route is blocked (a wall in the way) is the only way there, and stays.
+        return moves.filter { m in
+            guard m.kind == .sideKickForward || m.kind == .sideKickBack else { return true }
+            return !moves.contains { $0.token == m.token && $0.to == m.to && $0.visit == nil && ($0.kind == .forward || $0.kind == .backKick) }
+        }
     }
 
     /// Into an opponent's lane with the exact roll, onto a token there: on along the track to the
