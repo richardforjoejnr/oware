@@ -219,6 +219,30 @@ final class OnlyForwardMoveTests: XCTestCase {
         XCTAssertEqual(Set(kick.choices(for: 0).map(\.kind)), [.forward, .backKick])
     }
 
+    /// With the phone's own pacing (the move waits for the throw), not only in instant test pacing.
+    func testItPlaysItselfAfterARealThrow() async {
+        for style in DiceAnimation.allCases {
+            let s = session(versus(.novice), red: [10, -1, -1, -1], dice: [3, 2])
+            s.pacing = .normal(style)
+            s.pacing.computer = .zero
+            s.pacing.step = .milliseconds(1)
+            await s.roll()
+            XCTAssertEqual(s.state.tokens(of: .red)[0], 13, "\(style)")
+        }
+    }
+
+    /// The roll after a 6 (yours again): with one move forward, it plays itself too.
+    func testTheBonusRollPlaysItselfToo() async {
+        let s = session(versus(.novice), red: [10, -1, -1, -1], dice: [6, 3, 2])
+        await s.roll()
+        XCTAssertEqual(Set(s.state.legalMoves().map(\.kind)), [.enter, .forward], "a 6: out or on, yours to choose")
+        await s.tap(token: 0)
+        XCTAssertEqual(s.state.tokens(of: .red)[0], 16)
+        XCTAssertTrue(s.canRoll, "a 6 rolls again")
+        await s.roll()
+        XCTAssertEqual(s.state.tokens(of: .red)[0], 19, "the 3 moved by itself")
+    }
+
     func testNotBringingATokenOut() async {
         let s = session(versus(.novice), red: [-1, -1, -1, -1], dice: [6])
         await s.roll()
