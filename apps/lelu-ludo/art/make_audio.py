@@ -1,14 +1,14 @@
-"""Lelu Ludo's sounds and music, made from nothing but arithmetic, so the app owns every second of
+"""Lelu Ludo's sounds, made from nothing but arithmetic, so the app owns every second of
 them (no samples, no libraries, no licences). Run from apps/lelu-ludo:
 
     python art/make_audio.py
 
 Writes LeluLudo/Resources/Audio/*.m4a (AAC, mono, 44.1 kHz) via macOS `afconvert`. They are stand-ins
-until recorded foley and commissioned music arrive (docs/AUDIO_SOURCES.md): a file of the same name
+until recorded foley arrives (docs/AUDIO_SOURCES.md): a file of the same name
 replaces one without any change to the app.
 
-The instruments, roughly: a wooden xylophone with a buzzing gourd (after the gyil), a double iron
-bell, a seed shaker, a hand drum and a plucked harp-lute (after the seperewa), playing in 12/8.
+The instruments, roughly: a wooden xylophone with a buzzing gourd (after the gyil), an iron bell, a
+seed shaker and a hand drum.
 """
 
 import os
@@ -95,26 +95,6 @@ def drum(f=105, vel=1.0, dur=0.6, slap=0.0):
     x = np.sin(phase) * np.exp(-t * 9) + np.sin(phase * 1.5) * np.exp(-t * 18) * 0.25
     x += band(rng.uniform(-1, 1, len(t)), lo=600, hi=5_000) * np.exp(-t * 90) * (0.15 + slap)
     return x * vel * 0.5
-
-
-def pluck(f, vel=1.0, dur=2.2, bright=0.6):
-    """A plucked string (Karplus-Strong), worked a period at a time."""
-    n = int(dur * SR)
-    period = SR / f
-    p = int(period)
-    frac = period - p
-    y = np.zeros(n + p + 2)
-    y[:p + 1] = band(rng.uniform(-1, 1, p + 1), hi=1_000 + 6_000 * bright)
-    loss = 0.996 - f / 90_000
-    i = p + 1
-    while i < len(y):
-        j = min(i + p, len(y))
-        a = y[i - p:j - p]
-        b = y[i - p - 1:j - p - 1]
-        y[i:j] = loss * ((1 - frac) * (0.5 * (a + b)) + frac * b)
-        i = j
-    y = y[p + 1:p + 1 + n]
-    return y / (np.max(np.abs(y)) + 1e-9) * vel * 0.30
 
 
 # The pentatonic scale the tunes use (G A B D E).
@@ -209,75 +189,6 @@ def lose():
     return out
 
 
-# Music -------------------------------------------------------------------------------------------
-
-def loop(length, events):
-    """Renders `events` (seconds, sound) into a loop `length` long; what rings past the end is
-    folded back onto the start, so the loop joins without a seam."""
-    tail = 3.0
-    out = np.zeros(int((length + tail) * SR))
-    for at, s in events:
-        place(out, s, at)
-    n = int(length * SR)
-    body = out[:n].copy()
-    body[:len(out) - n] += out[n:]
-    return body
-
-
-# The 12/8 bell pattern heard all over West Africa: strokes on these of the 12 pulses.
-BELL = [0, 2, 4, 5, 7, 9, 11]
-
-
-def play_music():
-    """At play: gyil over bell, shaker and drum, 12/8 at 66 dotted crotchets a minute, 8 bars."""
-    pulse = 60 / 66 / 3
-    bars = 8
-    ev = []
-    for b in range(bars):
-        t0 = b * 12 * pulse
-        for p in BELL:
-            ev.append((t0 + p * pulse, bell(1_050 if p else 790, 0.35 if p else 0.5, dur=0.6)))
-        for p in range(12):
-            ev.append((t0 + p * pulse, shaker(0.75 if p % 3 == 0 else 0.4)))
-        ev.append((t0, drum(98, 0.55)))
-        ev.append((t0 + 6 * pulse, drum(98, 0.45)))
-        ev.append((t0 + 9 * pulse, drum(150, 0.3, slap=0.2)))
-        ev.append((t0 + 10 * pulse, drum(150, 0.25, slap=0.2)))
-    a = [(0, "G4"), (2, "B4"), (3, "D5"), (5, "B4"), (6, "A4"), (8, "G4"), (9, "E4"), (11, "G4"),
-         (12, "A4"), (14, "B4"), (15, "D5"), (17, "E5"), (18, "D5"), (20, "B4"), (21, "A4"), (23, "B4")]
-    b_ = [(0, "E5"), (2, "D5"), (3, "B4"), (5, "D5"), (6, "E5"), (8, "G5"), (9, "E5"), (11, "D5"),
-          (12, "B4"), (14, "A4"), (15, "G4"), (17, "A4"), (18, "B4"), (21, "G4")]
-    bass = [(0, "G3"), (6, "D4"), (12, "E3"), (18, "B3")]
-    bass_b = [(0, "E3"), (6, "B3"), (12, "A3"), (18, "D4")]
-    for pair, (tune, low) in enumerate([(a, bass), (a, bass), (b_, bass_b), (a, bass)]):
-        t0 = pair * 24 * pulse
-        for p, n in tune:
-            ev.append((t0 + p * pulse, gyil(N[n], 0.55 if p % 3 == 0 else 0.45)))
-        for p, n in low:
-            ev.append((t0 + p * pulse, gyil(N[n], 0.5, dur=2.0, buzz=1.3)))
-    return loop(bars * 12 * pulse, ev)
-
-
-def menu_music():
-    """On the menu: a slow harp-lute pattern with soft gyil, a little shaker, no drum; 6 bars."""
-    pulse = 60 / 52 / 3
-    bars = 6
-    ev = []
-    chords = [["G3", "D4", "B4"], ["E3", "B3", "G4"], ["A3", "E4", "B4"], ["G3", "D4", "A4"],
-              ["E3", "B3", "G4"], ["D4", "A4", "D5"]]
-    figure = [0, 2, 1, 2, 0, 2, 1, 2, 0, 1, 2, 1]   # which chord tone on each pulse
-    for b, chord in enumerate(chords):
-        t0 = b * 12 * pulse
-        for p, k in enumerate(figure):
-            ev.append((t0 + p * pulse, pluck(N[chord[k]], 0.75 if p % 3 == 0 else 0.55)))
-        ev.append((t0, pluck(N[chord[0]] / 2, 0.8, dur=3.0, bright=0.3)))
-        for p in [0, 3, 6, 9]:
-            ev.append((t0 + p * pulse, shaker(0.35 if p else 0.5)))
-        top = {0: "B4", 1: "G4", 2: "E5", 3: "D5", 4: "B4", 5: "A4"}[b]
-        ev.append((t0 + 6 * pulse, gyil(N[top] * 2, 0.35, dur=1.6, buzz=0.5)))
-    return loop(bars * 12 * pulse, ev)
-
-
 # Output ------------------------------------------------------------------------------------------
 
 def normalise(x, peak_db):
@@ -289,13 +200,8 @@ def normalise(x, peak_db):
     return x / (np.max(np.abs(x)) + 1e-9) * 10 ** (peak_db / 20)
 
 
-def write(name, x, peak_db=-1.0, music=False):
-    if music:
-        # A loop must not fade at its ends: only scale it.
-        x = x - np.mean(x)
-        x = x / (np.max(np.abs(x)) + 1e-9) * 10 ** (peak_db / 20)
-    else:
-        x = normalise(x, peak_db)
+def write(name, x, peak_db=-1.0):
+    x = normalise(x, peak_db)
     pcm = (np.clip(x, -1, 1) * 32_767).astype("<i2")
     with tempfile.TemporaryDirectory() as tmp:
         wav = os.path.join(tmp, name + ".wav")
@@ -305,7 +211,7 @@ def write(name, x, peak_db=-1.0, music=False):
             w.setframerate(SR)
             w.writeframes(pcm.tobytes())
         dest = os.path.join(OUT, name + ".m4a")
-        subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-b", "96000" if music else "80000", wav, dest],
+        subprocess.run(["afconvert", "-f", "m4af", "-d", "aac", "-b", "80000", wav, dest],
                        check=True)
     print(f"{name}.m4a  {len(x) / SR:.2f}s  {os.path.getsize(dest) // 1024} KB")
 
@@ -322,8 +228,6 @@ def main():
     write("sfx-threeSixes-1", three_sixes(), peak_db=-2)
     write("sfx-win-1", win(), peak_db=-1)
     write("sfx-lose-1", lose(), peak_db=-3)
-    write("music-game", play_music(), peak_db=-3, music=True)
-    write("music-menu", menu_music(), peak_db=-3, music=True)
 
 
 if __name__ == "__main__":

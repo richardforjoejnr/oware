@@ -231,29 +231,9 @@ final class DiceThrowTests: XCTestCase {
     }
 }
 
-/// The music: which tune when, and that the files are in the app and read.
+/// The sound files are in the app and read.
 @MainActor
-final class MusicTests: XCTestCase {
-    func testTheMenuAndTheGameHaveTheirOwnTunes() {
-        XCTAssertEqual(MusicTrack.wanted(musicOn: true, onScreen: true, splash: false, inGame: false, gameOver: false), .menu)
-        XCTAssertEqual(MusicTrack.wanted(musicOn: true, onScreen: true, splash: false, inGame: true, gameOver: false), .game)
-    }
-
-    func testQuietWhenItShouldBe() {
-        XCTAssertNil(MusicTrack.wanted(musicOn: false, onScreen: true, splash: false, inGame: true, gameOver: false), "Music off")
-        XCTAssertNil(MusicTrack.wanted(musicOn: true, onScreen: false, splash: false, inGame: false, gameOver: false), "off the screen")
-        XCTAssertNil(MusicTrack.wanted(musicOn: true, onScreen: true, splash: true, inGame: false, gameOver: false), "the opening card")
-        XCTAssertNil(MusicTrack.wanted(musicOn: true, onScreen: true, splash: false, inGame: true, gameOver: true),
-                     "the game-over card: the win or lose sound is heard alone")
-    }
-
-    func testEveryTuneIsInTheAppAndLongEnoughToLoop() throws {
-        for track in MusicTrack.allCases {
-            let buffer = try XCTUnwrap(AudioFiles.decode(track.rawValue), track.rawValue)
-            XCTAssertGreaterThan(Double(buffer.frameLength) / buffer.format.sampleRate, 20, track.rawValue)
-        }
-    }
-
+final class SoundFileTests: XCTestCase {
     /// Each sound is a file (the synthesised tone is only a fallback), in the format the effects'
     /// player takes: mono, 44.1 kHz.
     func testEverySoundHasAFileTheEffectsPlayerTakes() {
@@ -265,13 +245,5 @@ final class MusicTests: XCTestCase {
             XCTAssertTrue(takes.allSatisfy { $0.format == expected }, "\(f)")
         }
         XCTAssertGreaterThanOrEqual(AudioFiles.takes("step").count, 3, "a token's steps vary")
-    }
-
-    func testPlayingAndStoppingNeverFails() async {
-        let music = MusicPlayer()
-        music.play(.menu)
-        music.play(.game)
-        music.play(nil)
-        XCTAssertNil(music.current)
     }
 }
