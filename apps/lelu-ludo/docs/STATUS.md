@@ -46,3 +46,13 @@ kick and Labourer; art per `ART_DIRECTION.md`; confirm black (not blue) tokens a
   `docs/lelu-ludo/` (served on leluoware.com), App Review checks for this app, TestFlight and App
   Store workflows with Lelu Ludo's own release tags, the owner's art (none in the repo yet; see
   ART_DIRECTION.md: the app icon first).
+
+## 2026-10-12: music and fuller sounds
+
+- `art/make_audio.py` makes every sound and both music loops from code (owned outright; listed in
+  [AUDIO_SOURCES.md](AUDIO_SOURCES.md)): several takes of each effect, a new losing sound, a menu tune
+  and a game tune in 12/8. They are stand-ins: recorded foley or commissioned music of the same file name
+  replaces them with no code change.
+- Settings ▸ Sound and touch ▸ **Music** (on by default, quiet, follows Silent mode, off while the
+  player's own audio plays). Quiet over the opening card and the game-over card.
+- Next: Oware the same way (its sounds are still synthesised in `SoundPlayer.swift`).

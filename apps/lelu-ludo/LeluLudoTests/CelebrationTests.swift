@@ -106,5 +106,17 @@ final class CelebrationTests: XCTestCase {
         await s.runComputerTurns()
         XCTAssertNotNil(s.outcome)
         XCTAssertFalse(rec.played.contains(.win), "no fanfare when the computer wins")
+        XCTAssertEqual(rec.played.filter { $0 == .lose }.count, 1, "the losing fall, once")
+    }
+
+    func testYourWinPlaysTheFanfareNotTheFall() async {
+        let rec = RecordingFeedback()
+        let s = LudoSession(store: TestSupport.store(), dice: ScriptedDice([3]), feedback: rec)
+        s.pacing = .instant
+        s.load(.winNext)
+        await s.roll()   // the 3 brings the last token in (the only move)
+        XCTAssertEqual(s.outcome?.youWon, true)
+        XCTAssertEqual(rec.played.filter { $0 == .win }.count, 1)
+        XCTAssertFalse(rec.played.contains(.lose))
     }
 }
