@@ -52,27 +52,14 @@ struct RootView: View {
     @State private var splash = LaunchOptions.splash
         || (!LaunchOptions.testMode && !LaunchOptions.startGame && LaunchOptions.scenario == nil && !LaunchOptions.tutorial)
 
-    @State private var music = MusicPlayer()
-    @Environment(AppSettings.self) private var settings
-    @Environment(LudoSession.self) private var session
-    @Environment(\.scenePhase) private var scenePhase
-
     var body: some View {
-        Group {
-            if splash {
-                SplashView(holds: LaunchOptions.splash) { withAnimation(.easeOut(duration: 0.4)) { splash = false } }
-            } else if inGame {
-                GameView(goHome: { inGame = false })
-            } else {
-                HomeView(startGame: { inGame = true })
-            }
+        if splash {
+            SplashView(holds: LaunchOptions.splash) { withAnimation(.easeOut(duration: 0.4)) { splash = false } }
+        } else if inGame {
+            GameView(goHome: { inGame = false })
+        } else {
+            HomeView(startGame: { inGame = true })
         }
-        .onChange(of: wantedMusic, initial: true) { _, track in music.play(track) }
-    }
-
-    private var wantedMusic: MusicTrack? {
-        MusicTrack.wanted(musicOn: settings.effectiveMusic, onScreen: scenePhase == .active, splash: splash,
-                          inGame: inGame, gameOver: session.outcome != nil)
     }
 }
 

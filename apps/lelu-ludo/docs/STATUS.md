@@ -56,3 +56,9 @@ kick and Labourer; art per `ART_DIRECTION.md`; confirm black (not blue) tokens a
 - Settings ▸ Sound and touch ▸ **Music** (on by default, quiet, follows Silent mode, off while the
   player's own audio plays). Quiet over the opening card and the game-over card.
 - Next: Oware the same way (its sounds are still synthesised in `SoundPlayer.swift`).
+
+## 2026-10-13: music removed
+
+The owner did not like the generated tunes: the music and the Music switch are gone; the new sound
+effects stay. Music returns only as a commissioned track (see AUDIO_SOURCES.md; the player code is in
+PR #86's history).

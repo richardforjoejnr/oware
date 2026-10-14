@@ -18,19 +18,20 @@ scipy, see `art/requirements.txt`); it writes the same files every time.
 | `sfx-threeSixes-1` | Two drum hits and a falling pair of notes | Three sixes lose the turn |
 | `sfx-win-1` | A run up the scale, a chord, bell and shaker | A person wins |
 | `sfx-lose-1` | A gentle fall of four notes | A computer wins against you |
-| `music-menu` | Harp-lute pattern with soft xylophone and shaker, 12/8, ~28 s loop | The menu |
-| `music-game` | Xylophone over bell, shaker and drum, 12/8, ~29 s loop | During a game (quiet at game over) |
+
+**No music for now** (owner, 2026-10-13: not a fan of the generated tunes). The menu and game loops and
+the Music switch were removed; they are in git history at PR #86 (`MusicPlayer` in
+`Support/Music.swift`) if a commissioned track comes along.
 
 The instruments are imitations made in code, after the gyil (wooden xylophone with gourd
-resonators), a double iron bell, a seed shaker, a hand drum and the seperewa (harp-lute). The bell
-plays the common West African 12/8 pattern, which belongs to no one. The app makes no cultural claim
-about the music (it names no style or people), so nothing here needs the cultural review in
+resonators), an iron bell, a seed shaker and a hand drum. The app makes no cultural claim
+about the sounds (it names no style or people), so nothing here needs the cultural review in
 `CULTURE_SOURCES.md`. If a later version names a style, it does.
 
 ## Next: replacing the stand-ins
 
 A file with the same name replaces a stand-in with no code change. The sound effects must be mono at
-44.1 kHz (`.m4a`), or that sound falls back to the synthesised tone; `MusicTests` checks this.
+44.1 kHz (`.m4a`), or that sound falls back to the synthesised tone; `SoundFileTests` checks this.
 Add more takes of an effect by numbering on (`sfx-step-5.m4a`).
 
 1. **Foley you record yourself** (owned outright): a real die thrown on a wooden board, pawns

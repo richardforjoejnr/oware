@@ -10,15 +10,7 @@ final class SettingsTests: XCTestCase {
         let s = AppSettings(defaults: TestSupport.defaults(), testMode: false)
         XCTAssertEqual(s.preset, .ghanaClassic)
         XCTAssertEqual(s.rules, .ghanaClassic)
-        XCTAssertTrue(s.soundOn && s.hapticsOn && s.musicOn)
-    }
-
-    func testMusicIsItsOwnSwitchAndIsRemembered() {
-        let d = TestSupport.defaults()
-        let s = AppSettings(defaults: d, testMode: false)
-        s.musicOn = false
-        XCTAssertTrue(s.effectiveSound, "music off leaves the sound effects on")
-        XCTAssertFalse(AppSettings(defaults: d, testMode: false).musicOn)
+        XCTAssertTrue(s.soundOn && s.hapticsOn)
     }
 
     func testThePresetIsRemembered() {
@@ -44,8 +36,8 @@ final class SettingsTests: XCTestCase {
 
     func testTestLaunchesAreSilentWithoutChangingThePlayersChoice() {
         let s = AppSettings(defaults: TestSupport.defaults(), testMode: true)
-        XCTAssertFalse(s.effectiveSound || s.effectiveHaptics || s.effectiveMusic)
-        XCTAssertTrue(s.soundOn && s.musicOn, "the stored choice is untouched")
+        XCTAssertFalse(s.effectiveSound || s.effectiveHaptics)
+        XCTAssertTrue(s.soundOn, "the stored choice is untouched")
     }
 
     func testNewGamesUseTheChosenRules() {
