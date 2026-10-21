@@ -13,6 +13,16 @@ final class LeluLudoUITests: XCTestCase {
         return app
     }
 
+    /// Taps Home and waits for `menuItem`. A tap that lands while the board is still coming in can
+    /// be lost (CI run 39642854996 stayed on the board), so it is tapped once more if needed.
+    @MainActor private func goHome(_ app: XCUIApplication, to menuItem: XCUIElement) {
+        let home = app.buttons["btn-home"]
+        XCTAssertTrue(home.waitForExistence(timeout: 20))
+        home.tap()
+        if !menuItem.waitForExistence(timeout: 10), home.exists { home.tap() }
+        XCTAssertTrue(menuItem.waitForExistence(timeout: 20))
+    }
+
     @MainActor
     func testRollASixBringATokenOutAndMoveIt() throws {
         // You: 6 (out), 4 (moves it by itself: Novice, and its only move is forward). Computer: 2
@@ -183,9 +193,8 @@ final class LeluLudoUITests: XCTestCase {
         roll.tap()   // a 3: nothing to move; the computer plays and it is your roll again
         expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: roll)
         waitForExpectations(timeout: 20)
-        app.buttons["btn-home"].tap()
         let start = app.buttons["tile-start"]
-        XCTAssertTrue(start.waitForExistence(timeout: 20))
+        goHome(app, to: start)
         start.tap()
         let play = app.buttons["btn-play-computer"]
         XCTAssertTrue(play.waitForExistence(timeout: 10))
@@ -194,9 +203,8 @@ final class LeluLudoUITests: XCTestCase {
         expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: roll)
         waitForExpectations(timeout: 10)   // the cup can be tapped in the new game
         // And after Home and Continue too.
-        app.buttons["btn-home"].tap()
         let resume = app.buttons["btn-continue"]
-        XCTAssertTrue(resume.waitForExistence(timeout: 20))
+        goHome(app, to: resume)
         resume.tap()
         XCTAssertTrue(roll.waitForExistence(timeout: 20))
         expectation(for: NSPredicate(format: "isEnabled == true"), evaluatedWith: roll)
@@ -243,8 +251,7 @@ final class LeluLudoUITests: XCTestCase {
         expectation(for: NSPredicate(format: "label == 'Home is the centre'"), evaluatedWith: title)
         waitForExpectations(timeout: 20)
         // Home gives the menu back (TutorialTests prove the saved game is untouched).
-        app.buttons["btn-home"].tap()
-        XCTAssertTrue(app.buttons["tile-learn"].waitForExistence(timeout: 20))
+        goHome(app, to: app.buttons["tile-learn"])
     }
 
     @MainActor
