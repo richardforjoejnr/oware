@@ -41,6 +41,8 @@ jobs:
         with: { fetch-depth: 0 }
       - uses: maxim-lobanov/setup-xcode@v1
         with: { xcode-version: latest-stable }
+      - name: SDK the App Store accepts
+        run: ../../scripts/sdk_deadline.sh
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.3"

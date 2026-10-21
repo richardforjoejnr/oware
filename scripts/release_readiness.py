@@ -8,6 +8,7 @@ Catches the things that get builds rejected or pulled: a missing or incomplete p
 debug switches in release builds, an icon with transparency, placeholder text on the public
 support and privacy pages, and so on. Exit code 1 lists every failure.
 """
+import datetime
 import pathlib
 import plistlib
 import re
@@ -127,6 +128,11 @@ def main(app_dir: str) -> int:
         body = "\n".join(l for l in flags.group(1).splitlines() if not l.strip().startswith("//"))
         check(bool(re.fullmatch(r"(\s*static let \w+ = (true|false)\s*)*", body)),
               "Feature flags are compile-time constants, not remotely switchable (2.3.1)")
+    # 2.5.19 (2026-10-16): no hidden, dormant or undocumented features, and nothing obfuscated or
+    # loaded at run time that App Review can't see in the binary.
+    hidden = re.findall(r"\b(NSClassFromString|NSSelectorFromString|dlopen|dlsym|JSContext|evaluateJavaScript)\b", code)
+    check(not hidden, "No code is looked up, loaded or run at run time (2.5.19)"
+          + (f": {', '.join(sorted(set(hidden)))}" if hidden else ""))
     # 2.1: no placeholder text on screen.
     shown = re.findall(r'Text\("([^"]*)"\)|Button\("([^"]*)"\)|title: "([^"]*)"', code)
     words = " ".join(w for t in shown for w in t)
@@ -170,16 +176,25 @@ def main(app_dir: str) -> int:
     # 2.3.3: screenshots show the app in use, in sizes the store takes, for every device it runs on.
     shots = sorted((app / "fastlane" / "screenshots").glob("*/*.png"))
     if shots:
-        sizes = {"iPhone": {(1320, 2868), (1290, 2796), (1284, 2778), (1242, 2688)},
+        # iPhone Duo (outer and inner display) screenshots are named iPhoneDuo-*; Apple requires them
+        # from April 2027 (App Store Connect release notes, 2026-10-15).
+        sizes = {"iPhoneDuo": {(1398, 2034), (2007, 2853)},
+                 "iPhone": {(1320, 2868), (1290, 2796), (1284, 2778), (1242, 2688)},
                  "iPad": {(2064, 2752), (2048, 2732)}}
+        duo_required = datetime.date.today() >= datetime.date(2027, 4, 1)
         for device, ok_sizes in sizes.items():
-            mine = [p for p in shots if p.name.startswith(device)]
+            mine = [p for p in shots if p.name.startswith(device + "-")]
             if device == "iPad" and '"1,2"' not in project:
+                continue
+            if device == "iPhoneDuo" and not (mine or duo_required):
                 continue
             check(len(mine) >= 3, f"At least 3 {device} screenshots ({len(mine)})")
             for shot in mine:
                 w, h = struct.unpack(">II", shot.read_bytes()[16:24])
                 check((w, h) in ok_sizes or (h, w) in ok_sizes, f"Screenshot {shot.name} is a store size ({w}×{h})")
+        # App Store Connect refuses screenshots with an alpha channel (2026-07-08).
+        for shot in shots:
+            check(shot.read_bytes()[25] not in (4, 6), f"Screenshot {shot.name} has no transparency")
         check(not any(re.search(r"splash|launch", p.name, re.I) for p in shots), "No screenshot is just the splash (2.3.3)")
 
     for p in passes:

@@ -1,6 +1,7 @@
 # App Review: what is checked automatically, and what is not
 
-Apple's three sources, reviewed against Lelu Oware on 3 October 2026:
+Apple's three sources, reviewed against Lelu Oware on 3 October 2026, and against the guidelines
+revised on 16 October 2026 (new 2.3.14 and 2.5.19) on 21 October 2026:
 [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/),
 [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines) and
 [App Review](https://developer.apple.com/distribute/app-review/) (over 40% of rejections are
@@ -24,9 +25,16 @@ the app runs on iPad, and none is the splash.
 | 5.1.1(ii) consent | Usage stats default to off (the player is asked once, after a finished game) |
 | 2.1 completeness | No placeholder text on screen; a linked newsletter page has a live form; test switches compiled out of release builds; no plain-http links |
 | 2.3.1(a) hidden features | Feature flags are compile-time constants, so nothing can be switched on without a new review |
+| 2.5.19 hidden or dormant features | No code looked up, loaded or run at run time (`NSClassFromString`, `dlopen`, `JSContext`…) |
+| Screenshot specs | No alpha channel (refused since July 2026); iPhone Duo screenshots (`iPhoneDuo-*`) are store sizes, and required from April 2027 |
 | 2.5 / export | Export compliance answered; permission prompts described; only expected entitlements |
 | HIG ratings | No button calls `requestReview` (it may show nothing); the Rate button opens the write-review page |
 | HIG launching / icons | A launch screen is configured; the 1024 pt icon has no transparency |
+
+`scripts/sdk_deadline.sh` (TestFlight workflows, after Xcode is chosen): warns while the build uses
+an SDK older than iOS 27, and fails from 1 April 2027, when Apple requires the iOS 27 SDK. Builds run
+on `macos-15` with Xcode 26.3 today; moving to a runner with Xcode 27 also brings the iPhone Duo
+screenshot requirement (apps built with the iOS 27.1 SDK or later).
 
 Tests:
 
@@ -53,7 +61,18 @@ In App Store Connect:
 - **Game Center** on the version page matches the app: switched **off** unless the app has the
   Game Center entitlement (the check prints which). On with no entitlement, "Add for Review" refuses.
 - **Privacy Policy URL** under App Privacy, and the App Privacy answers published by an Admin.
-- **Contact details** for App Review are current.
+- **Contact details** for App Review are current, with the phone number in international format
+  (+44…), which App Store Connect requires since August 2026.
+- **Agreements**: the Account Holder has accepted the latest Developer Program License Agreement
+  (revised 13 October 2026) and the Paid Applications Schedule (Business). Without them, updates and
+  new In-App Purchases can't be submitted.
+- **Age rating**: the questionnaire is answered for this version, including the social media
+  questions added in July 2026 (both games: no social features, no chat, no user content).
+- **Creative assets** (2.3.14, product page header and search results), if used: about the app,
+  suitable for all ages, no prices or discounts, no claims that can't be checked, no other apps.
+- **Hidden features** (2.5.19): everything the build can do is on screen or in the review notes.
+  Code behind a feature flag that is off (Lelu Oware: online play, the newsletter links) must stay
+  unreachable, and switching one on is new functionality to describe in the next version's notes.
 
 Outside App Store Connect:
 - **A screen recording on a physical device** with the latest iOS, from launching the app through
