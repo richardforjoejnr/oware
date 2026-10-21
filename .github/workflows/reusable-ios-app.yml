@@ -38,7 +38,7 @@ permissions:
 jobs:
   app:
     name: build + test (simulator)
-    runs-on: macos-15
+    runs-on: xcode-27
     defaults:
       run:
         working-directory: ${{ inputs.app-dir }}
@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
-        with: { xcode-version: latest-stable }
+        with: { xcode-version: "27.0" }
       - name: Install tools
         run: brew install xcodegen xcbeautify
       - name: Generate Xcode project

@@ -32,9 +32,10 @@ the app runs on iPad, and none is the splash.
 | HIG launching / icons | A launch screen is configured; the 1024 pt icon has no transparency |
 
 `scripts/sdk_deadline.sh` (TestFlight workflows, after Xcode is chosen): warns while the build uses
-an SDK older than iOS 27, and fails from 1 April 2027, when Apple requires the iOS 27 SDK. Builds run
-on `macos-15` with Xcode 26.3 today; moving to a runner with Xcode 27 also brings the iPhone Duo
-screenshot requirement (apps built with the iOS 27.1 SDK or later).
+an SDK older than iOS 27, and fails from 1 April 2027, when Apple requires the iOS 27 SDK. Builds and
+tests run on GitHub's `xcode-27` runner, pinned to Xcode 27.0 (iOS 27.0 SDK). Moving to 27.1 or later
+also brings the iPhone Duo screenshot requirement (apps built with the iOS 27.1 SDK or later), so add
+`iPhoneDuo-*` screenshots in the same change.
 
 Tests:
 
