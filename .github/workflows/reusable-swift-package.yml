@@ -9,8 +9,8 @@ name: Reusable - Swift package tests
 #
 # runner: "linux" (default) runs in Apple's swift:6.0 container on ubuntu-latest, a tenth of a
 # macOS runner's cost on a private repository; use it for pure-Swift packages. "macos" runs on
-# macos-15 with the latest stable Xcode; use it for packages that import Apple frameworks
-# (StoreKit, SwiftUI, ...). Two jobs gated by `if:` because `container:` cannot be made
+# the Xcode 27 runner with Xcode 27.0, the one the apps ship with; use it for packages that import
+# Apple frameworks (StoreKit, SwiftUI, ...). Two jobs gated by `if:` because `container:` cannot be made
 # conditionally empty; the one not chosen shows as skipped.
 on:
   workflow_call:
@@ -20,7 +20,7 @@ on:
         required: true
         type: string
       runner:
-        description: '"linux" (swift:6.0 container) or "macos" (macos-15, latest stable Xcode)'
+        description: '"linux" (swift:6.0 container) or "macos" (xcode-27 runner, Xcode 27.0)'
         required: false
         type: string
         default: linux
@@ -50,13 +50,13 @@ jobs:
   macos:
     name: swift test (macOS)
     if: inputs.runner == 'macos'
-    runs-on: macos-15
+    runs-on: xcode-27
     defaults:
       run:
         working-directory: ${{ inputs.package-path }}
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
-        with: { xcode-version: latest-stable }
+        with: { xcode-version: "27.0" }
       - name: swift test
         run: swift test ${{ inputs.parallel && '--parallel' || '' }}
