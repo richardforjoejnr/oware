@@ -7,9 +7,10 @@ import XCTest
 /// choice, timed by SplashSchedule). The fastest of three cold launches.
 final class LaunchTimeUITests: XCTestCase {
     /// Our own work is about 0.5–0.6 s today, on a Mac's simulator and on CI alike (CI, 2026-10-03:
-    /// 0.48–0.86 s, median 0.59). Well past this and launch (setup, the home screen's first render)
-    /// has got heavier.
-    static let budget: TimeInterval = 1.0
+    /// 0.48–0.86 s, median 0.59). The iOS 27 simulator on the xcode-27 runner is slower for the same
+    /// app (2026-10-23: fastest 0.82 and 1.07 s, against 0.75 s on macos-15), so the budget is 1.5 s,
+    /// not 1.0. Well past this and launch (setup, the home screen's first render) has got heavier.
+    static let budget: TimeInterval = 1.5
 
     @MainActor
     func testTheHomeMenuAppearsQuickly() throws {
