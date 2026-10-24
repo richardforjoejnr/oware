@@ -34,7 +34,7 @@ concurrency:
 jobs:
   maestro:
     name: Maestro flows on simulator
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 45
     defaults:
       run:
@@ -42,7 +42,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
-        with: { xcode-version: latest-stable }
+        with: { xcode-version: "27.0" }
       - name: Install tools
         env:
           MAESTRO_VERSION: "2.10.0"   # pinned; bump deliberately (github.com/mobile-dev-inc/maestro/releases)
@@ -103,7 +103,7 @@ jobs:
 
   appium-ts:
     name: Appium + WebdriverIO (TypeScript)
-    runs-on: macos-15
+    runs-on: xcode-27
     timeout-minutes: 45
     defaults:
       run:
@@ -111,7 +111,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: maxim-lobanov/setup-xcode@v1
-        with: { xcode-version: latest-stable }
+        with: { xcode-version: "27.0" }
       - uses: actions/setup-node@v4
         with:
           node-version: 22
