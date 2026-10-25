@@ -25,6 +25,7 @@ lanes run locally and in CI.
 | `reusable-app-readiness.yml` | called by `ci.yml`, `ludo-ci.yml` and `testflight-ludo.yml` | No | The App Store readiness check (`scripts/release_readiness.py <app>`) for one app: privacy manifest, icon, launch screen, release flags, in-app privacy link, public pages |
 | `release.yml` | manual, from a `build/…` tag | Yes | That build submitted for App Review with "What's New", released automatically once approved; tags `vX.Y.Z` and publishes the GitHub Release |
 | `release-ludo.yml` | manual, from a `build/ludo-…` tag | Yes | The same for Lelu Ludo; tags `ludo-vX.Y.Z` and publishes the GitHub Release "Lelu Ludo X.Y.Z" |
+| `record-release.yml` | manual, from a `build/…` or `build/ludo-…` tag | No | For a version submitted by hand in App Store Connect: once approved, tags it `vX.Y.Z` / `ludo-vX.Y.Z` with its GitHub Release, so the next TestFlight build counts from it. Nothing is sent to Apple |
 | `pages.yml` ("Site") | docs or site change on `main`, a release, CI / E2E finishing on `main`, or manual | AWS keys | Website on AWS (S3 + CloudFront): privacy, support, What's new, test reports |
 
 The signed workflows are skipped until the repository variable `SIGNING_READY` is `true`, so
@@ -149,7 +150,8 @@ One-time steps:
 → next patch, `!` → next major; `docs`/`ci`/`test`/`chore` alone build the next patch for TestFlight but
 add nothing to "What's New". The workflow writes it into `MARKETING_VERSION` for the build. The build
 number is the UTC date and time, as for Lelu Oware. Each upload is tagged `build/ludo-<version>-<build #>`.
-1.0.0 shipped from build 202610051920 and is tagged `ludo-v1.0.0`.
+1.0.0 shipped from build 202610051920 and is tagged `ludo-v1.0.0`. A version submitted by hand in App
+Store Connect is recorded the same way once approved: **Record an App Store release** on its build tag.
 
 **Shipping an update:** Actions ▸ **App Store Release (Lelu Ludo)** ▸ Run workflow ▸ "Use workflow from"
 ▸ Tags ▸ the `build/ludo-…` tag you tested ▸ Run. It submits that build with "What's New" from the PR

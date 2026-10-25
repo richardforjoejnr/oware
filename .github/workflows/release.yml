@@ -11,6 +11,11 @@ name: App Store Release
 # The App Store text, screenshots, privacy answers and age rating stay as set in App Store Connect.
 on:
   workflow_dispatch:
+    inputs:
+      whats_new:
+        description: "What's New on the App Store, if not the one written from the PR titles (leave empty to use those)"
+        required: false
+        default: ""
 
 run-name: App Store ${{ github.ref_name }}
 
@@ -59,9 +64,13 @@ jobs:
       - name: App Store readiness checks
         run: python3 ../../scripts/release_readiness.py apps/lelu-oware
       - name: Write the release notes
+        env:
+          WHATS_NEW: ${{ inputs.whats_new }}
         run: |
           # What's New on the App Store: none for the very first version (Apple has no field for it).
-          if [ -n "$(git tag --list 'v*')" ]; then
+          if [ -n "$WHATS_NEW" ] && [ -n "$(git tag --list 'v*')" ]; then
+            { echo "RELEASE_NOTES<<EOF_NOTES"; echo "$WHATS_NEW"; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
+          elif [ -n "$(git tag --list 'v*')" ]; then
             { echo "RELEASE_NOTES<<EOF_NOTES"; python3 ../../scripts/next_version.py --store-notes; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
           fi
           python3 ../../scripts/next_version.py --notes > "$RUNNER_TEMP/notes.md"
