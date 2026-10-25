@@ -113,7 +113,9 @@ platform :ios do
       skip_binary_upload: true,
       skip_screenshots: true,
       skip_metadata: notes.empty?,
-      release_notes: notes.empty? ? nil : { "default" => notes },
+      # The listing's language by name: with no metadata folder, fastlane maps "default" onto no
+      # language at all, and Apple then refuses the submission for a missing "What's New".
+      release_notes: notes.empty? ? nil : { "en-GB" => notes },
       submit_for_review: true,
       automatic_release: true,
       phased_release: false,
