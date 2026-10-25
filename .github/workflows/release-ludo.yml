@@ -2,8 +2,9 @@ name: App Store Release (Lelu Ludo)
 
 # Lelu Ludo's twin of release.yml. Ships a build you have already tested on TestFlight; nothing is rebuilt.
 #   Actions ▸ App Store Release (Lelu Ludo) ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸
-#   build/ludo-X.Y.Z-NNNN ▸ Run.
-# Every Lelu Ludo TestFlight upload is tagged build/ludo-<version>-<build number> (testflight-ludo.yml),
+#   build/ludo-X.Y.Z ▸ Run.
+# Every Lelu Ludo TestFlight upload is tagged build/ludo-<version> (testflight-ludo.yml), the build number
+# in the tag's message,
 # its version worked out from Lelu Ludo's Conventional Commit PR titles. This run:
 #   1. sends that build to App Review with "What's New" written from those PR titles,
 #   2. has Apple release it to everyone as soon as it is approved,
@@ -44,15 +45,26 @@ jobs:
         env:
           REF: ${{ github.ref }}
         run: |
-          if [[ ! "$REF" =~ ^refs/tags/build/ludo-([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
-            echo "::error::Run this from a build tag (Use workflow from ▸ Tags ▸ build/ludo-X.Y.Z-NNNN), not $REF. Each Lelu Ludo TestFlight upload makes one."
+          # build/ludo-X.Y.Z, or the older build/ludo-X.Y.Z-<build number>.
+          if [[ ! "$REF" =~ ^refs/tags/build/ludo-([0-9]+\.[0-9]+\.[0-9]+)(-([0-9]+))?$ ]]; then
+            echo "::error::Run this from a build tag (Use workflow from ▸ Tags ▸ build/ludo-X.Y.Z), not $REF. Each Lelu Ludo TestFlight upload makes one."
             exit 1
           fi
           echo "APP_VERSION=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
-          echo "BUILD_NUMBER=${BASH_REMATCH[2]}" >> "$GITHUB_ENV"
-          echo "Releasing version ${BASH_REMATCH[1]}, build ${BASH_REMATCH[2]}"
+          echo "BUILD_NUMBER=${BASH_REMATCH[3]}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
+      - name: The build number, from the tag's message if not in its name
+        run: |
+          if [ -z "$BUILD_NUMBER" ]; then
+            BUILD_NUMBER="$(git tag --list --format='%(contents:subject)' "${GITHUB_REF#refs/tags/}" | sed -n 's/^build \([0-9][0-9]*\)$/\1/p')"
+            if [ -z "$BUILD_NUMBER" ]; then
+              echo "::error::${GITHUB_REF#refs/tags/} has no build number in its message (\"build NNNN\")."
+              exit 1
+            fi
+            echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          fi
+          echo "Releasing version $APP_VERSION, build $BUILD_NUMBER"
       - name: Not already released
         run: |
           if git rev-parse -q --verify "refs/tags/ludo-v$APP_VERSION" >/dev/null; then
@@ -70,7 +82,7 @@ jobs:
           WHATS_NEW: ${{ inputs.whats_new }}
         run: |
           # What's New on the App Store: none for the very first version (Apple has no field for it).
-          if [ -n "$WHATS_NEW" ]; then
+          if [ -n "$WHATS_NEW" ] && [ -n "$(python3 ../../scripts/next_version.py --last-release)" ]; then
             { echo "RELEASE_NOTES<<EOF_NOTES"; echo "$WHATS_NEW"; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
           elif [ -n "$(python3 ../../scripts/next_version.py --last-release)" ]; then
             { echo "RELEASE_NOTES<<EOF_NOTES"; python3 ../../scripts/next_version.py --store-notes; echo "EOF_NOTES"; } >> "$GITHUB_ENV"

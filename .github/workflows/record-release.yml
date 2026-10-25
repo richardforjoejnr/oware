@@ -1,0 +1,55 @@
+name: Record an App Store release
+
+# For a version that went to App Review by hand in App Store Connect, not through App Store Release:
+# once Apple approves it, run this so the next TestFlight build counts from it (Apple refuses new
+# builds for a version that is already out).
+#   Actions ▸ Record an App Store release ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸ the approved
+#   build's tag ▸ Run. (The build number is on the version's page in App Store Connect.)
+# build/X.Y.Z (Lelu Oware) is recorded as vX.Y.Z, build/ludo-X.Y.Z (Lelu Ludo) as ludo-vX.Y.Z,
+# each with its GitHub Release ("Lelu Oware X.Y.Z" / "Lelu Ludo X.Y.Z"). Nothing is sent to Apple.
+on:
+  workflow_dispatch:
+
+run-name: Record release ${{ github.ref_name }}
+
+permissions:
+  contents: write   # to tag the release
+  actions: write    # to start the Pages workflow (a release made with GITHUB_TOKEN fires no `release` event)
+
+jobs:
+  record:
+    name: Tag the approved build as released
+    runs-on: ubuntu-latest
+    steps:
+      - name: Which app and version, from the tag
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          # build/[ludo-]X.Y.Z, or the older build/[ludo-]X.Y.Z-<build number>.
+          if [[ "$REF" =~ ^refs/tags/build/ludo-([0-9]+\.[0-9]+\.[0-9]+)(-[0-9]+)?$ ]]; then
+            { echo "APP_DIR=apps/lelu-ludo"; echo "APP_NAME=Lelu Ludo"; echo "TAG=ludo-v${BASH_REMATCH[1]}"; } >> "$GITHUB_ENV"
+          elif [[ "$REF" =~ ^refs/tags/build/([0-9]+\.[0-9]+\.[0-9]+)(-[0-9]+)?$ ]]; then
+            { echo "APP_DIR=apps/lelu-oware"; echo "APP_NAME=Lelu Oware"; echo "TAG=v${BASH_REMATCH[1]}"; } >> "$GITHUB_ENV"
+          else
+            echo "::error::Run this from a build tag (Use workflow from ▸ Tags ▸ build/…), not $REF."
+            exit 1
+          fi
+          echo "APP_VERSION=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Not already recorded
+        run: |
+          if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
+            echo "::error::$TAG already exists."
+            exit 1
+          fi
+      - name: Tag it and publish its notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (cd "$APP_DIR" && python3 ../../scripts/next_version.py --notes) > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+          gh release create "$TAG" --target "$GITHUB_SHA" --title "$APP_NAME $APP_VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          # Lelu Oware's What's new page is built from its GitHub Releases.
+          if [ "$APP_DIR" = apps/lelu-oware ]; then gh workflow run pages.yml --ref main -R "$GITHUB_REPOSITORY"; fi
+          echo "Recorded $APP_NAME $APP_VERSION as $TAG; the next TestFlight build counts from it." >> "$GITHUB_STEP_SUMMARY"

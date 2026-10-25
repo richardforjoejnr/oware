@@ -95,7 +95,7 @@ platform :ios do
 
   desc "Submit a build already on TestFlight for App Review; Apple releases it to everyone once approved"
   # The build players get is the one you tested: APP_VERSION and BUILD_NUMBER come from its
-  # build/<version>-<build> tag (see .github/workflows/release.yml). Nothing is rebuilt.
+  # build/<version> tag (see .github/workflows/release.yml). Nothing is rebuilt.
   lane :release do
     asc_auth
     # Empty for the first version: App Store Connect has no "What's New" until there is an update.
@@ -108,7 +108,9 @@ platform :ios do
       # Only "What's New" is sent; the description, keywords and screenshots stay as set in
       # App Store Connect. "default" fills it for every language the listing has.
       skip_metadata: notes.empty?,
-      release_notes: notes.empty? ? nil : { "default" => notes },
+      # The listing's language by name: with no metadata folder, fastlane maps "default" onto no
+      # language at all, and Apple then refuses the submission for a missing "What's New".
+      release_notes: notes.empty? ? nil : { "en-GB" => notes },
       submit_for_review: true,
       automatic_release: true,    # owner's choice (2026-10-02): live as soon as Apple approves
       phased_release: false,      # everyone at once
