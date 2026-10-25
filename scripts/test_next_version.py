@@ -4,7 +4,8 @@ import os
 import subprocess
 import tempfile
 
-from next_version import APP_PATHS, RELEASE_TAGS, bump, current_app, last_release, notes, store_notes, titles_since
+from next_version import (APP_PATHS, BUILD_TAGS, RELEASE_TAGS, bump, current_app, last_build, last_release, next_build,
+                          notes, store_notes, titles_since)
 
 
 class NextVersionTests(unittest.TestCase):
@@ -134,6 +135,32 @@ class PerAppTests(unittest.TestCase):
                 self.assertEqual(last_release(RELEASE_TAGS["lelu-oware"]), "v1.10.0", "newest by version, not by text")
                 self.assertEqual(last_release(RELEASE_TAGS["lelu-ludo"]), "ludo-v1.0.0")
                 self.assertIsNone(last_release("other-v"))
+            finally:
+                os.chdir(here)
+
+    def test_every_build_gets_a_version_of_its_own(self):
+        self.assertEqual(next_build("1.1.0", None), "1.1.0", "the first build of a release")
+        self.assertEqual(next_build("1.1.0", "1.1.0"), "1.1.1", "1.1.0 is taken: the next patch")
+        self.assertEqual(next_build("1.1.0", "1.1.4"), "1.1.5")
+        self.assertEqual(next_build("2.0.0", "1.1.4"), "2.0.0", "a breaking change still jumps")
+        self.assertEqual(next_build("1.2.0", "1.1.10"), "1.2.0", "compared as numbers, not text")
+
+    def test_the_newest_build_per_app_old_and_new_tags(self):
+        with tempfile.TemporaryDirectory() as repo:
+            def run(*args):
+                subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+            run("init", "-q", "-b", "main")
+            run("config", "user.email", "t@example.com"); run("config", "user.name", "T")
+            run("commit", "-q", "--allow-empty", "-m", "first")
+            for tag in ["build/1.0.0-202610102016", "build/1.0.9", "build/1.0.10",
+                        "build/ludo-1.0.0-202610051920", "build/ludo-1.1.0-202610251429", "build/ludo-oops"]:
+                run("tag", tag)
+            here = os.getcwd()
+            os.chdir(repo)
+            try:
+                self.assertEqual(last_build(BUILD_TAGS["lelu-oware"]), "1.0.10", "Ludo's tags never count for Oware")
+                self.assertEqual(last_build(BUILD_TAGS["lelu-ludo"]), "1.1.0")
+                self.assertIsNone(last_build("build/other-"))
             finally:
                 os.chdir(here)
 

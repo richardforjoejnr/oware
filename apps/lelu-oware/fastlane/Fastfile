@@ -95,7 +95,7 @@ platform :ios do
 
   desc "Submit a build already on TestFlight for App Review; Apple releases it to everyone once approved"
   # The build players get is the one you tested: APP_VERSION and BUILD_NUMBER come from its
-  # build/<version>-<build> tag (see .github/workflows/release.yml). Nothing is rebuilt.
+  # build/<version> tag (see .github/workflows/release.yml). Nothing is rebuilt.
   lane :release do
     asc_auth
     # Empty for the first version: App Store Connect has no "What's New" until there is an update.

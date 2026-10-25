@@ -14,8 +14,10 @@ Oware, ludo-vX.Y.Z for Lelu Ludo (RELEASE_TAGS). Since the app's last tag:
   - docs/chore/ci/test/style only                   → no new version, and not in the notes
 With no release yet the answer is 1.0.0. `--build` (used for TestFlight) moves past the last
 released version whenever anything was merged since it: Apple refuses new builds for a version that
-is already out. With nothing merged since the tag it prints the released version itself, and the
-TestFlight workflow then skips ("nothing to build").
+is already out. Every TestFlight build also gets a version of its own: if the answer was already
+built (a build/<version> tag, BUILD_TAGS), it moves on to the next patch past the newest build, so
+1.1.0, then 1.1.1, 1.1.2 until the release. With nothing merged since the release tag it prints the
+released version itself, and the TestFlight workflow then skips ("nothing to build").
 
 PRs are merged with merge commits, whose body starts with the PR title, so only PR titles need to
 follow the convention (checked by the PR-title workflow). The PR description is not in the merge
@@ -69,6 +71,28 @@ def git(*args: str) -> str:
 
 # Each app's release tags: <prefix>X.Y.Z. Lelu Oware's came first, so it keeps the plain "v".
 RELEASE_TAGS = {"lelu-oware": "v", "lelu-ludo": "ludo-v"}
+# Each app's TestFlight build tags: <prefix>X.Y.Z (older ones end in -<build number>).
+BUILD_TAGS = {"lelu-oware": "build/", "lelu-ludo": "build/ludo-"}
+
+
+def _key(version: str) -> tuple[int, ...]:
+    return tuple(int(x) for x in version.split("."))
+
+
+def last_build(prefix: str = "build/") -> str | None:
+    """The newest version built for TestFlight, from the app's build tags."""
+    pattern = re.compile(re.escape(prefix) + r"(\d+\.\d+\.\d+)(?:-\d+)?")
+    versions = [m.group(1) for t in git("tag", "--list", f"{prefix}*").split() if (m := pattern.fullmatch(t))]
+    return max(versions, key=_key) if versions else None
+
+
+def next_build(candidate: str, built: str | None) -> str:
+    """`candidate` unless a build already has it (or a later version): then the next patch after the
+    newest build, so no two TestFlight builds share a version."""
+    if built is None or _key(candidate) > _key(built):
+        return candidate
+    major, minor, patch = _key(built)
+    return f"{major}.{minor}.{patch + 1}"
 
 
 def last_release(prefix: str = "v") -> str | None:
@@ -189,7 +213,11 @@ def main() -> None:
     elif "--notes" in sys.argv:
         print(notes(changes) or "Small improvements.")
     else:
-        print(bump(tag[len(prefix):] if tag else None, changes, for_build="--build" in sys.argv))
+        released = tag[len(prefix):] if tag else None
+        version = bump(released, changes, for_build="--build" in sys.argv)
+        if "--build" in sys.argv and version != released:
+            version = next_build(version, last_build(BUILD_TAGS[app] if app else "build/"))
+        print(version)
 
 
 if __name__ == "__main__":
