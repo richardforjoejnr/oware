@@ -4,8 +4,10 @@
     python3 scripts/next_version.py            # e.g. 1.2.0
     python3 scripts/next_version.py --notes    # release notes for TestFlight / GitHub Release
     python3 scripts/next_version.py --store-notes   # "What's New" on the App Store (players only)
+    python3 scripts/next_version.py --last-release  # the app's last release tag, empty if none
 
-Releases are git tags vX.Y.Z (the App Store workflow creates them). Since the last tag:
+Releases are git tags, one line per app (the App Store workflows create them): vX.Y.Z for Lelu
+Oware, ludo-vX.Y.Z for Lelu Ludo (RELEASE_TAGS). Since the app's last tag:
   - any "feat!:" / "fix!:" title or "BREAKING CHANGE" → next major (2.0.0)
   - otherwise any "feat:"                           → next minor (1.3.0)
   - otherwise any fix/perf/refactor/build/revert    → next patch (1.2.4)
@@ -65,8 +67,13 @@ def git(*args: str) -> str:
     return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
 
 
-def last_release() -> str | None:
-    tags = [t for t in git("tag", "--list", "v*", "--sort=-v:refname").split() if re.fullmatch(r"v\d+\.\d+\.\d+", t)]
+# Each app's release tags: <prefix>X.Y.Z. Lelu Oware's came first, so it keeps the plain "v".
+RELEASE_TAGS = {"lelu-oware": "v", "lelu-ludo": "ludo-v"}
+
+
+def last_release(prefix: str = "v") -> str | None:
+    tags = git("tag", "--list", f"{prefix}*", "--sort=-v:refname").split()
+    tags = [t for t in tags if re.fullmatch(re.escape(prefix) + r"\d+\.\d+\.\d+", t)]
     return tags[0] if tags else None
 
 
@@ -171,15 +178,18 @@ def store_notes(changes: list[tuple[str, str]], limit: int = 3800) -> str:
 
 
 def main() -> None:
-    tag = last_release()
     app = current_app(sys.argv, os.getcwd())
+    prefix = RELEASE_TAGS[app] if app else "v"
+    tag = last_release(prefix)
     changes = titles_since(tag, APP_PATHS[app] if app else None)
-    if "--store-notes" in sys.argv:
+    if "--last-release" in sys.argv:
+        print(tag or "")
+    elif "--store-notes" in sys.argv:
         print(store_notes(changes))
     elif "--notes" in sys.argv:
         print(notes(changes) or "Small improvements.")
     else:
-        print(bump(tag[1:] if tag else None, changes, for_build="--build" in sys.argv))
+        print(bump(tag[len(prefix):] if tag else None, changes, for_build="--build" in sys.argv))
 
 
 if __name__ == "__main__":
