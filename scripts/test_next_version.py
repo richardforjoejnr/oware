@@ -4,7 +4,7 @@ import os
 import subprocess
 import tempfile
 
-from next_version import APP_PATHS, bump, current_app, notes, store_notes, titles_since
+from next_version import APP_PATHS, RELEASE_TAGS, bump, current_app, last_release, notes, store_notes, titles_since
 
 
 class NextVersionTests(unittest.TestCase):
@@ -118,6 +118,24 @@ class PerAppTests(unittest.TestCase):
             self.assertEqual(ludo, ["feat: ludo dice"], "an Oware-only package does not count for Ludo")
             self.assertEqual(len(everything), 4)
             self.assertEqual(bump("1.0.0", [(t, "") for t in oware]), "1.0.1", "Ludo's feat does not make Oware 1.1.0")
+
+    def test_each_app_counts_from_its_own_release_tags(self):
+        with tempfile.TemporaryDirectory() as repo:
+            def run(*args):
+                subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True)
+            run("init", "-q", "-b", "main")
+            run("config", "user.email", "t@example.com"); run("config", "user.name", "T")
+            run("commit", "-q", "--allow-empty", "-m", "first")
+            for tag in ["v1.2.0", "v1.10.0", "ludo-v1.0.0", "build/ludo-1.0.0-202610051920", "vnext"]:
+                run("tag", tag)
+            here = os.getcwd()
+            os.chdir(repo)
+            try:
+                self.assertEqual(last_release(RELEASE_TAGS["lelu-oware"]), "v1.10.0", "newest by version, not by text")
+                self.assertEqual(last_release(RELEASE_TAGS["lelu-ludo"]), "ludo-v1.0.0")
+                self.assertIsNone(last_release("other-v"))
+            finally:
+                os.chdir(here)
 
 
 if __name__ == "__main__":

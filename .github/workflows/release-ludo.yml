@@ -1,0 +1,92 @@
+name: App Store Release (Lelu Ludo)
+
+# Lelu Ludo's twin of release.yml. Ships a build you have already tested on TestFlight; nothing is rebuilt.
+#   Actions ▸ App Store Release (Lelu Ludo) ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸
+#   build/ludo-X.Y.Z-NNNN ▸ Run.
+# Every Lelu Ludo TestFlight upload is tagged build/ludo-<version>-<build number> (testflight-ludo.yml),
+# its version worked out from Lelu Ludo's Conventional Commit PR titles. This run:
+#   1. sends that build to App Review with "What's New" written from those PR titles,
+#   2. has Apple release it to everyone as soon as it is approved,
+#   3. tags ludo-vX.Y.Z (the next version counts from it) and publishes the GitHub Release
+#      "Lelu Ludo X.Y.Z".
+# One version can be in review at a time. If Apple rejects it, merge the fix and run this again on
+# the newer build tag; App Store Connect's version number is updated to match.
+# The App Store text, screenshots, privacy answers and age rating stay as set in App Store Connect.
+on:
+  workflow_dispatch:
+    inputs:
+      whats_new:
+        description: "What's New on the App Store, if not the one written from the PR titles (leave empty to use those)"
+        required: false
+        default: ""
+
+run-name: App Store (Lelu Ludo) ${{ github.ref_name }}
+
+permissions:
+  contents: write   # to tag the release
+
+concurrency:
+  group: release-ludo
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Submit a TestFlight build for App Review
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: apps/lelu-ludo
+    environment: production   # add required reviewers on this environment for a manual gate
+    if: ${{ vars.SIGNING_READY == 'true' }}
+    steps:
+      - name: Read the version and build number from the tag
+        working-directory: .
+        env:
+          REF: ${{ github.ref }}
+        run: |
+          if [[ ! "$REF" =~ ^refs/tags/build/ludo-([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
+            echo "::error::Run this from a build tag (Use workflow from ▸ Tags ▸ build/ludo-X.Y.Z-NNNN), not $REF. Each Lelu Ludo TestFlight upload makes one."
+            exit 1
+          fi
+          echo "APP_VERSION=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=${BASH_REMATCH[2]}" >> "$GITHUB_ENV"
+          echo "Releasing version ${BASH_REMATCH[1]}, build ${BASH_REMATCH[2]}"
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Not already released
+        run: |
+          if git rev-parse -q --verify "refs/tags/ludo-v$APP_VERSION" >/dev/null; then
+            echo "::error::Lelu Ludo $APP_VERSION (ludo-v$APP_VERSION) is already released. Pick a newer build tag."
+            exit 1
+          fi
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: App Store readiness checks
+        run: python3 ../../scripts/release_readiness.py apps/lelu-ludo
+      - name: Write the release notes
+        env:
+          WHATS_NEW: ${{ inputs.whats_new }}
+        run: |
+          # What's New on the App Store: none for the very first version (Apple has no field for it).
+          if [ -n "$WHATS_NEW" ]; then
+            { echo "RELEASE_NOTES<<EOF_NOTES"; echo "$WHATS_NEW"; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
+          elif [ -n "$(python3 ../../scripts/next_version.py --last-release)" ]; then
+            { echo "RELEASE_NOTES<<EOF_NOTES"; python3 ../../scripts/next_version.py --store-notes; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
+          fi
+          python3 ../../scripts/next_version.py --notes > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+      - name: Submit for App Review (released automatically once approved)
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+        run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios release
+      - name: Tag the release and publish its notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "ludo-v$APP_VERSION" --target "$GITHUB_SHA" --title "Lelu Ludo $APP_VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          echo "Submitted Lelu Ludo $APP_VERSION ($BUILD_NUMBER) for review; it goes live when Apple approves it." >> "$GITHUB_STEP_SUMMARY"

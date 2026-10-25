@@ -101,7 +101,7 @@ platform :ios do
 
   desc "Submit a build already on TestFlight for App Review; Apple releases it to everyone once approved"
   # Nothing is rebuilt. APP_VERSION and BUILD_NUMBER come from the build's build/ludo-<version>-<build>
-  # tag (see .github/workflows/testflight-ludo.yml). No workflow calls this yet (docs/PIPELINE.md).
+  # tag (see .github/workflows/testflight-ludo.yml). Run by release-ludo.yml.
   lane :release do
     asc_auth
     # Empty for the first version: App Store Connect has no "What's New" until there is an update.

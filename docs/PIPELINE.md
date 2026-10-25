@@ -24,6 +24,7 @@ lanes run locally and in CI.
 | `testflight-ludo.yml` | push to `main` that changes Lelu Ludo, or manual | Yes (the same ones) | New Lelu Ludo build in TestFlight, tagged `build/ludo-<version>-<build #>` (see "Lelu Ludo" below) |
 | `reusable-app-readiness.yml` | called by `ci.yml`, `ludo-ci.yml` and `testflight-ludo.yml` | No | The App Store readiness check (`scripts/release_readiness.py <app>`) for one app: privacy manifest, icon, launch screen, release flags, in-app privacy link, public pages |
 | `release.yml` | manual, from a `build/…` tag | Yes | That build submitted for App Review with "What's New", released automatically once approved; tags `vX.Y.Z` and publishes the GitHub Release |
+| `release-ludo.yml` | manual, from a `build/ludo-…` tag | Yes | The same for Lelu Ludo; tags `ludo-vX.Y.Z` and publishes the GitHub Release "Lelu Ludo X.Y.Z" |
 | `pages.yml` ("Site") | docs or site change on `main`, a release, CI / E2E finishing on `main`, or manual | AWS keys | Website on AWS (S3 + CloudFront): privacy, support, What's new, test reports |
 
 The signed workflows are skipped until the repository variable `SIGNING_READY` is `true`, so
@@ -141,16 +142,20 @@ One-time steps:
    Internal Testing ▸ add a group with yourself (groups are per app, so Lelu Oware's does not carry over).
 5. Merge a change to Lelu Ludo, or run **TestFlight (Lelu Ludo)** by hand from the Actions tab.
 
-**Version and tags.** Builds take the version from `MARKETING_VERSION` in `apps/lelu-ludo/project.yml`
-(raise it by hand for now) and the same build number as Lelu Oware (UTC date and time). Each upload is
-tagged `build/ludo-<version>-<build #>`: the prefix keeps it out of Lelu Oware's App Store Release,
-which only accepts `build/X.Y.Z-N`. `vX.Y.Z` tags stay Lelu Oware's releases.
+**Version and tags.** Nobody edits the version. Lelu Ludo's releases are tagged `ludo-vX.Y.Z`
+(`vX.Y.Z` stays Lelu Oware's), and each TestFlight build's version is worked out by
+`scripts/next_version.py` from the Conventional Commit titles of the PRs that changed Lelu Ludo
+(`apps/lelu-ludo`, `packages/LudoEngine`) since the last `ludo-v` tag: `feat` → next minor, `fix`/`perf`
+→ next patch, `!` → next major; `docs`/`ci`/`test`/`chore` alone build the next patch for TestFlight but
+add nothing to "What's New". The workflow writes it into `MARKETING_VERSION` for the build. The build
+number is the UTC date and time, as for Lelu Oware. Each upload is tagged `build/ludo-<version>-<build #>`.
+1.0.0 shipped from build 202610051920 and is tagged `ludo-v1.0.0`.
 
-**Not yet automated (follow-up):** an App Store Release workflow for Lelu Ludo. The `release` lane is
-ready, but Lelu Ludo first needs its own release tags (e.g. `ludo-vX.Y.Z`) in `scripts/next_version.py`
-(which today reads only `vX.Y.Z`), its own GitHub Release name ("Lelu Ludo X.Y.Z") in
-`scripts/build_release_notes.py`, and a copy of `release.yml` that accepts `build/ludo-…` tags. Until
-then, submit a Lelu Ludo TestFlight build for review from App Store Connect.
+**Shipping an update:** Actions ▸ **App Store Release (Lelu Ludo)** ▸ Run workflow ▸ "Use workflow from"
+▸ Tags ▸ the `build/ludo-…` tag you tested ▸ Run. It submits that build with "What's New" from the PR
+titles (or the text you type in its "What's New" box), Apple releases it once approved, and it tags
+`ludo-vX.Y.Z` so the next build counts from there.
+Lelu Ludo has no What's new page on the site yet (Lelu Oware's is built from its GitHub Releases).
 
 ---
 
