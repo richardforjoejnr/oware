@@ -4,7 +4,7 @@ name: TestFlight (Lelu Ludo)
 # TestFlight. Same secrets, same SIGNING_READY switch and same build-number scheme as Lelu Oware.
 # Each uploaded build has a version of its own and is tagged build/ludo-<version> on the commit it was
 # made from, the build number kept in the tag's message. The "ludo-" prefix keeps these tags apart
-# from Lelu Oware's build/<version> tags, so Oware's App Store Release (release.yml) refuses a Ludo tag.
+# from Lelu Oware's build/<version> tags, so Oware's App Store Release (release-oware.yml) refuses a Ludo tag.
 #
 # Version: worked out by scripts/next_version.py from Lelu Ludo's Conventional Commit PR titles since
 # its last release tag (ludo-vX.Y.Z, made by release-ludo.yml): feat → 1.1.0, fix → 1.0.1, "!" → 2.0.0;
