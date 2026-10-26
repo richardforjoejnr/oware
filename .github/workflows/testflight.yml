@@ -4,7 +4,7 @@ name: TestFlight
 # docs, the website, CI or scripts do not (run it by hand from the Actions tab if needed).
 # Each uploaded build has a version of its own (scripts/next_version.py: 1.1.0, then 1.1.1 …) and is
 # tagged build/<version> on the commit it was made from, the build number kept in the tag's message;
-# releasing to the App Store means running App Store Release from one of those tags.
+# releasing to the App Store means running App Store Release (Lelu Oware) from one of those tags.
 on:
   push:
     branches: [main]
@@ -82,14 +82,14 @@ jobs:
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
         run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios beta
-      - name: Tag the build (pick this tag in App Store Release to ship it)
+      - name: Tag the build (pick this tag in App Store Release (Lelu Oware) to ship it)
         if: steps.version.outputs.skip != 'true'
         run: |
           TAG="build/$VERSION"
           # The build number goes in the tag's message: App Store Release reads it from there.
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" tag -a "$TAG" -m "build $BUILD_NUMBER" "$GITHUB_SHA"
           git push origin "$TAG"
-          echo "Tagged $TAG. To release it: Actions ▸ App Store Release ▸ Run workflow ▸ Use workflow from ▸ Tags ▸ $TAG" >> "$GITHUB_STEP_SUMMARY"
+          echo "Tagged $TAG. To release it: Actions ▸ App Store Release (Lelu Oware) ▸ Run workflow ▸ Use workflow from ▸ Tags ▸ $TAG" >> "$GITHUB_STEP_SUMMARY"
       - name: Upload IPA artifact
         if: always() && steps.version.outputs.skip != 'true'
         uses: actions/upload-artifact@v4

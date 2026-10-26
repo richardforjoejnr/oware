@@ -1,6 +1,6 @@
 name: App Store Release (Lelu Ludo)
 
-# Lelu Ludo's twin of release.yml. Ships a build you have already tested on TestFlight; nothing is rebuilt.
+# Lelu Ludo's twin of release-oware.yml. Ships a build you have already tested on TestFlight; nothing is rebuilt.
 #   Actions ▸ App Store Release (Lelu Ludo) ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸
 #   build/ludo-X.Y.Z ▸ Run.
 # Every Lelu Ludo TestFlight upload is tagged build/ludo-<version> (testflight-ludo.yml), the build number

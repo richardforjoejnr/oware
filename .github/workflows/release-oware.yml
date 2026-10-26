@@ -1,7 +1,7 @@
-name: App Store Release
+name: App Store Release (Lelu Oware)
 
 # Ships a build you have already tested on TestFlight. Nothing is rebuilt.
-#   Actions ▸ App Store Release ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸ build/X.Y.Z ▸ Run.
+#   Actions ▸ App Store Release (Lelu Oware) ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸ build/X.Y.Z ▸ Run.
 # Every TestFlight upload is tagged build/<version>, its build number in the tag's message (see
 # testflight.yml). This run:
 #   1. sends that build to App Review with "What's New" written from the PR titles,

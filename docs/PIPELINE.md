@@ -23,7 +23,7 @@ lanes run locally and in CI.
 | `testflight.yml` | push to `main` that changes the app (paths below), or manual | Yes | New build in TestFlight with a version of its own, tagged `build/<version>` |
 | `testflight-ludo.yml` | push to `main` that changes Lelu Ludo, or manual | Yes (the same ones) | New Lelu Ludo build in TestFlight, tagged `build/ludo-<version>` (see "Lelu Ludo" below) |
 | `reusable-app-readiness.yml` | called by `ci.yml`, `ludo-ci.yml` and `testflight-ludo.yml` | No | The App Store readiness check (`scripts/release_readiness.py <app>`) for one app: privacy manifest, icon, launch screen, release flags, in-app privacy link, public pages |
-| `release.yml` | manual, from a `build/…` tag | Yes | That build submitted for App Review with "What's New", released automatically once approved; tags `vX.Y.Z` and publishes the GitHub Release |
+| `release-oware.yml` | manual, from a `build/…` tag | Yes | That build submitted for App Review with "What's New", released automatically once approved; tags `vX.Y.Z` and publishes the GitHub Release |
 | `release-ludo.yml` | manual, from a `build/ludo-…` tag | Yes | The same for Lelu Ludo; tags `ludo-vX.Y.Z` and publishes the GitHub Release "Lelu Ludo X.Y.Z" |
 | `record-release.yml` | manual, from a `build/…` or `build/ludo-…` tag | No | For a version submitted by hand in App Store Connect: once approved, tags it `vX.Y.Z` / `ludo-vX.Y.Z` with its GitHub Release, so the next TestFlight build counts from it. Nothing is sent to Apple |
 | `pages.yml` ("Site") | docs or site change on `main`, a release, CI / E2E finishing on `main`, or manual | AWS keys | Website on AWS (S3 + CloudFront): privacy, support, What's new, test reports |
@@ -191,7 +191,7 @@ placeholder text or a missing contact email on the public privacy and support pa
 
 Every TestFlight upload has a version of its own and is tagged `build/<version>` (e.g. `build/1.0.1`,
 the build number in the tag's message; older uploads are tagged `build/1.0.0-202610102016`) on the
-commit it was built from. The newest version is the newest build. To ship one: Actions ▸ **App Store Release** ▸ **Run workflow** ▸
+commit it was built from. The newest version is the newest build. To ship one: Actions ▸ **App Store Release (Lelu Oware)** ▸ **Run workflow** ▸
 **Use workflow from** ▸ **Tags** ▸ pick the build ▸ **Run workflow**. It:
 
 1. submits that exact build (nothing is rebuilt) for App Review, with "What's New" made from the
@@ -248,7 +248,7 @@ Automatic, from **Conventional Commit PR titles** (checked on every PR by the "P
   notes list the player-facing PRs since the last release. A beta always moves past the released
   version, even if only a `chore:` touched the app. A manual run with nothing merged since the last
   tag skips the upload (there is no new version to build). In the app, Settings shows "Version 1.3.0 (build) · Beta".
-- **App Store** (App Store Release, run from a `build/X.Y.Z` tag): submits that build, then tags
+- **App Store** (App Store Release (Lelu Oware), run from a `build/X.Y.Z` tag): submits that build, then tags
   `vX.Y.Z`, publishes a GitHub Release named "Lelu Oware X.Y.Z" with the notes, and starts the Pages
   workflow (a release created by a workflow fires no `release` event). The next TestFlight builds then
   move on to the version after. Settings shows no "Beta" in App Store builds. (A GitHub Release
@@ -270,7 +270,7 @@ then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upl
 2. Push, open a PR. CI must be green.
 3. Merge → if the PR changed the app, a TestFlight build appears in ~15 minutes, tagged
    `build/<version>` → test on your phone.
-4. When a build is good: Actions ▸ App Store Release ▸ Run workflow from its tag (see "Releasing to
+4. When a build is good: Actions ▸ App Store Release (Lelu Oware) ▸ Run workflow from its tag (see "Releasing to
    the App Store"). Apple reviews it and it goes live when approved.
 
 ## Hosted pages (AWS)
