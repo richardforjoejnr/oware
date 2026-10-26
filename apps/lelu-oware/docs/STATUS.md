@@ -154,7 +154,7 @@ PRs #15–#20 are merged (#20 fixed the Pages build: `_site` was root-owned afte
 | Engine | `../../packages/OwareEngine` — stub `GameState` (initial 4×12 = 48 seeds) + Swift Testing test. `swift test` works with Command Line Tools only. |
 | App | Placeholder home screen with accessibility ids `home-title`, `home-seed-count`. |
 | Tests | `OwareTests` (unit), `OwareUITests` (XCUITest), `.maestro/flows/smoke.yaml` (Maestro), `e2e/` (TypeScript Appium + WebdriverIO v9, spec `specs/home.spec.ts`, helpers `helpers/board.ts`). |
-| CI | `.github/workflows/ci.yml` (engine + app build/test), `e2e.yml` (Maestro job + Appium/TS job), `testflight.yml` (merge to main), `release.yml` (GitHub Release → App Store Connect). Signed workflows skipped until repo variable `SIGNING_READY=true`. |
+| CI | `.github/workflows/ci.yml` (engine + app build/test), `e2e.yml` (Maestro job + Appium/TS job), `testflight.yml` (merge to main), `release-oware.yml` (App Store Release (Lelu Oware): a TestFlight build → App Review). Signed workflows skipped until repo variable `SIGNING_READY=true`. |
 | Signing/upload | fastlane lanes `test`, `beta`, `release` with match (private cert repo) + App Store Connect API key. `Gemfile` present. |
 | GitHub | Branch protection on `main` (checks: "Engine (swift test)", "iOS app (build + test)", "Maestro flows on simulator"). Environments `testflight` and `production` (production requires owner approval). Variable `SIGNING_READY=false`. |
 | Docs | `GAME_PLAN.md` (design + culture + compliance), `PIPELINE.md` (what credentials are needed), `CULTURE_SOURCES.md` (source log), this file. |

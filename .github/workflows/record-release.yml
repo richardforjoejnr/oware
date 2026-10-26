@@ -1,6 +1,6 @@
 name: Record an App Store release
 
-# For a version that went to App Review by hand in App Store Connect, not through App Store Release:
+# For a version that went to App Review by hand in App Store Connect, not through an App Store Release workflow:
 # once Apple approves it, run this so the next TestFlight build counts from it (Apple refuses new
 # builds for a version that is already out).
 #   Actions ▸ Record an App Store release ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸ the approved

@@ -37,4 +37,4 @@ Then select the Oware target → Signing & Capabilities → your Personal Team, 
 TestFlight, App Store and Game Center need the paid programme (see docs/PIPELINE.md).
 
 ## Contributing flow
-Branch → PR (CI runs) → merge to `main` (TestFlight build, tagged `build/X.Y.Z-N`) → run App Store Release from that tag (App Review, live when approved; tags `vX.Y.Z`).
+Branch → PR (CI runs) → merge to `main` (TestFlight build, tagged `build/X.Y.Z`) → run App Store Release (Lelu Oware) from that tag (App Review, live when approved; tags `vX.Y.Z`).
