@@ -36,6 +36,8 @@ packages:
     path: ../../packages/OwareEngine
   SupportKit:
     path: ../../packages/SupportKit
+  MatchKit:
+    path: ../../packages/MatchKit
   # Anonymous analytics (see Oware/Sources/Support/Analytics.swift and docs/lelu-oware/privacy.md).
   TelemetryDeck:
     url: https://github.com/TelemetryDeck/SwiftSDK
@@ -58,6 +60,10 @@ targets:
         product: OwareAI
       - package: SupportKit
         product: SupportKit
+      - package: MatchKit
+        product: MatchKit
+      - package: MatchKit
+        product: MatchKitNearby
       - package: TelemetryDeck
         product: TelemetryDeck
       - sdk: GameKit.framework
