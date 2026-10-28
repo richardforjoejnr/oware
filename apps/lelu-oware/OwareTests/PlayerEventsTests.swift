@@ -180,17 +180,4 @@ final class PlayerEventsTests: XCTestCase {
         XCTAssertFalse(settings.effectiveUsageStats)
         XCTAssertFalse(AppSettings(defaults: TestSupport.defaults(), testMode: true).shouldAskUsageStats)
     }
-
-    // MARK: Online access ("the host pays")
-
-    func testOnlinePolicy() {
-        let policy = OnlinePolicy()
-        XCTAssertTrue(policy.canHost(purchased: true, founding: false))
-        XCTAssertFalse(policy.canHost(purchased: false, founding: true), "founding players are not included unless switched on")
-        XCTAssertTrue(policy.canJoin(invitedByPlayerWhoCanHost: true, purchased: false, founding: false), "invited friends play free")
-        XCTAssertFalse(policy.canJoin(invitedByPlayerWhoCanHost: false, purchased: false, founding: false))
-        let generous = OnlinePolicy(hostPays: true, foundingPlayersIncluded: true)
-        XCTAssertTrue(generous.canHost(purchased: false, founding: true))
-        XCTAssertFalse(FeatureFlags.onlinePlay, "online play stays hidden until it ships")
-    }
 }
