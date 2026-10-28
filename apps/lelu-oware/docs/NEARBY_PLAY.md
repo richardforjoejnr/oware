@@ -5,7 +5,7 @@ Bonjour over Apple's phone-to-phone Wi-Fi. **Free**, behind the `nearbyPlay` fea
 
 The design shared with Lelu Ludo is in [MULTIPLAYER.md](../../../docs/MULTIPLAYER.md): the layers,
 MatchKit, feature switches, Apple requirements and the test pyramid. This file covers what is
-specific to Oware and the order of work. Planned 2026-10-28. Progress: step 1 built (2026-10-28).
+specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–2 built (2026-10-28).
 
 ## What the player sees
 
@@ -103,6 +103,9 @@ Tests first (`SupportKitTests/FeatureGateTests.swift`):
 The app adds `FeatureTableTests`, which lists `nearbyPlay: .free` and `online: .off`.
 
 Then: `FeatureGate`, `Features.swift`, with `OnlineAccess` reading the gate.
+
+**Built.** `OnlinePolicy`'s rules are now `Access.canUse` / `canJoin`. Nothing used `OnlineAccess`, so it
+was removed rather than kept; `Feature.gate()` builds the app's gate. `nearbyPlay` is `.off` until step 6.
 
 ### Step 3: `feat(matchkit): rooms for playing on two phones`
 Tests first (`MatchKitTests`, Linux):
