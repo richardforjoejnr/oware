@@ -7,7 +7,8 @@ struct FramerTests {
     @Test func oneMessageRoundTrips() throws {
         var reader = Framer.Reader()
         let message = Data("play house 4".utf8)
-        #expect(try reader.push(Framer.frame(message)) == [message])
+        let out = try reader.push(Framer.frame(message))
+        #expect(out == [message])
     }
 
     @Test func aMessageSplitAcrossPacketsIsJoined() throws {
@@ -51,14 +52,15 @@ struct EnvelopeTests {
     @Test func sequencesOnlyMoveForwardPerSender() {
         var filter = SequenceFilter()
         let a = PeerID("a"), b = PeerID("b")
-        #expect(filter.accept(1, from: a))
-        #expect(filter.accept(2, from: a))
-        #expect(!filter.accept(2, from: a), "a repeat is dropped")
-        #expect(!filter.accept(1, from: a), "a late message is dropped")
-        #expect(filter.accept(1, from: b), "each sender counts on its own")
-        #expect(filter.accept(5, from: a), "a gap is fine: the next snapshot carries everything")
+        func accept(_ n: Int, _ peer: PeerID) -> Bool { filter.accept(n, from: peer) }
+        #expect(accept(1, a))
+        #expect(accept(2, a))
+        #expect(!accept(2, a), "a repeat is dropped")
+        #expect(!accept(1, a), "a late message is dropped")
+        #expect(accept(1, b), "each sender counts on its own")
+        #expect(accept(5, a), "a gap is fine: the next snapshot carries everything")
         filter.forget(a)
-        #expect(filter.accept(1, from: a), "a peer that starts again is heard again")
+        #expect(accept(1, a), "a peer that starts again is heard again")
     }
 
     @Test func anEnvelopeRoundTrips() throws {

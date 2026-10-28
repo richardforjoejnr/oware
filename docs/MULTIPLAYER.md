@@ -49,8 +49,8 @@ the host logic and the game screen stay as they are.
 public struct PeerID: Hashable, Sendable, Codable { public let raw: String }
 
 public enum TransportEvent: Sendable {
-    case joined(PeerID, name: String)
-    case left(PeerID)
+    case connected(PeerID)      // names come in the room's hello, not from the transport
+    case disconnected(PeerID)
     case received(Data, from: PeerID)
 }
 
@@ -89,8 +89,8 @@ public struct Envelope<Body: Codable & Sendable>: Codable, Sendable {
 }
 
 public enum RoomMessage<Match: Codable & Sendable, Intent: Codable & Sendable>: Codable, Sendable {
-    case hello(name: String, appBuild: Int)
-    case welcome(seat: Int, snapshot: Match)
+    case hello(name: String, rejoin: UUID?)   // rejoin: the token from an earlier welcome
+    case welcome(seat: Int, token: UUID, names: [Int: String], snapshot: Match)
     case refused(Refusal)             // room full, game started, newer version, host said no
     case intent(Intent)
     case snapshot(Match)

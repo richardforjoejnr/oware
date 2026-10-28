@@ -6,10 +6,13 @@ import Testing
 struct Tally: Codable, Sendable, Equatable {
     var game = 1
     var numbers: [Int] = []
+    var note = ""
 }
 
 enum TallyIntent: Codable, Sendable, Equatable {
     case add(Int)
+    /// Any seat, any time: a small message that makes the match `bytes` larger, too large to send.
+    case grow(bytes: Int)
 }
 
 struct TallyRules: RoomRules {
@@ -17,9 +20,14 @@ struct TallyRules: RoomRules {
     let seatCount = 2
 
     func applying(_ intent: TallyIntent, from seat: Int, to match: Tally) throws -> Tally {
-        guard seat == match.numbers.count % seatCount else { throw NotYourTurn() }
         var next = match
-        if case let .add(n) = intent { next.numbers.append(n) }
+        switch intent {
+        case let .add(n):
+            guard seat == match.numbers.count % seatCount else { throw NotYourTurn() }
+            next.numbers.append(n)
+        case let .grow(bytes):
+            next.note = String(repeating: "x", count: bytes)
+        }
         return next
     }
 
@@ -49,7 +57,7 @@ struct RoomTests {
         for _ in 0..<200 { await Task.yield() }
     }
 
-    private struct Table {
+    @MainActor private struct Table {
         let clock = ManualClock()
         let hostLink = LoopbackTransport()
         let host: TallyRoom
@@ -125,8 +133,9 @@ struct RoomTests {
 
     @Test func twoAskingAtOnceTheSecondIsRefusedWhenTheFirstIsAccepted() async {
         let table = Table()
-        let (_, _, _) = table.guest("Ama")
-        let (_, _, yawLog) = table.guest("Yaw")
+        let (amaRoom, _, _) = table.guest("Ama")
+        let (yawRoom, _, yawLog) = table.guest("Yaw")
+        defer { withExtendedLifetime((amaRoom, yawRoom)) {} }
         await eventually("two requests") { table.host.pending.count == 2 }
         let ama = table.host.pending.first { $0.value == "Ama" }!.key
         await table.host.accept(ama)
@@ -165,7 +174,7 @@ struct RoomTests {
         try await table.host.send(.add(5))   // seat 0 moves first
         await eventually("guest sees the host's move") { guest.match?.numbers == [5] }
 
-        await guest.send(.add(7))
+        try await guest.send(.add(7))
         await eventually("host applies the guest's move") { table.host.match?.numbers == [5, 7] }
         await eventually("guest sees its own move only once the host agrees") { guest.match?.numbers == [5, 7] }
         #expect(log.events.filter { if case .snapshot = $0 { true } else { false } }.count >= 2)
@@ -173,7 +182,7 @@ struct RoomTests {
 
     @Test func theHostRefusesAMoveOutOfTurn() async throws {
         let (table, guest, _, _) = await seated()
-        await guest.send(.add(9))   // seat 0 is to move
+        try await guest.send(.add(9))   // seat 0 is to move
         await settle()
         #expect(table.host.match?.numbers == [])
         #expect(guest.match?.numbers == [])
@@ -196,13 +205,14 @@ struct RoomTests {
     @Test func messagesTooLargeForOnlineAreNotSent() async throws {
         let (table, guest, _, _) = await seated()
         await #expect(throws: Framer.Failure.self) {
-            try await table.host.send(.add(0))
-            // Grow the match past 64 KB with legal moves from both sides.
-            for _ in 0..<20_000 {
-                await guest.send(.add(123_456_789))
-                try await table.host.send(.add(123_456_789))
-            }
+            try await table.host.send(.grow(bytes: Framer.maxMessageBytes))
         }
+        #expect(table.host.match == Tally(), "the host keeps the match it can still send")
+
+        // From a guest, the host refuses it the same way.
+        try await guest.send(.grow(bytes: Framer.maxMessageBytes))
+        await settle()
+        #expect(table.host.match == Tally())
     }
 
     // MARK: Connection
@@ -263,7 +273,7 @@ struct RoomTests {
         #expect(table.host.pending.isEmpty, "rejoining does not ask the host again")
         #expect(log.events.contains(.back(seat: 0)) || log.events.contains(.seated(seat: 1, name: "Ama")))
 
-        await guest.send(.add(8))
+        try await guest.send(.add(8))
         await eventually("play carries on") { table.host.match?.numbers == [4, 8] }
     }
 

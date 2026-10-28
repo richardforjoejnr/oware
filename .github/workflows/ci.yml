@@ -1,6 +1,6 @@
 name: CI
 
-# Lelu Oware's CI (apps/lelu-oware, packages/OwareEngine, packages/SupportKit). The name stays "CI":
+# Lelu Oware's CI (apps/lelu-oware, packages/OwareEngine, packages/SupportKit, packages/MatchKit). The name stays "CI":
 # the Site workflow (pages.yml) triggers on it and scripts/build-reports.py downloads its
 # `TestResults` artifact by that name.
 #
@@ -19,6 +19,7 @@ on:
       - apps/lelu-oware/**
       - packages/OwareEngine/**
       - packages/SupportKit/**
+      - packages/MatchKit/**
       - docs/lelu-oware/**
       - scripts/release_readiness.py
       - .github/workflows/reusable-app-readiness.yml
@@ -40,6 +41,7 @@ on:
       - apps/lelu-oware/**
       - packages/OwareEngine/**
       - packages/SupportKit/**
+      - packages/MatchKit/**
       - docs/lelu-oware/**
       - scripts/release_readiness.py
       - .github/workflows/reusable-app-readiness.yml
@@ -98,6 +100,23 @@ jobs:
     uses: ./.github/workflows/reusable-swift-package.yml
     with:
       package-path: packages/SupportKit
+      runner: macos
+      parallel: false
+
+  # Rooms, envelopes and the framer are pure Swift: Linux.
+  match-kit:
+    name: MatchKit
+    uses: ./.github/workflows/reusable-swift-package.yml
+    with:
+      package-path: packages/MatchKit
+      runner: linux
+
+  # The nearby transport imports Network: a host and a browser on one Mac find each other.
+  match-kit-nearby:
+    name: MatchKit (nearby, macOS)
+    uses: ./.github/workflows/reusable-swift-package.yml
+    with:
+      package-path: packages/MatchKit
       runner: macos
       parallel: false
 
