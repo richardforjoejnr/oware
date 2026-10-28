@@ -159,6 +159,10 @@ Collected" is still correct.
 
 ## 8. Online play (built, not shown)
 
+Nearby play (two phones, free) comes first and builds the layers online play will reuse:
+[NEARBY_PLAY.md](NEARBY_PLAY.md) and [MULTIPLAYER.md](../../../docs/MULTIPLAYER.md). `OnlineMatch` becomes
+`OwareMatch` and the switches move into a shared `FeatureGate` there.
+
 What exists:
 - `OnlineMatch`: the match message (rules + houses played + resignation), validated by replay so a
   tampered or out-of-date message is refused, with a format version.
