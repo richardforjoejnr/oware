@@ -80,6 +80,9 @@ targets:
         # Set TELEMETRYDECK_APP_ID (e.g. in CI or a local xcconfig); empty leaves analytics off.
         TelemetryDeckAppID: $(TELEMETRYDECK_APP_ID)
         AppStoreID: $(APP_STORE_ID)
+        # Nearby play: finding the other phone (MatchKitNearby, LiveNearbyNetwork.serviceType).
+        NSLocalNetworkUsageDescription: Lelu Oware looks for phones near you so two people can play one game, each on their own phone. Nothing leaves the room.
+        NSBonjourServices: [_leluoware._tcp]
         UILaunchScreen:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]

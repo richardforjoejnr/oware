@@ -7,6 +7,7 @@ enum Screen: Hashable {
     case puzzles
     case heritage
     case journey
+    case nearby
 }
 
 struct RootView: View {
@@ -15,7 +16,10 @@ struct RootView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(PuzzleLibrary.self) private var library
     @Environment(RiddleReminder.self) private var reminder
+    @Environment(NearbyLobby.self) private var lobby
     @Environment(\.scenePhase) private var scenePhase
+    /// Nearby with the demo player (Settings ▸ Try nearby play) rather than real phones.
+    @State private var nearbyDemo = false
     @State private var screen: Screen = .home
     @State private var showSettings = false
     /// The carved-map opening; skipped for test launches so suites are not slowed.
@@ -39,6 +43,7 @@ struct RootView: View {
                          openPuzzles: { screen = .puzzles },
                          openHeritage: { screen = .heritage },
                          openJourney: { screen = .journey },
+                         openNearby: { nearbyDemo = false; screen = .nearby },
                          openSettings: { showSettings = true })
                     .transition(.opacity)
             case .game:
@@ -52,6 +57,9 @@ struct RootView: View {
                     screen = .game
                 })
                 .transition(.opacity)
+            case .nearby:
+                NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home })
+                    .transition(.opacity)
             case .heritage:
                 HeritageView(goBack: { screen = .home })
                     .transition(.opacity)
@@ -65,7 +73,11 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.45), value: screen)
         .sheet(isPresented: $showSettings) {
-            SettingsView()
+            SettingsView(tryNearby: {
+                showSettings = false
+                nearbyDemo = true
+                screen = .nearby
+            })
                 .presentationDetents([.large])
                 .presentationBackground(Theme.ember)
         }
@@ -80,6 +92,7 @@ struct RootView: View {
             Task { await reminder.reschedule(solvedToday: library.dailySolved, streak: library.currentStreak()) }
         }
         .onAppear {
+            lobby.onStart = { screen = .game }
             library.variant = settings.rules.variant
             switch LaunchOptions.startScreen {
             case "journey": screen = .journey

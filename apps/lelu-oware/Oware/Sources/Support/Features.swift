@@ -14,6 +14,11 @@ enum Feature {
         online: .off,
     ]
 
+    /// Play nearby on Home and Try nearby play in Settings: when its switch is on, or with
+    /// `--nearby` in a Debug build (trying it on two phones before it ships).
+    @MainActor
+    static var showsNearbyPlay: Bool { gate().isShown(nearbyPlay) || LaunchOptions.nearbyPlay }
+
     /// The app's gate, with a purchase record for every feature that is sold.
     @MainActor
     static func gate(defaults: UserDefaults = .standard) -> FeatureGate {

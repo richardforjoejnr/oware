@@ -23,6 +23,8 @@ final class BoardScene: SKScene, BoardAnimator {
     var sound: SoundPlayer? = .shared
     var haptics: Haptics? = .shared
     var humanSide: Player?
+    /// The player whose row is nearest: North when you play North on your own phone.
+    var bottomSide: Player = .south { didSet { if built, bottomSide != oldValue { relayout() } } }
     var theme: BoardTheme = .heritage { didSet { if built { applyTheme() } } }
     private let highlightLayer = SKNode()
 
@@ -248,7 +250,7 @@ final class BoardScene: SKScene, BoardAnimator {
     }
 
     private func relayout() {
-        layout = BoardLayout(size: size)
+        layout = BoardLayout(size: size, bottomSide: bottomSide)
         let r = layout.sk(layout.boardRect)
         // Before the first real layout the board can be 0×0: nothing to bake yet.
         if lastBoardSize != r.size, r.width >= 1, r.height >= 1 {

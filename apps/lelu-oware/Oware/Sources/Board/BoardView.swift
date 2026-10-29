@@ -13,7 +13,7 @@ struct BoardView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let layout = BoardLayout(size: geo.size)
+            let layout = BoardLayout(size: geo.size, bottomSide: session.bottomSide)
             ZStack {
                 SpriteView(scene: scene, options: [.allowsTransparency])
                     .accessibilityHidden(true)
@@ -75,6 +75,7 @@ struct BoardView: View {
     }
 
     private func configureScene() {
+        scene.bottomSide = session.bottomSide
         scene.theme = settings.boardTheme
         scene.setHighlight(house: session.highlightedHouse)
         scene.animationSpeed = settings.effectiveSpeed
