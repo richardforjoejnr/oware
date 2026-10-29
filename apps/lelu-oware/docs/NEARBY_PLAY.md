@@ -5,7 +5,7 @@ Bonjour over Apple's phone-to-phone Wi-Fi. **Free**, behind the `nearbyPlay` fea
 
 The design shared with Lelu Ludo is in [MULTIPLAYER.md](../../../docs/MULTIPLAYER.md): the layers,
 MatchKit, feature switches, Apple requirements and the test pyramid. This file covers what is
-specific to Oware and the order of work. Planned 2026-10-28; nothing is built yet.
+specific to Oware and the order of work. Planned 2026-10-28. Progress: step 1 built (2026-10-28).
 
 ## What the player sees
 
@@ -87,6 +87,10 @@ Tests first (`OwareEngineTests/OwareMatchTests.swift`):
 - a snapshot is applied only if it extends the match the phone already has (stale ones are ignored).
 
 Then: the rename, `OwareIntent`, `starter`, `matchID`.
+
+**Built.** `OwareMatch` also has `game` (1, 2, 3… for rematches) so `supersedes(_:)` can tell a
+rematch from an old game's late message. `starter` sets who sows first in round 1; later Nam-Nam
+rounds still alternate as the engine already does.
 
 ### Step 2: `feat(supportkit): feature switches that can become paid`
 Tests first (`SupportKitTests/FeatureGateTests.swift`):
