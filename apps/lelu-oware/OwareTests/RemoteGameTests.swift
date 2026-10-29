@@ -56,7 +56,9 @@ final class RemoteGameTests: XCTestCase {
         XCTAssertEqual(p.guest.sideName(.north), "You")
         XCTAssertEqual(p.guest.sideName(.south), "Kofi")
         XCTAssertEqual(p.guest.turnDescription, "Kofi's turn")
-        XCTAssertEqual(p.host.turnDescription, "Your move")
+        XCTAssertEqual(p.host.turnDescription, "Your turn")
+        XCTAssertEqual(p.host.bottomSide, .south)
+        XCTAssertEqual(p.guest.bottomSide, .north, "the guest's board is turned round")
     }
 
     func testTheHostMovesAndTheGuestsBoardMatches() async {
