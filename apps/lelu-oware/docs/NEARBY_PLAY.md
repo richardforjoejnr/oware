@@ -5,7 +5,7 @@ Bonjour over Apple's phone-to-phone Wi-Fi. **Free**, behind the `nearbyPlay` fea
 
 The design shared with Lelu Ludo is in [MULTIPLAYER.md](../../../docs/MULTIPLAYER.md): the layers,
 MatchKit, feature switches, Apple requirements and the test pyramid. This file covers what is
-specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–2 built (2026-10-28).
+specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–3 built (2026-10-28); step 0 (two real phones) still to do.
 
 ## What the player sees
 
@@ -128,6 +128,11 @@ messages in order.
 
 Then: the package, CI callers through `reusable-swift-package.yml` (Linux for `MatchKit`, macOS for
 the Nearby tests), and an entry in `MONOREPO.md`.
+
+**Built.** `Room<Rules: RoomRules>` is a `@MainActor` class; heartbeats run from `tick()`, which
+`startHeartbeat()` calls every 2 s and tests call by hand with a `ManualClock`. Rejoining uses a token
+from the welcome (`reconnect(over:)` on the guest). `NearbyHost` / `NearbyBrowser` / `NearbyTransport`
+in `MatchKitNearby`; the macOS test finds a host on the same Mac and sends 100 messages in order.
 
 ### Step 4: `feat(oware): play a game on two phones`, the session, with no screens yet
 Tests first (`OwareTests/RemoteGameTests.swift`, two `GameSession`s joined by `LoopbackTransport`):
