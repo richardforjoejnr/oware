@@ -88,7 +88,8 @@ before the earlier one is green and merged.
 5. **Polish and release:** art from the owner, the lesson ("New here?"), Game Center, tips, privacy
    and support pages on leluoware.com (`docs/lelu-ludo/`, served by the existing site), App Review
    readiness (the same checks), TestFlight and App Store workflows copied for this app.
-6. **Later:** online play (Game Center turn-based, paid, host pays), as planned for Oware.
+6. **Next:** nearby play on 2–4 phones, free, empty seats played by the computer: [NEARBY_PLAY.md](NEARBY_PLAY.md).
+7. **Later:** online play (Game Center, paid, host pays), as planned for Oware.
 
 ## Test pyramid
 

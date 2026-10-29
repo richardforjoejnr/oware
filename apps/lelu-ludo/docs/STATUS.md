@@ -4,6 +4,10 @@
 > [HANDOFF-2026-10-04.md](HANDOFF-2026-10-04.md) (dice, menus, Learn the game, launch screen, TestFlight). Work goes in stages; finish one
 > (tests, implement, test, improve) before starting the next.
 
+## Nearby play (planned 2026-10-28)
+
+After Lelu Oware's: 2–4 phones, free, empty seats played by the computer. Plan: [NEARBY_PLAY.md](NEARBY_PLAY.md).
+
 ## Now (2026-10-03)
 
 **Stage 1, the rules engine, is built** (`packages/LudoEngine`, branch `feat/lelu-ludo-foundation`).

@@ -17,6 +17,12 @@
 - **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
   `packages/*/.swiftpm` after `swift test`; run `make project` after pulling.
 
+## Nearby play (planned 2026-10-28)
+
+Two phones, no router, free, behind a feature switch that can become paid later. Plan, tests first:
+[NEARBY_PLAY.md](NEARBY_PLAY.md); shared design with Lelu Ludo: [MULTIPLAYER.md](../../../docs/MULTIPLAYER.md).
+Step 0 (a two-phone spike) is next.
+
 ## App Review readiness (2026-10-02, branch `fix/review-readiness`)
 
 Version 1.0 was submitted to App Review on 2026-10-02. A check against the guidelines found three risks, fixed here
