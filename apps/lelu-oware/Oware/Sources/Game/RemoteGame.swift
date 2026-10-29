@@ -13,11 +13,21 @@ struct RemoteGame: Codable, Hashable, Sendable {
     var via: Via = .nearby
 }
 
-/// What the phones share: the match, and who has asked for another game. A rematch starts only
-/// once both have asked.
+/// What the phones share: the match, who has asked for another game (a rematch starts only once
+/// both have asked), and each player's sowing speed (both phones sow at the slower).
 struct OwareTable: Codable, Sendable, Equatable {
     var match: OwareMatch
     var rematchAsked: Set<Player> = []
+    var paces: [Player: Double] = [:]
+
+    /// The speed both phones sow at: the slower of the two, once both are known.
+    var sharedPace: Double? { paces.values.min() }
+}
+
+/// What a phone may ask the host: a move, resign or rematch, or its sowing speed.
+enum TableIntent: Codable, Sendable, Equatable {
+    case game(OwareIntent)
+    case pace(Double)
 }
 
 /// The host's checks, through the engine. Seat 0 (the host) is South, seat 1 North.
@@ -26,12 +36,20 @@ struct OwareRoomRules: RoomRules {
 
     static func player(seat: Int) -> Player { seat == 0 ? .south : .north }
 
-    func applying(_ intent: OwareIntent, from seat: Int, to table: OwareTable) throws -> OwareTable {
+    func applying(_ intent: TableIntent, from seat: Int, to table: OwareTable) throws -> OwareTable {
         let player = Self.player(seat: seat)
         var next = table
+        let game: OwareIntent
         switch intent {
+        case let .pace(pace):
+            next.paces[player] = min(max(pace, 0.1), AppSettings.AnimationSpeed.instant.rawValue)
+            return next
+        case let .game(intent):
+            game = intent
+        }
+        switch game {
         case .play, .resign:
-            next.match = try table.match.applying(intent, from: player)
+            next.match = try table.match.applying(game, from: player)
         case .rematch:
             guard try table.match.state().isOver else { throw OwareMatch.Failure.gameNotOver }
             next.rematchAsked.insert(player)
@@ -45,8 +63,9 @@ struct OwareRoomRules: RoomRules {
 
     func shouldReplace(_ current: OwareTable, with snapshot: OwareTable) -> Bool {
         if snapshot.match.supersedes(current.match) { return true }
+        // The same match, with more asked for a rematch or more speeds known.
         return snapshot.match == current.match && snapshot.rematchAsked.isSuperset(of: current.rematchAsked)
-            && snapshot.rematchAsked != current.rematchAsked
+            && Set(snapshot.paces.keys).isSuperset(of: current.paces.keys) && snapshot != current
     }
 }
 
@@ -67,12 +86,20 @@ final class MatchLink {
     var opponentName: String? { room.seats[room.mySeat == 0 ? 1 : 0]?.name }
     var table: OwareTable? { room.match }
 
-    init(hosting match: OwareMatch, name: String, transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
-        room = Room(hosting: OwareTable(match: match), name: name, rules: OwareRoomRules(), transport: transport, clock: clock)
+    /// This phone's sowing speed (`AppSettings.effectiveSpeed`), shared once seated.
+    private let pace: Double
+
+    init(hosting match: OwareMatch, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
+         transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
+        self.pace = pace
+        room = Room(hosting: OwareTable(match: match, paces: [.south: pace]), name: name, rules: OwareRoomRules(),
+                    transport: transport, clock: clock)
         room.onEvent = { [weak self] in self?.handle($0) }
     }
 
-    init(joiningAs name: String, transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
+    init(joiningAs name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
+         transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
+        self.pace = pace
         room = Room(joiningAs: name, rules: OwareRoomRules(), transport: transport, clock: clock)
         room.onEvent = { [weak self] in self?.handle($0) }
     }
@@ -83,6 +110,11 @@ final class MatchLink {
             joinRequests.append(JoinRequest(peer: peer, name: name))
         case .seated:
             joinRequests = []
+            // The guest tells the host its speed; the host's went in with the match.
+            if room.role == .guest {
+                let pace = pace
+                Task { try? await room.send(.pace(pace)) }
+            }
         default:
             break
         }
@@ -101,7 +133,7 @@ final class MatchLink {
 
     /// Host: applied at once, or refused by the rules. Guest: sent to the host.
     func send(_ intent: OwareIntent) async {
-        try? await room.send(intent)
+        try? await room.send(.game(intent))
     }
 
     func tick() async { await room.tick() }

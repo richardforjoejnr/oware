@@ -198,7 +198,7 @@ struct NearbyView: View {
                     .foregroundStyle(Theme.ivoryDim)
                 ForEach(lobby.games) { game in
                     QuietButton(title: game.name, subtitle: game.rules, prominent: true) {
-                        lobby.join(game, name: NearbyLobby.savedName() ?? "")
+                        lobby.join(game, name: NearbyLobby.savedName() ?? "", pace: settings.effectiveSpeed)
                     }
                         .accessibilityIdentifier("nearby-game-\(game.name)")
                 }
@@ -245,7 +245,7 @@ struct NearbyView: View {
             return
         }
         switch step {
-        case .host: lobby.host(name: saved, rules: settings.rules, starter: starter)
+        case .host: lobby.host(name: saved, rules: settings.rules, starter: starter, pace: settings.effectiveSpeed)
         case .join: lobby.browse()
         }
     }

@@ -68,6 +68,8 @@ final class GameSession {
     private(set) var opponentGone = false
     /// Who has asked for another game after this one.
     private(set) var rematchAsked: Set<Player> = []
+    /// The speed both phones sow at (the slower of the two); nil when this phone plays alone.
+    private(set) var sharedPace: Double?
     /// Guest: why the host's phone said no.
     private(set) var refusal: Refusal?
     /// The match as the board shows it, and the latest from the host.
@@ -638,6 +640,7 @@ final class GameSession {
         offersComputer = false
         opponentGone = false
         rematchAsked = []
+        sharedPace = link.table?.sharedPace
         refusal = nil
         link.onEvent = { [weak self] in self?.handle($0) }
         animator?.render(state)
@@ -658,6 +661,7 @@ final class GameSession {
         link = nil
         interrupt()
         mode = .versusAI(difficulty: difficulty, personality: .balanced, humanPlays: game.mySide)
+        sharedPace = nil
         offersComputer = false
         isReconnecting = false
         rematchAsked = []
@@ -678,6 +682,7 @@ final class GameSession {
     }
 
     private func leaveRemote() {
+        sharedPace = nil
         syncTask?.cancel()
         syncTask = nil
         shownMatch = nil
@@ -698,6 +703,7 @@ final class GameSession {
             }
         case let .snapshot(table):
             rematchAsked = table.rematchAsked
+            sharedPace = table.sharedPace
             latestMatch = table.match
             sync()
         case let .reconnecting(seat):

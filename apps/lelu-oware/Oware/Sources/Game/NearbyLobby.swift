@@ -81,7 +81,8 @@ final class NearbyLobby {
         if demo != network.isDemo { network = demo ? DemoNetwork() : LiveNearbyNetwork() }
     }
 
-    func host(name: String, rules: RuleSet, starter: Starter) {
+    /// `pace`: this phone's sowing speed; both phones sow at the slower of the two.
+    func host(name: String, rules: RuleSet, starter: Starter, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
         reset()
         let first: Player = switch starter {
         case .me: .south
@@ -91,7 +92,7 @@ final class NearbyLobby {
         do {
             let transport = try network.host(gameName: "\(name)'s game", info: ["rules": Self.rulesName(rules)],
                                               status: { [weak self] in self?.status = $0 })
-            let link = MatchLink(hosting: OwareMatch(rules: rules, starter: first), name: name, transport: transport)
+            let link = MatchLink(hosting: OwareMatch(rules: rules, starter: first), name: name, pace: pace, transport: transport)
             link.onEvent = { [weak self] in self?.handle($0) }
             self.link = link
             phase = .hosting
@@ -107,8 +108,8 @@ final class NearbyLobby {
         network.browse(games: { [weak self] in self?.games = $0 }, status: { [weak self] in self?.status = $0 })
     }
 
-    func join(_ listing: NearbyListing, name: String) {
-        let link = MatchLink(joiningAs: name, transport: network.connect(to: listing))
+    func join(_ listing: NearbyListing, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
+        let link = MatchLink(joiningAs: name, pace: pace, transport: network.connect(to: listing))
         link.onEvent = { [weak self] in self?.handle($0) }
         self.link?.room.stop()
         self.link = link
@@ -360,13 +361,14 @@ final class DemoPlayer {
     }
 
     private func act(_ intent: OwareIntent) {
+        let intent = TableIntent.game(intent)
         let pause = script.thinkTime
         turn = Task { [weak self] in
             try? await Task.sleep(for: .seconds(pause))
             guard let self, !Task.isCancelled else { return }
             try? await self.room.send(intent)
             self.turn = nil
-            if case .play = intent { self.played() }
+            if case .game(.play) = intent { self.played() }
             // Hosting, her own move comes back while she is still busy: look again.
             self.consider()
         }
