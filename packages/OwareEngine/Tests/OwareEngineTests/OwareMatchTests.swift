@@ -197,8 +197,9 @@ struct OwareMatchTests {
         }
         let record = GameRecord(rules: .namNam, moves: moves)
         let state = try match.state()
+        let replayed = try record.replay()
         #expect(state.isOver)
-        #expect(state == (try record.replay()))
+        #expect(state == replayed)
     }
 
     @Test("Even the longest game fits in one message", arguments: [RuleSet.abapa, RuleSet.namNam])
