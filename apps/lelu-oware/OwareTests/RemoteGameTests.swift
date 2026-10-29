@@ -11,10 +11,10 @@ final class RemoteGameTests: XCTestCase {
     private var hostEvents: [AnalyticsEvent] = []
 
     /// Waits for the sessions to catch up with each other.
-    private func until(_ what: String, timeout: TimeInterval = 5, _ condition: () -> Bool) async {
+    private func until(_ what: @autoclosure () -> String, timeout: TimeInterval = 5, _ condition: () -> Bool) async {
         let end = Date().addingTimeInterval(timeout)
         while !condition() {
-            if Date() > end { return XCTFail("timed out waiting: \(what)") }
+            if Date() > end { return XCTFail("timed out waiting: \(what())") }
             try? await Task.sleep(nanoseconds: 1_000_000)
         }
     }
@@ -188,7 +188,12 @@ final class RemoteGameTests: XCTestCase {
 
     func testBothPhonesAlwaysShowTheSamePosition() async {
         let p = await pair()
-        var rng = SystemRandomNumberGenerator()
+        // Seeded, so a failure can be replayed.
+        struct LCG: RandomNumberGenerator {
+            var s: UInt64
+            mutating func next() -> UInt64 { s = s &* 6364136223846793005 &+ 1442695040888963407; return s }
+        }
+        var rng = LCG(s: 3)   // this game ends with a player who could not be fed
         var plies = 0
         while !p.host.isGameOver, plies < 400 {
             let mover = p.host.humanToMove ? p.host : p.guest
@@ -196,8 +201,10 @@ final class RemoteGameTests: XCTestCase {
             guard let move = mover.state.legalMoves().randomElement(using: &rng) else { break }
             mover.play(house: move.absoluteIndex)
             plies += 1
-            await until("both show move \(plies)") {
-                p.host.state.moveNumber == plies && p.guest.state.moveNumber == plies
+            // A move that can feed nobody ends the game without sowing, so it is not counted.
+            await until("both show move \(plies): host at \(p.host.state.moveNumber), guest at \(p.guest.state.moveNumber)") {
+                (p.host.state.moveNumber == plies && p.guest.state.moveNumber == plies)
+                    || (p.host.isGameOver && p.guest.isGameOver)
             }
             XCTAssertEqual(p.host.state, p.guest.state, "after move \(plies)")
         }
