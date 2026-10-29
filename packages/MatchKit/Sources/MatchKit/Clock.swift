@@ -5,9 +5,17 @@ public protocol RoomClock: Sendable {
     var now: Double { get }
 }
 
+/// Seconds since this clock was made. `ContinuousClock` rather than ProcessInfo's uptime, which Apple
+/// counts as reading the boot time and asks apps to give a reason for in their privacy manifest.
 public struct SystemClock: RoomClock {
+    private let start = ContinuousClock.now
+
     public init() {}
-    public var now: Double { ProcessInfo.processInfo.systemUptime }
+
+    public var now: Double {
+        let elapsed = start.duration(to: .now).components
+        return Double(elapsed.seconds) + Double(elapsed.attoseconds) / 1e18
+    }
 }
 
 /// A clock that moves only when told to.
