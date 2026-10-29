@@ -36,6 +36,8 @@ final class PlayerEvents {
         case .journey: modeName = "journey"; level = mode.journeyOpponent?.difficulty
         case .passAndPlay: modeName = "passAndPlay"
         case .puzzle, .tutorial: return
+        // Counted as nearby.finished once the screens ship (NEARBY_PLAY.md step 5).
+        case .remote: return
         }
         let result: String
         if case .passAndPlay = mode {

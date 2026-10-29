@@ -5,7 +5,7 @@ Bonjour over Apple's phone-to-phone Wi-Fi. **Free**, behind the `nearbyPlay` fea
 
 The design shared with Lelu Ludo is in [MULTIPLAYER.md](../../../docs/MULTIPLAYER.md): the layers,
 MatchKit, feature switches, Apple requirements and the test pyramid. This file covers what is
-specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–3 built (2026-10-28); step 0 (two real phones) still to do.
+specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–4 built (2026-10-28/29); step 0 (two real phones) still to do.
 
 ## What the player sees
 
@@ -147,6 +147,11 @@ Tests first (`OwareTests/RemoteGameTests.swift`, two `GameSession`s joined by `L
 - both phones always show the same position (checked after every move of a full scripted game).
 
 Then: `GameMode.remote`, `MatchLink`, the `GameSession` changes, and `BoardScene.bottomSide`.
+
+**Built**, except `BoardScene.bottomSide`, which moves to step 5 with the screens. The room's match is
+`OwareTable` (the `OwareMatch` plus who has asked for a rematch). `GameSession.canAgreeToStop` is
+false on two phones, and "Stop here and count" should be hidden there in step 5. In Abapa, a move
+that can feed nobody ends the game without sowing, so it is not counted in `moveNumber`.
 
 ### Step 5: `feat(oware): nearby play screens`
 Tests first:
