@@ -253,6 +253,23 @@ struct RoomTests {
         #expect(guest.seats[0]?.isReconnecting == false)
     }
 
+    /// The host moved while the guest was out of range: when the guest is heard again, the host
+    /// sends the match as it stands, or both phones would wait for each other.
+    @Test func aGuestBackFromAQuietSpellCatchesUp() async throws {
+        let (table, guest, link, log) = await seated()
+        link.isQuiet = true
+        try await table.host.send(.add(5))   // missed
+        table.clock.advance(by: 7)
+        await table.host.tick()
+        #expect(table.host.seats[1]?.isReconnecting == true)
+
+        link.isQuiet = false
+        await guest.tick()   // the guest's ping is heard
+        await eventually("the host is back for the guest") { table.hostEvents.contains(.back(seat: 1)) }
+        await eventually("the guest has the move it missed") { guest.match?.numbers == [5] }
+        #expect(log.events.contains(.snapshot(Tally(numbers: [5]))))
+    }
+
     @Test func rejoiningInTimeGetsTheSameSeatAndTheLatestMatch() async throws {
         let (table, guest, link, log) = await seated()
         link.close()   // the guest's app was in the background and its connection dropped
