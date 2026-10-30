@@ -19,6 +19,8 @@ struct HomeView: View {
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
     @AppStorage("tutorialSeen") private var tutorialSeen = false
     @State private var showMore = false
+    /// Read so the menu updates when the TestFlight test switch for nearby play changes.
+    @AppStorage(TestFeatures.nearbyPlayKey) private var testNearbyPlay = false
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showLevels = false
 

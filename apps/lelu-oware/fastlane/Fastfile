@@ -63,10 +63,14 @@ platform :ios do
       code_sign_identity: "Apple Distribution",
       profile_name: "match AppStore #{BUNDLE_ID}"
     )
+    # TEST_FEATURES=true (TestFlight run by hand with "test features" ticked): Settings gets switches
+    # for unfinished features (TestFeatures.swift). Never set for a build that may go to the App Store.
+    test_features = ENV["TEST_FEATURES"] == "true"
     build_app(
       project: PROJECT,
       scheme: SCHEME,
       configuration: "Release",
+      xcargs: test_features ? "SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) TEST_FEATURES'" : nil,
       export_method: "app-store",
       xcodebuild_formatter: "xcbeautify",
       export_options: {

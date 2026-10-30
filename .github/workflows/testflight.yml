@@ -19,6 +19,11 @@ on:
       - Gemfile
       - .github/workflows/testflight.yml
   workflow_dispatch:
+    inputs:
+      test_features:
+        description: "Test build: Settings gets switches for unfinished features (nearby play). Not tagged, so it can never be sent to the App Store."
+        type: boolean
+        default: false
 
 permissions:
   contents: write   # to tag each uploaded build
@@ -63,12 +68,21 @@ jobs:
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          if [ "${{ inputs.test_features }}" = "true" ]; then
+            echo "TEST_FEATURES=true" >> "$GITHUB_ENV"
+            echo "::warning::Test build with test features (nearby play switch in Settings). It is not tagged and must not be submitted for review."
+          fi
           sed -i '' "s/MARKETING_VERSION: \".*\"/MARKETING_VERSION: \"$VERSION\"/" project.yml
           # Set here (not inside fastlane) so the build tag below names the same number.
           {
             echo "VERSION=$VERSION"
             echo "BUILD_NUMBER=$(date -u +%Y%m%d%H%M)"
-            echo "CHANGELOG<<EOF_NOTES"; python3 ../../scripts/next_version.py --notes; echo "EOF_NOTES"
+            echo "CHANGELOG<<EOF_NOTES"
+            if [ "${{ inputs.test_features }}" = "true" ]; then
+              echo "TEST BUILD from ${GITHUB_REF_NAME}: Settings ▸ Test features ▸ Nearby play shows Play nearby under More. Not for the App Store."
+              echo
+            fi
+            python3 ../../scripts/next_version.py --notes; echo "EOF_NOTES"
           } >> "$GITHUB_ENV"
           echo "Beta of version $VERSION"
       - name: Upload to TestFlight
@@ -83,7 +97,8 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
         run: BUNDLE_GEMFILE=$GITHUB_WORKSPACE/Gemfile bundle exec fastlane ios beta
       - name: Tag the build (pick this tag in App Store Release (Lelu Oware) to ship it)
-        if: steps.version.outputs.skip != 'true'
+        # Test builds are not tagged, so App Store Release can never pick one.
+        if: steps.version.outputs.skip != 'true' && inputs.test_features != true
         run: |
           TAG="build/$VERSION"
           # The build number goes in the tag's message: App Store Release reads it from there.
