@@ -79,6 +79,19 @@ The game is entirely free; the only purchases are tips (decided 2026-09-26, repl
 Review note: "The in-app purchases are optional tips. They unlock no content; every level, chapter
 and board look is available to all users." Local testing uses `Oware/Resources/Tips.storekit`.
 
+These three are the **only** products the app asks for (`Tips.productIDs`, checked by
+`TipStoreTests`). Do not create `com.richardforjoe.oware.online` (online play) until the version
+that ships online play: a product with no feature behind it reads as unfinished (guideline 2.2).
+
+Each tip needs, before it can be submitted: reference name, product ID, price, an English display
+name and description, and an **App Review screenshot** (a simulator screenshot of the open Support
+me sheet with the three tips is enough; one image can serve all three). Its status must be **Ready
+to Submit**; then add all three under **In-App Purchases and Subscriptions** on the version page and
+submit them **with** the build. The first in-app purchases of an app can only be submitted with a
+new version. Tips load only once the Account Holder has accepted the **Paid Apps Agreement**
+(Business ▸ Agreements) and it shows Active; until then the App Store returns no products and the
+sheet shows "The tips could not be reached just now" with Try again.
+
 ## App Privacy (nutrition label)
 - With analytics configured (`TELEMETRYDECK_APP_ID` set): Usage Data ▸ Product Interaction and
   Identifiers ▸ Device ID, both not linked to the user, not used for tracking, purpose Analytics.

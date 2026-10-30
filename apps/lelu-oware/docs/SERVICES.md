@@ -43,7 +43,7 @@ settings. Passwords, API keys and certificates never go in this repo.
 
 | Piece | File | Notes |
 |---|---|---|
-| Tip jar | `packages/SupportKit/…/TipJar.swift`, `TipJarView.swift` | Shown from Settings ▸ Support me. |
+| Tip jar | `packages/SupportKit/…/TipJar.swift`, `TipJarView.swift` | Shown from Home ▸ Support me and Settings ▸ Support me (`OwareTipJar`). |
 | One-time unlock | `packages/SupportKit/…/Unlock.swift` | Non-consumable; reads StoreKit entitlements; caches the answer. |
 | Founding players | `packages/SupportKit/…/FoundingPlayer.swift` | StoreKit 2 `AppTransaction.originalAppVersion` (the first-installed **build number**). |
 | Online rules | `Oware/Sources/Support/OnlineAccess.swift` | `FeatureFlags.onlinePlay` (off), `OnlinePolicy` (host pays), product id. |
@@ -166,8 +166,9 @@ Nearby play (two phones, free) comes first and builds the layers online play wil
 What exists:
 - `OnlineMatch`: the match message (rules + houses played + resignation), validated by replay so a
   tampered or out-of-date message is refused, with a format version.
-- `Unlock` for the product `com.richardforjoe.oware.online` (in `Tips.storekit` for local testing
-  only; not yet in App Store Connect).
+- `Unlock` for the product `com.richardforjoe.oware.online`. Not in `Tips.storekit` and not in App
+  Store Connect: App Review rejected 1.0.0 partly over products that had no feature behind them, so
+  the product is created (and added back to `Tips.storekit`) only in the version that ships online play.
 - `OnlinePolicy` / `OnlineAccess`: who may host and who may join.
 
 Still to build when online ships:

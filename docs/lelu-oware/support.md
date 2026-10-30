@@ -20,7 +20,7 @@ and what happened. Screenshots help.
   in the game's Settings.
 - **How do I capture?** Your last seed must land on the other player's row and leave that house with
   two or three seeds. The full rules are in the app under More ▸ Rules & heritage.
-- **Tips.** The optional tips in Settings unlock nothing; every chapter and board look is free.
+- **Reviews.** Tap Rate Lelu Oware on the home screen to leave a review on the App Store. For help, email the address above. Every chapter and board look is free.
 
 ## Privacy
 
