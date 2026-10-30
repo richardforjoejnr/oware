@@ -103,6 +103,12 @@ Room behaviour, all tested with `LoopbackTransport`:
 - **Messages:** a framed message is at most 64 KB (Game Center's turn-based limit, so online fits).
 - **Heartbeat:** a ping every 2 s. A peer silent for 6 s is shown as "reconnecting".
 - **Rejoining:** a peer gone for 60 s loses its seat. If it comes back in time it gets the same seat.
+  A seat heard again after a quiet spell is sent the match as it stands, since it may have missed moves.
+- **Leaving:** a peer that says `bye` is reported as `left(seat:)` at once, not as `seatLost`, so the
+  app can say "Richard left the game" rather than wait for a connection to come back.
+- **Starting (each game's rules):** connected is not started. In Oware the `OwareTable` holds a
+  `ready` set: each phone sends `ready(stateHash:)` with the fingerprint of the opening as its own
+  engine replays it, and the host refuses moves until both match (`GameState.fingerprint`).
 - **Who decides:** only the host's phone decides. A guest's own engine never moves the game on.
   It only checks what the host sends.
 

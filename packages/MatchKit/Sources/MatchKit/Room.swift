@@ -42,8 +42,10 @@ public enum RoomEvent<Match: Sendable & Equatable>: Sendable, Equatable {
     /// Nothing heard from that seat for a while.
     case reconnecting(seat: Int)
     case back(seat: Int)
-    /// That seat has gone: left, or silent too long. On a guest, seat 0 means the host has gone.
+    /// That seat has gone silent too long. On a guest, seat 0 means the host's phone.
     case seatLost(seat: Int)
+    /// That seat left on purpose (said goodbye): no point waiting for it.
+    case left(seat: Int)
 }
 
 /// Seats, the host's checks, snapshots and rejoining, over any transport (docs/MULTIPLAYER.md §2).
@@ -310,7 +312,7 @@ public final class Room<Rules: RoomRules> {
                 await post(.snapshot(current), to: peer)
             }
         case .bye:
-            if let seat = seat(of: peer) { lose(seat) }
+            if let seat = seat(of: peer) { lose(seat, left: true) }
         case .snapshot, .welcome, .refused, .ping:
             break   // only the host decides what the match is
         }
@@ -331,7 +333,7 @@ public final class Room<Rules: RoomRules> {
         case let .snapshot(snapshot):
             take(snapshot)
         case .bye:
-            lose(0)
+            lose(0, left: true)
         case .hello, .intent, .ping:
             break
         }
@@ -365,7 +367,7 @@ public final class Room<Rules: RoomRules> {
         onEvent?(.snapshot(snapshot))
     }
 
-    private func lose(_ seat: Int) {
+    private func lose(_ seat: Int, left: Bool = false) {
         guard seats[seat] != nil || (role == .guest && seat == 0) else { return }
         if role == .host {
             seats[seat] = nil
@@ -375,7 +377,7 @@ public final class Room<Rules: RoomRules> {
             seats[seat] = nil
         }
         lastHeard[seat] = nil
-        onEvent?(.seatLost(seat: seat))
+        onEvent?(left ? .left(seat: seat) : .seatLost(seat: seat))
     }
 
     private func encode(_ message: Message) throws -> Data {

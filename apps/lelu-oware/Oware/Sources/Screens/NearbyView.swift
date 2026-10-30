@@ -13,7 +13,7 @@ struct NearbyView: View {
     let demo: Bool
     let goBack: () -> Void
 
-    @State private var starter: NearbyLobby.Starter = .me
+    @State private var starter: NearbyLobby.Starter = .creatorStarts
     /// Waiting for a name before hosting or joining.
     @State private var askingName: PendingStep?
     @State private var name = ""
@@ -174,9 +174,9 @@ struct NearbyView: View {
 
     private var starterNote: String {
         switch starter {
-        case .me: "you start"
-        case .them: "they start"
-        case .random: "either starts"
+        case .creatorStarts: "you start"
+        case .joiningPlayerStarts: "the other player starts"
+        case .random: "random start"
         }
     }
 

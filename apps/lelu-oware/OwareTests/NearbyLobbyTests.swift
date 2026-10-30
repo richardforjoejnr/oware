@@ -27,7 +27,7 @@ final class NearbyLobbyTests: XCTestCase {
         let (lobby, session) = lobby()
         var started = false
         lobby.onStart = { started = true }
-        lobby.host(name: "Kofi", rules: .namNam, starter: .me)
+        lobby.host(name: "Kofi", rules: .namNam, starter: .creatorStarts)
         XCTAssertEqual(lobby.phase, .hosting)
         await until("Ama asks") { lobby.joinRequests.map(\.name) == ["Ama"] }
         XCTAssertFalse(started)
@@ -37,6 +37,7 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertEqual(session.remoteGame?.opponentName, "Ama")
         XCTAssertEqual(session.remoteGame?.mySide, .south)
         XCTAssertEqual(session.state.rules, .namNam, "the host's rules")
+        await until("both phones ready, Ama too") { session.isStarted }
         XCTAssertTrue(session.humanToMove)
         XCTAssertEqual(events.first, .nearbyHosted(demo: true))
     }
@@ -44,7 +45,7 @@ final class NearbyLobbyTests: XCTestCase {
     func testTheHostCanLetThemStart() async {
         let (lobby, session) = lobby()
         lobby.onStart = {}
-        lobby.host(name: "Kofi", rules: .abapa, starter: .them)
+        lobby.host(name: "Kofi", rules: .abapa, starter: .joiningPlayerStarts)
         await until("Ama asks") { !lobby.joinRequests.isEmpty }
         await lobby.accept(lobby.joinRequests[0])
         await until("Ama moves first") { session.state.moveNumber == 1 }
@@ -53,7 +54,7 @@ final class NearbyLobbyTests: XCTestCase {
 
     func testDecliningSendsAmaAway() async {
         let (lobby, _) = lobby()
-        lobby.host(name: "Kofi", rules: .abapa, starter: .me)
+        lobby.host(name: "Kofi", rules: .abapa, starter: .creatorStarts)
         await until("Ama asks") { !lobby.joinRequests.isEmpty }
         await lobby.decline(lobby.joinRequests[0])
         XCTAssertTrue(lobby.joinRequests.isEmpty)
@@ -67,6 +68,8 @@ final class NearbyLobbyTests: XCTestCase {
         lobby.browse()
         await until("Ama's game is listed") { lobby.games.map(\.name) == ["Ama's game"] }
         XCTAssertEqual(lobby.games.first?.rules, "Abapa")
+        XCTAssertEqual(lobby.games.first?.creatorStarts, true, "the card can say Ama starts")
+        XCTAssertNotNil(lobby.games.first?.gameID)
         lobby.join(lobby.games[0], name: "Esi")
         await until("seated") { started }
         XCTAssertEqual(session.remoteGame?.mySide, .north)
@@ -79,7 +82,7 @@ final class NearbyLobbyTests: XCTestCase {
     func testAmaResignsWhenScriptedAndAgreesToARematch() async {
         let (lobby, session) = lobby(.init(resignAfter: 0, thinkTime: 0.01, joinDelay: 0.01))
         lobby.onStart = {}
-        lobby.host(name: "Kofi", rules: .abapa, starter: .me)
+        lobby.host(name: "Kofi", rules: .abapa, starter: .creatorStarts)
         await until("Ama asks") { !lobby.joinRequests.isEmpty }
         await lobby.accept(lobby.joinRequests[0])
         await until("my turn") { session.humanToMove }
@@ -96,7 +99,7 @@ final class NearbyLobbyTests: XCTestCase {
 
     func testCancellingStopsHostingAndLeavesNoGame() async {
         let (lobby, session) = lobby()
-        lobby.host(name: "Kofi", rules: .abapa, starter: .me)
+        lobby.host(name: "Kofi", rules: .abapa, starter: .creatorStarts)
         lobby.cancel()
         XCTAssertEqual(lobby.phase, .choosing)
         XCTAssertNil(session.remoteGame)
@@ -110,5 +113,16 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertEqual(NearbyLobby.savedName(defaults), "Kofi")
         NearbyLobby.saveName("   ", defaults)
         XCTAssertEqual(NearbyLobby.savedName(defaults), "Kofi")
+    }
+
+    /// The choice is stored by what it means, not by "you" or "them", which swap between phones;
+    /// random is settled before the game is listed, so both phones agree.
+    func testWhoStartsIsStoredByMeaningAndShownPerPhone() {
+        XCTAssertEqual(NearbyLobby.Starter.allCases.map(\.title), ["Me", "Other player", "Random"])
+        XCTAssertEqual(NearbyLobby.Starter.creatorStarts.firstPlayer, .south)
+        XCTAssertEqual(NearbyLobby.Starter.joiningPlayerStarts.firstPlayer, .north)
+        XCTAssertTrue([.south, .north].contains(NearbyLobby.Starter.random.firstPlayer))
+        XCTAssertEqual(NearbyLobby.startNote(creatorStarts: true, creatorName: "Richard"), "Richard starts")
+        XCTAssertEqual(NearbyLobby.startNote(creatorStarts: false, creatorName: "Richard"), "You start")
     }
 }

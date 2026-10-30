@@ -307,10 +307,20 @@ struct RoomTests {
         await eventually("asked again") { table.host.pending.values.contains("Ama") }
     }
 
+    /// Leaving on purpose is told apart from going silent: "Ama left the game", not "reconnecting".
     @Test func leavingEndsTheSeatAtOnce() async throws {
         let (table, guest, _, _) = await seated()
         await guest.leave()
         await eventually("seat ended") { table.host.seats[1] == nil }
-        #expect(table.hostEvents.contains(.seatLost(seat: 1)))
+        #expect(table.hostEvents.contains(.left(seat: 1)))
+        #expect(!table.hostEvents.contains(.seatLost(seat: 1)), "left, not lost")
+    }
+
+    @Test func theHostLeavingIsToldToTheGuest() async throws {
+        let (table, guest, _, log) = await seated()
+        await table.host.leave()
+        await eventually("the guest hears it") { log.events.contains(.left(seat: 0)) }
+        #expect(!log.events.contains(.seatLost(seat: 0)))
+        withExtendedLifetime(guest) {}
     }
 }

@@ -537,7 +537,7 @@ struct GameView: View {
     @ViewBuilder private var connectionNotice: some View {
         if session.offersComputer {
             VStack(spacing: 14) {
-                Text("\(session.opponentName)'s phone has gone")
+                Text(session.opponentLeft ? "\(session.opponentName) left the game" : "\(session.opponentName)'s phone has gone")
                     .font(Theme.title(26))
                     .accessibilityIdentifier("nearby-gone")
                 Text("You can finish this game against the computer, from where it stands.")
