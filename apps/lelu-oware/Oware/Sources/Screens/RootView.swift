@@ -66,7 +66,8 @@ struct RootView: View {
                 })
                 .transition(.opacity)
             case .nearby:
-                NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home })
+                NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home },
+                           tryDemo: { openNearby(demo: true) })
                     .transition(.opacity)
             case .heritage:
                 HeritageView(goBack: { screen = .home })
@@ -81,10 +82,7 @@ struct RootView: View {
         }
         .animation(.easeInOut(duration: 0.45), value: screen)
         .sheet(isPresented: $showSettings) {
-            SettingsView(tryNearby: {
-                showSettings = false
-                openNearby(demo: true)
-            })
+            SettingsView()
                 .presentationDetents([.large])
                 .presentationBackground(Theme.ember)
         }

@@ -12,8 +12,6 @@ struct SettingsView: View {
     @State private var channel: AppChannel = .appStore
     @Environment(\.openURL) private var openURL
     /// Settings ▸ Try nearby play: the demo player, for anyone curious before finding a friend.
-    var tryNearby: () -> Void = {}
-    @State private var nearbyName = NearbyLobby.savedName() ?? ""
 
     var body: some View {
         @Bindable var settings = settings
@@ -147,24 +145,6 @@ struct SettingsView: View {
             }
 
             Spacer()
-            if Feature.showsNearbyPlay {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Nearby name")
-                        .font(Theme.caption())
-                        .foregroundStyle(Theme.ivoryDim)
-                    TextField(NearbyLobby.myName(saved: nil, gameCenter: GameCenter.shared.playerName), text: $nearbyName)
-                        .textContentType(.givenName)
-                        .submitLabel(.done)
-                        .onSubmit { NearbyLobby.saveName(nearbyName) }
-                        .onChange(of: nearbyName) { _, name in NearbyLobby.saveName(name) }
-                        .accessibilityIdentifier("setting-nearby-name")
-                    Text("Shown only to players near you.")
-                        .font(Theme.caption())
-                        .foregroundStyle(Theme.ivoryDim)
-                }
-                QuietButton(title: "Try nearby play", subtitle: "a game against a pretend second phone") { tryNearby() }
-                    .accessibilityIdentifier("btn-try-nearby")
-            }
             QuietButton(title: "Leaderboards & achievements", subtitle: "Game Center") {
                 GameCenter.shared.showDashboard()
             }

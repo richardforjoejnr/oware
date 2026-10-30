@@ -4,8 +4,12 @@ import MatchKitNearby
 import OwareEngine
 
 /// Play nearby (NEARBY_PLAY_REDESIGN.md §2): one screen. Look for games lists the games nearby, or
-/// Start nearby game makes yours (and you move first); then Ready to play on both phones. The game itself is
-/// the usual game screen. Never "host", "join mode" or "client" in the player's words.
+/// Start nearby game makes yours (and you move first); then Ready to play on both phones. The game
+/// itself is the usual game screen. Never "host", "join mode" or "client" in the player's words.
+///
+/// Buttons follow Apple's guidance: every control has a shape, one filled (gold) button per screen
+/// for the main action, bordered wood ones for the rest, links with an icon; plain text never looks
+/// tappable.
 struct NearbyView: View {
     @Environment(NearbyLobby.self) private var lobby
     @Environment(AppSettings.self) private var settings
@@ -13,6 +17,8 @@ struct NearbyView: View {
     /// The demo player, Ama, instead of real phones.
     let demo: Bool
     let goBack: () -> Void
+    /// Try it with Ama, a pretend second phone.
+    var tryDemo: () -> Void = {}
 
     /// Nil until chosen here: the rules from Settings.
     @State private var variant: RuleSet.Variant?
@@ -38,12 +44,13 @@ struct NearbyView: View {
             .padding(.top, 8)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(title)
                             .font(Theme.title(34))
                             .foregroundStyle(Theme.ivory)
                             .accessibilityIdentifier("nearby-title")
+                            .accessibilityAddTraits(.isHeader)
                         if lobby.phase == .lobby {
                             Text("Two phones. One game. No internet needed. Stay close and keep Wi-Fi on.")
                                 .font(Theme.caption(15))
@@ -54,7 +61,7 @@ struct NearbyView: View {
                     if demo {
                         Text("Demo: \(DemoPlayer.name) plays on a pretend phone inside this one, the way a friend's phone would.")
                             .font(Theme.caption(14))
-                            .foregroundStyle(Theme.gold)
+                            .foregroundStyle(Theme.ivoryDim)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     if lobby.status == .localNetworkDenied {
@@ -62,7 +69,7 @@ struct NearbyView: View {
                     }
                     content
                 }
-                .padding(.horizontal, 28)
+                .padding(.horizontal, 24)
                 .padding(.vertical, 12)
                 .frame(maxWidth: 560, alignment: .leading)
                 .frame(maxWidth: .infinity)
@@ -92,17 +99,23 @@ struct NearbyView: View {
         case .lobby, .playing:
             startGame
             gamesNearby
-            helpLink("How nearby play works")
+            VStack(alignment: .leading, spacing: 0) {
+                helpLink("How nearby play works")
+                if !demo {
+                    link("Try it with a pretend player", icon: "person.crop.circle.badge.questionmark", action: tryDemo)
+                        .accessibilityIdentifier("btn-try-nearby")
+                }
+            }
         case .waiting:
             waiting
         case .ready:
             readyToPlay
         case let .refused(reason):
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 16) {
                 Text(reason)
-                    .foregroundStyle(Theme.gold)
                     .accessibilityIdentifier("nearby-refused")
-                QuietButton(title: "Back") { lobby.cancel() }
+                Button("Back") { lobby.cancel() }
+                    .buttonStyle(NearbyButtonStyle(.secondary))
                     .accessibilityIdentifier("btn-cancel")
             }
         }
@@ -112,49 +125,86 @@ struct NearbyView: View {
 
     private var startGame: some View {
         VStack(alignment: .leading, spacing: 14) {
+            sectionLabel("Start a game")
             row("Rules") {
-                Picker("Rules", selection: Binding(get: { rules.variant }, set: { variant = $0 })) {
-                    Text("Abapa").tag(RuleSet.Variant.abapa)
-                    Text("Nam-Nam").tag(RuleSet.Variant.namNam)
+                Menu {
+                    Picker("Rules", selection: Binding(get: { rules.variant }, set: { variant = $0 })) {
+                        Text("Abapa").tag(RuleSet.Variant.abapa)
+                        Text("Nam-Nam").tag(RuleSet.Variant.namNam)
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(NearbyLobby.rulesName(rules))
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 12, weight: .semibold))
+                    }
+                    .font(Theme.body(17))
+                    .foregroundStyle(Theme.ivory)
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 40)
+                    .background(Theme.wood, in: Capsule())
+                    .overlay(Capsule().stroke(Theme.gold.opacity(0.55)))
                 }
-                .pickerStyle(.menu)
+                .accessibilityLabel("Rules, \(NearbyLobby.rulesName(rules))")
                 .accessibilityIdentifier("nearby-rules")
             }
-            row("Nearby name") {
-                TextField(NearbyLobby.myName(saved: nil, gameCenter: GameCenter.shared.playerName), text: $name)
-                    .multilineTextAlignment(.trailing)
-                    .textContentType(.givenName)
-                    .submitLabel(.done)
-                    .onChange(of: name) { _, name in NearbyLobby.saveName(name) }
-                    .accessibilityIdentifier("nearby-name-field")
+            row("Your name") {
+                HStack(spacing: 8) {
+                    TextField(NearbyLobby.myName(saved: nil, gameCenter: GameCenter.shared.playerName), text: $name)
+                        .multilineTextAlignment(.trailing)
+                        .textContentType(.givenName)
+                        .submitLabel(.done)
+                        .onChange(of: name) { _, name in NearbyLobby.saveName(name) }
+                        .accessibilityIdentifier("nearby-name-field")
+                    Image(systemName: "pencil").foregroundStyle(Theme.ivoryDim).accessibilityHidden(true)
+                }
+                .font(Theme.body(17))
+                .padding(.horizontal, 12)
+                .frame(minHeight: 40)
+                .frame(maxWidth: 210)
+                .background(Theme.night.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.ivoryDim.opacity(0.35)))
             }
-            QuietButton(title: "Start nearby game", subtitle: "\(NearbyLobby.rulesName(rules)) rules · you start", prominent: true) {
+            Text("You move first. Your name is shown only to players near you.")
+                .font(Theme.caption(13))
+                .foregroundStyle(Theme.ivoryDim)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Start nearby game") {
                 lobby.start(name: NearbyLobby.myName, rules: rules, pace: settings.effectiveSpeed)
             }
+            .buttonStyle(NearbyButtonStyle(.primary))
             .accessibilityIdentifier("btn-start-nearby")
         }
         .padding(16)
-        .background(Theme.ember, in: RoundedRectangle(cornerRadius: 14))
+        .background(Theme.ember, in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var gamesNearby: some View {
         VStack(alignment: .leading, spacing: 12) {
-            label("Games nearby")
+            sectionLabel("Join a friend's game")
             if !lobby.isLooking {
-                QuietButton(title: "Look for games", subtitle: "on phones near you") { lobby.look() }
-                    .accessibilityIdentifier("btn-look-nearby")
-            } else if lobby.games.isEmpty {
-                HStack(alignment: .top, spacing: 12) {
-                    WaitingMark()
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Looking for games nearby…")
-                            .accessibilityIdentifier("nearby-looking")
-                        Text("Ask your friend to start a nearby game.")
-                            .font(Theme.caption(14))
-                            .foregroundStyle(Theme.ivoryDim)
-                    }
+                Button { lobby.look() } label: {
+                    Label("Look for games", systemImage: "magnifyingglass")
                 }
+                .buttonStyle(NearbyButtonStyle(.secondary))
+                .accessibilityIdentifier("btn-look-nearby")
             } else {
+                HStack(spacing: 12) {
+                    WaitingMark()
+                    Text(lobby.games.isEmpty ? "Looking for games nearby…" : "Games nearby")
+                        .font(Theme.body(17))
+                        .accessibilityIdentifier("nearby-looking")
+                    Spacer()
+                    Button("Stop") { lobby.stopLooking() }
+                        .buttonStyle(NearbyButtonStyle(.small))
+                        .accessibilityLabel("Stop looking")
+                        .accessibilityIdentifier("btn-stop-looking")
+                }
+                if lobby.games.isEmpty {
+                    Text("Ask your friend to tap Start nearby game on their phone.")
+                        .font(Theme.caption(14))
+                        .foregroundStyle(Theme.ivoryDim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 ForEach(lobby.games) { game in
                     gameCard(game)
                 }
@@ -162,16 +212,16 @@ struct NearbyView: View {
         }
     }
 
-    /// C. A game found nearby: "Ama's game", "Abapa · Ama starts", Join game.
+    /// C. A game found nearby: "Ama's game", "Abapa · Ama starts", and a Join button.
     private func gameCard(_ game: NearbyListing) -> some View {
         let note = [game.rules, game.creatorStarts.map { NearbyLobby.startNote(creatorStarts: $0, creatorName: game.creatorName) }]
             .compactMap { $0 }.joined(separator: " · ")
         return Button {
             lobby.join(game, name: NearbyLobby.myName, pace: settings.effectiveSpeed)
         } label: {
-            HStack {
+            HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(game.name).font(Theme.body(20))
+                    Text(game.name).font(Theme.body(20)).foregroundStyle(Theme.ivory)
                     if !note.isEmpty {
                         Text(note)
                             .font(Theme.caption(14))
@@ -179,19 +229,22 @@ struct NearbyView: View {
                     }
                 }
                 Spacer()
-                Text("Join game")
+                Text("Join")
                     .font(Theme.body(17))
-                    .foregroundStyle(Theme.gold)
+                    .foregroundStyle(Theme.night)
+                    .padding(.horizontal, 18)
+                    .frame(minHeight: 40)
+                    .background(Theme.gold, in: Capsule())
             }
-            .padding(16)
+            .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.wood, in: RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.gold.opacity(0.4)))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.gold.opacity(0.45)))
+            .contentShape(RoundedRectangle(cornerRadius: 14))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressedStyle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(game.name), \(note)")
-        .accessibilityHint("Join game")
+        .accessibilityLabel("Join \(game.name), \(note)")
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("nearby-game-\(game.name)")
     }
@@ -211,8 +264,9 @@ struct NearbyView: View {
                 detail("Your name", NearbyLobby.myName)
             }
             .padding(16)
-            .background(Theme.ember, in: RoundedRectangle(cornerRadius: 14))
-            QuietButton(title: "Cancel") { lobby.cancel() }
+            .background(Theme.ember, in: RoundedRectangle(cornerRadius: 16))
+            Button("Cancel", role: .cancel) { lobby.cancel() }
+                .buttonStyle(NearbyButtonStyle(.secondary))
                 .accessibilityIdentifier("btn-cancel")
             helpLink("Can't find each other?")
         }
@@ -228,14 +282,6 @@ struct NearbyView: View {
             if let opponent = lobby.opponent {
                 playerTile(name: opponent.name, side: mine == .south ? .north : .south,
                            status: status(of: opponent), ready: opponent.isReady, isMe: false)
-                if lobby.canSayNotNow {
-                    Button("Not now") { Task { await lobby.notNow() } }
-                        .font(Theme.body(17))
-                        .foregroundStyle(Theme.ivoryDim)
-                        .frame(minHeight: 44)
-                        .accessibilityIdentifier("btn-not-now")
-                        .accessibilityLabel("Not now, \(opponent.name)")
-                }
             }
             if !lobby.gameNote.isEmpty {
                 Text(lobby.gameNote)
@@ -249,18 +295,21 @@ struct NearbyView: View {
                     Text("Waiting for \(lobby.opponent?.name ?? NearbyLobby.otherPlayer)…")
                 }
             }
-            Button { Task { await lobby.ready() } } label: {
-                Text("Ready")
-                    .font(Theme.body(22))
-                    .foregroundStyle(Theme.night)
-                    .frame(maxWidth: .infinity, minHeight: 52)
-                    .background(Theme.gold.opacity(lobby.canPressReady ? 1 : 0.35), in: RoundedRectangle(cornerRadius: 14))
+            Button("Ready") { Task { await lobby.ready() } }
+                .buttonStyle(NearbyButtonStyle(.primary))
+                .disabled(!lobby.canPressReady)
+                .accessibilityIdentifier("btn-ready")
+            HStack(spacing: 12) {
+                if lobby.canSayNotNow, let opponent = lobby.opponent {
+                    Button("Not now") { Task { await lobby.notNow() } }
+                        .buttonStyle(NearbyButtonStyle(.secondary))
+                        .accessibilityIdentifier("btn-not-now")
+                        .accessibilityLabel("Not now, \(opponent.name)")
+                }
+                Button("Cancel", role: .cancel) { lobby.cancel() }
+                    .buttonStyle(NearbyButtonStyle(.secondary))
+                    .accessibilityIdentifier("btn-cancel")
             }
-            .buttonStyle(.plain)
-            .disabled(!lobby.canPressReady)
-            .accessibilityIdentifier("btn-ready")
-            QuietButton(title: "Cancel") { lobby.cancel() }
-                .accessibilityIdentifier("btn-cancel")
         }
         .animation(.easeInOut(duration: 0.25), value: lobby.opponent)
     }
@@ -272,6 +321,7 @@ struct NearbyView: View {
     }
 
     /// A player on the Ready screen, in their side's colour (gold South, red North on both phones).
+    /// Not a control: no border that could pass for a button.
     private func playerTile(name: String, side: Player, status: String, ready: Bool, isMe: Bool) -> some View {
         let colour = side == .south ? Theme.gold : Theme.kenteRed
         return HStack(spacing: 14) {
@@ -294,15 +344,22 @@ struct NearbyView: View {
         }
         .padding(14)
         .background(Theme.ember, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(colour.opacity(0.6)))
+        .overlay(alignment: .leading) {
+            UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14)
+                .fill(colour)
+                .frame(width: 5)
+                .accessibilityHidden(true)
+        }
     }
 
     // MARK: Pieces
 
-    private func label(_ text: String) -> some View {
-        Text(text)
-            .font(Theme.caption())
+    private func sectionLabel(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(Theme.caption(13))
+            .tracking(1.2)
             .foregroundStyle(Theme.ivoryDim)
+            .accessibilityAddTraits(.isHeader)
     }
 
     private func row(_ title: String, @ViewBuilder _ control: () -> some View) -> some View {
@@ -324,10 +381,19 @@ struct NearbyView: View {
     }
 
     private func helpLink(_ text: String) -> some View {
-        Button(text) { showHelp = true }
-            .font(Theme.caption(15))
-            .frame(minHeight: 44)
+        link(text, icon: "questionmark.circle") { showHelp = true }
             .accessibilityIdentifier("btn-nearby-help")
+    }
+
+    /// A minor action: gold, with an icon, so it reads as tappable without competing with buttons.
+    private func link(_ text: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(text, systemImage: icon)
+                .font(Theme.body(16))
+                .foregroundStyle(Theme.gold)
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(PressedStyle())
     }
 
     private func back() {
@@ -338,16 +404,15 @@ struct NearbyView: View {
     // MARK: Local Network
 
     private var localNetworkOff: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("Lelu Oware can't look for phones nearby: Local Network is off for it.")
-                .foregroundStyle(Theme.gold)
             Text("Turn it on in Settings ▸ Privacy & Security ▸ Local Network, then come back.")
                 .font(Theme.caption(14))
                 .foregroundStyle(Theme.ivoryDim)
             Button("Open Settings") {
                 if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
             }
-            .frame(minHeight: 44)
+            .buttonStyle(NearbyButtonStyle(.small))
             .accessibilityIdentifier("btn-open-settings")
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -355,6 +420,47 @@ struct NearbyView: View {
         .background(Theme.ember, in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("nearby-local-network-off")
+    }
+}
+
+/// Nearby play's buttons. Primary: filled gold, one per screen, the main action. Secondary: wood
+/// with a gold edge. Small: a compact secondary for a row (Stop). All at least 44 pt tall.
+struct NearbyButtonStyle: ButtonStyle {
+    enum Kind { case primary, secondary, small }
+    let kind: Kind
+    @Environment(\.isEnabled) private var isEnabled
+
+    init(_ kind: Kind) { self.kind = kind }
+
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: kind == .small ? 10 : 14)
+        return configuration.label
+            .font(Theme.body(kind == .small ? 16 : 20))
+            .foregroundStyle(kind == .primary ? Theme.night : Theme.ivory)
+            .padding(.horizontal, kind == .small ? 14 : 18)
+            .frame(maxWidth: kind == .small ? nil : .infinity, minHeight: kind == .small ? 44 : 52)
+            .background {
+                if kind == .primary {
+                    shape.fill(LinearGradient(colors: [Theme.goldLight, Theme.gold, Theme.amber], startPoint: .top, endPoint: .bottom))
+                } else {
+                    shape.fill(Theme.wood)
+                }
+            }
+            .overlay(shape.stroke(kind == .primary ? Theme.amber : Theme.gold.opacity(0.6), lineWidth: 1))
+            .shadow(color: .black.opacity(configuration.isPressed ? 0 : 0.35), radius: 3, y: 2)
+            .contentShape(shape)
+            .opacity(isEnabled ? 1 : 0.4)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// No chrome of its own, just a dip when pressed (cards and links that draw their own shape).
+private struct PressedStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .opacity(configuration.isPressed ? 0.7 : 1)
+            .scaleEffect(configuration.isPressed ? 0.98 : 1)
     }
 }
 
@@ -381,6 +487,7 @@ private struct NearbyHelp: View {
             VStack(alignment: .leading, spacing: 18) {
                 Text("How nearby play works")
                     .font(Theme.title(28))
+                    .accessibilityAddTraits(.isHeader)
                 ForEach(Array(Self.steps.enumerated()), id: \.offset) { index, step in
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
                         Text("\(index + 1)")
@@ -396,10 +503,13 @@ private struct NearbyHelp: View {
                         }
                     }
                 }
-                Button("Having trouble connecting?") { withAnimation { showTrouble.toggle() } }
-                    .font(Theme.body(17))
-                    .frame(minHeight: 44)
-                    .accessibilityIdentifier("btn-trouble-connecting")
+                Button { withAnimation { showTrouble.toggle() } } label: {
+                    Label("Having trouble connecting?", systemImage: showTrouble ? "chevron.down" : "chevron.right")
+                        .font(Theme.body(17))
+                        .foregroundStyle(Theme.gold)
+                        .frame(minHeight: 44)
+                }
+                .accessibilityIdentifier("btn-trouble-connecting")
                 if showTrouble {
                     ForEach(Self.trouble, id: \.self) { tip in
                         HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -423,7 +533,7 @@ private struct NearbyHelp: View {
     static let steps: [(title: String, detail: String)] = [
         ("Keep both phones close", "No internet is needed."),
         ("Start on one phone", "Tap Start nearby game."),
-        ("Join on the other", "Tap Look for games, then choose the game."),
+        ("Join on the other", "Tap Look for games, then Join."),
     ]
 
     static let trouble = [

@@ -122,6 +122,9 @@ final class NearbyLobby {
         network.browse(games: { [weak self] in self?.games = $0 }, status: { [weak self] in self?.status = $0 })
     }
 
+    /// Stop looking: back to the Look for games button.
+    func stopLooking() { reset() }
+
     /// Start nearby game: whoever starts it moves first (the owner's call, 2026-10-30). `pace`: this
     /// phone's sowing speed; both phones sow at the slower of the two.
     func start(name: String, rules: RuleSet, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
