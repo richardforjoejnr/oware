@@ -11,8 +11,14 @@ enum Links {
     /// The address on the support page (docs/lelu-oware/support.md).
     static let supportEmail = "trendnestorg34@gmail.com"
 
+    /// Feedback (Home, while tips are off): the App Store's write-a-review page, or an email when
+    /// the app's id is unknown.
+    @MainActor static func feedback(appStoreID: String? = Bundle.main.object(forInfoDictionaryKey: "AppStoreID") as? String) -> URL {
+        writeReview(appStoreID: appStoreID) ?? feedbackEmail()
+    }
+
     /// Feedback by email, with the version and phone already written in so a reply can help.
-    @MainActor static func feedback(version: String = AppVersion.version, build: String = AppVersion.build,
+    @MainActor static func feedbackEmail(version: String = AppVersion.version, build: String = AppVersion.build,
                          system: String = "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)",
                          device: String = UIDevice.current.model) -> URL {
         var parts = URLComponents()

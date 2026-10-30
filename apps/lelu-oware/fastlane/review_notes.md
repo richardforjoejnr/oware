@@ -6,7 +6,7 @@
 
 **Setup and main features.** No account, login or setup is needed. From the menu: play the computer, play a friend on one device, the Journey, riddles and the lesson. Settings has the rules, sound and haptics, the switch for anonymous usage statistics, and links to the privacy policy and support. Game Center is optional.
 
-**Paid content.** None. This version has no In-App Purchases: the whole game is free and nothing can be bought. (The optional tips are switched off until our Paid Apps Agreement is active; the home screen shows Feedback, an email to the developer, in their place.)
+**Paid content.** None. This version has no In-App Purchases: the whole game is free and nothing can be bought. (The optional tips are switched off until our Paid Apps Agreement is active; the home screen shows Feedback, a link to write a review on the App Store, in their place.)
 
 **External services.** Apple Game Center for leaderboards and achievements, if the player signs in to it; TelemetryDeck (EU) for anonymous usage statistics, only after the player agrees (off until then, and can be switched off in Settings). No accounts, advertising or tracking.
 

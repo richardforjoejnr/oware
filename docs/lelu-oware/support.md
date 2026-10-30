@@ -20,7 +20,7 @@ and what happened. Screenshots help.
   in the game's Settings.
 - **How do I capture?** Your last seed must land on the other player's row and leave that house with
   two or three seeds. The full rules are in the app under More ▸ Rules & heritage.
-- **Feedback.** Tap Feedback on the home screen to email the maker. Every chapter and board look is free.
+- **Feedback.** Tap Feedback on the home screen to rate the game on the App Store. For help, email the address above. Every chapter and board look is free.
 
 ## Privacy
 

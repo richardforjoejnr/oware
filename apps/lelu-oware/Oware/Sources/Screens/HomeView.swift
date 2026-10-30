@@ -152,12 +152,12 @@ struct HomeView: View {
             .accessibilityLabel(tipJar.hasTipped ? "Support me. Medaase, thank you" : "Support me. A tip for the maker; it unlocks nothing")
     }
 
-    /// While tips are off (`LaunchOptions.showsTips`): an email to the maker, in Support me's place.
+    /// While tips are off (`LaunchOptions.showsTips`): a review on the App Store, in Support me's place.
     private var feedbackPlank: some View {
-        WoodPlank(title: "Feedback", subtitle: "tell the maker what you think",
+        WoodPlank(title: "Feedback", subtitle: "rate it on the App Store",
                   glyph: "info", height: 56) { openURL(Links.feedback()) }
             .accessibilityIdentifier("btn-feedback")
-            .accessibilityLabel("Feedback. Email the maker")
+            .accessibilityLabel("Feedback. Rate it on the App Store")
     }
 
     private var titleBlock: some View {
