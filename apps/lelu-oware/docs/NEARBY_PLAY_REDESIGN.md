@@ -9,6 +9,29 @@ back up.
 - Assets cut from the kit: `art/nearby/pieces/` (`art/nearby/make_nearby.py`; `--install` puts
   them in the asset catalogue once a screen uses them).
 
+## 0. Owner's decisions (2026-10-30)
+
+These settle the questions the brief and the mockups left open. Where they differ from the brief
+below, these win.
+
+1. **Colour stays with the side.** South gold, North red, the same on both phones, as now. Players
+   can say "red's turn" across the table. (The brief's "gold for the player, red for the
+   opponent" is not followed.)
+2. **Once the computer takes over, the game stays against the computer.** Continue vs Computer is
+   final: the room closes and the other phone cannot rejoin that game. Rejoin (screen F) is only
+   for a phone that comes back while the game is still waiting for it.
+3. **The creator can turn someone away.** The Ready screen keeps a quiet **Not now** under the
+   joining player's tile.
+4. **Default name: the Game Center name first**, then *Oware Player*. When both players still have
+   the same default, add the side colour (*Oware Player · red*).
+5. **Wait 30 s for a lost phone** reconnecting automatically, then offer Continue vs Computer;
+   Keep waiting stays available after that.
+6. **Carved icons for everything the kit lacks:** person, pin (nearby name), computer, leave and
+   no-Wi-Fi (connection lost), in the kit's style. To be made by the owner; until then, SF Symbols
+   in the wood colours as placeholders.
+7. **No saving and no Game Center:** a nearby game does not survive both apps being closed, and
+   nearby wins earn no achievements or scores (already so: `PlayerEvents.gameFinished`).
+
 ## 1. The owner's first notes (and what was decided)
 
 | Note | Decision (brief §3–§7) |
@@ -50,9 +73,11 @@ pressed Ready.
 *Connection lost* / *Trying to reconnect to Richard…* (reconnecting indicator), **Keep waiting**,
 **Continue vs Computer**, **Leave game**. Automatic reconnect for about 30–60 s. On reconnect:
 compare game ID, move number and state hash, send the latest state if needed, resume exactly.
+The automatic window is 30 s (decision 5).
 
 **F. Rejoin** (no mockup; `nearby-card-rejoin` in the kit). *Richard is back* / *Round 3 · 7–5
-houses* / **Rejoin game**: restores the human-v-human game.
+houses* / **Rejoin game**: restores the human-v-human game. Only while the game is still waiting
+for that phone; after Continue vs Computer there is nothing to rejoin (decision 2).
 
 **Deliberate leave.** The other phone shows *Richard left the game* with **Continue vs Computer**
 and **Leave game**. Never "reconnecting" for someone who left.
@@ -74,12 +99,11 @@ starts*, *Random start* (until settled).
 ### Names
 1. The Nearby name saved in Lelu Oware (Settings: **Nearby name**, *Shown only to players near
    you.*, default **Oware Player**).
-2. A suitable discoverable name if one exists. Suggestion: the Game Center alias, which the app
-   already signs in for.
+2. The Game Center name, when signed in (decision 4).
 3. **Nearby Player**.
 
 Never "Me" or "You" as a stored name ("Me's phone has gone"). Two players with the default name
-need telling apart: suggest the side colour (*Oware Player · red*).
+need telling apart: add the side colour (*Oware Player · red*).
 
 ### What the creator's phone decides
 Rules, starting player, initial board, round, territory, any random seed, and the game ID. The
@@ -118,12 +142,12 @@ together.
 | One screen, auto-discovery, Start nearby game | Host / Join buttons; Join starts browsing (`NearbyView`, `NearbyLobby.browse`) | Lobby browses on appear; `host(…)` becomes Start. `LiveNearbyNetwork` can browse and advertise at once; stop browsing once your game is listed. |
 | Rules on the Start screen | From Settings (`settings.rules`); listing shows them (`info["rules"]`) | Rules picker on the lobby; keep the TXT record. Guest already plays `OwareMatch.rules`. |
 | Me / Other player / Random | `NearbyLobby.Starter` .me/.them/.random titled You/Them/Either; random settled on the host | Rename to `creatorStarts / joiningPlayerStarts / random` and the copy; put the starter in the TXT record so the card can say *Richard starts* / *You start*. |
-| Ready handshake | Host taps **Play** on "Ama wants to play"; the game starts at once on both phones | Add `ready: Set<Player>` (and the guest's acknowledged state hash) to `OwareTable`; `OwareRoomRules.applying` refuses `.play` until both are ready and the hashes match. Screen D replaces the Play / Not now card (the creator keeps a way to say no). |
+| Ready handshake | Host taps **Play** on "Ama wants to play"; the game starts at once on both phones | Add `ready: Set<Player>` (and the guest's acknowledged state hash) to `OwareTable`; `OwareRoomRules.applying` refuses `.play` until both are ready and the hashes match. Screen D replaces the Play / Not now card, keeping **Not now** for the creator (decision 3). |
 | State hash, move number | `OwareMatch` is the move list; every phone replays it with the engine (deterministic, tested; whole game under 64 KB) | Keep the move list as the truth (don't switch to sending board snapshots). Add `stateHash` (of the replayed `GameState`) to what is checked on ready and on reconnect. |
-| Nearby name, default Oware Player | Asked once in a prompt; kept as `nearbyName`; editable in Settings | Drop the prompt; default *Oware Player*; Settings label *Nearby name* + *Shown only to players near you.*; Game Center alias as a suggestion. |
-| Connection lost sheet | "Reconnecting to Ama…" banner after 6 s quiet; after 60 s an overlay with Finish against the computer / Leave | Sheet at once (board dimmed, input frozen) with Keep waiting / Continue vs Computer / Leave. |
+| Nearby name, default Oware Player | Asked once in a prompt; kept as `nearbyName`; editable in Settings | Drop the prompt; saved name, else the Game Center name (`GKLocalPlayer.local.displayName` when signed in), else *Oware Player*; add the side colour when both names match; Settings label *Nearby name* + *Shown only to players near you.* (decision 4). |
+| Connection lost sheet | "Reconnecting to Ama…" banner after 6 s quiet; after 60 s an overlay with Finish against the computer / Leave | Sheet at once (board dimmed, input frozen) with Keep waiting / Continue vs Computer / Leave; reconnect automatically for 30 s (`Room.lostAfter` is 60 s today; decision 5). |
 | Automatic reconnect | Only works while the TCP connection survives (quiet spells). `Room.reconnect(over:)` and the rejoin token exist in MatchKit but the app never makes a new connection | The guest keeps browsing for the same game (match ID in the TXT record) and calls `reconnect(over:)`; the creator keeps advertising while a seat is reconnecting. The host already resends the match to a seat that comes back (#103). |
-| Rejoin card / restore HvH after Continue vs Computer | `finishAgainstComputer` stops the room for good | Keep the room listening after switching to the computer; if the other phone returns, offer *Richard is back · Rejoin game* and hand the side back (computer's moves stay played). |
+| Rejoin card | `finishAgainstComputer` stops the room for good | Right as it is (decision 2). The Rejoin card is for a phone that returns while the sheet is still up. |
 | Deliberate leave | `bye` → `seatLost`, same as timing out ("Ama's phone has gone") | New `RoomEvent.left(seat:)` for `bye`, separate from `seatLost`; copy *Richard left the game*. |
 | Help | Five-bullet "Finding each other" sheet | Three steps + *Having trouble connecting?* |
 | Local Network text | *Lelu Oware looks for phones near you so two people can play one game, each on their own phone. Nothing leaves the room.* | Use the brief's text. |
@@ -147,8 +171,8 @@ together.
 | `nearby-band` | Divider | Red, gold and green inlays. |
 
 The mockups show more carved icons (rules book, person, pin, computer, leave, no-Wi-Fi) that are
-not in the kit; `wood-book` exists already, the others are still to make or to draw with SF
-Symbols in the wood colours.
+not in the kit; `wood-book` exists already. The owner will make carved ones for the rest
+(decision 6); use SF Symbols in the wood colours until they arrive.
 
 ### Things to settle in the mockups
 - `d-ready-both.jpg` shows the rules row twice.
@@ -156,11 +180,9 @@ Symbols in the wood colours.
   creator chooses.
 - `e-connection-lost.jpg` shows a player called "You" with an "M" badge, the naming bug the brief
   warns about.
-- Colours: the brief says gold for the player and red for the opponent. Today colour follows the
-  side (South gold, North red), so the joiner is red on their own phone. Per-phone colour reads
-  better ("I'm always gold"); per-side colour lets players say "red's turn" across the table.
-  Pick one. The mockups draw the joiner's own row on the left; since #103 your own row sits on
-  the right, nearest your hand.
+- Colours: decided, they stay with the side (decision 1), so the joiner is red on both phones. The
+  mockups draw the joiner's own row on the left; since #103 your own row sits on the right,
+  nearest your hand.
 
 ## 5. Testing notes carried from step 5
 
@@ -185,8 +207,8 @@ Symbols in the wood colours.
    `creatorStarts / joiningPlayerStarts / random`, game ID and starter in the TXT record.
 2. **Lobby:** one screen with discovery, Start nearby game (rules, who starts, name), Your game is
    ready, game cards, Ready to play; default names; new help sheet and Local Network text.
-3. **Connections:** Connection lost sheet, reconnect over a new connection, Rejoin card,
-   deliberate leave, rejoin after Continue vs Computer.
+3. **Connections:** Connection lost sheet, reconnect over a new connection (30 s), Rejoin card,
+   deliberate leave.
 4. **Look:** install the kit pieces, the components (NearbyPlayIcon, NearbyGameCard,
    PlayerConnectionTile, RuleChip, StartChip, ReadySeal, SearchingIndicator,
    ReconnectingIndicator, ConnectionLostSheet, RejoinCard), the in-game header.

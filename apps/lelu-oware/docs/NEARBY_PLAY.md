@@ -200,8 +200,9 @@ Real-phone checklist before TestFlight:
 
 ## Still to decide (later, not blocking)
 
-- **Saved games:** should a nearby game be resumable after both apps are closed? v1 says no. The
-  `matchID` makes it possible later.
+- **Saved games:** decided 2026-10-30: no. A nearby game does not survive both apps being closed.
+  (The `matchID` would make it possible later.)
 - **Join code:** should joining need a 4-digit code shown on the host? Accepting each player is
   enough between friends. A code could also key encryption (TLS with a pre-shared key) if wanted.
-- **Game Center:** should nearby wins count towards achievements?
+- **Game Center:** decided 2026-10-30: no. Nearby wins earn no achievements or scores (easy to
+  farm against a second phone of your own).
