@@ -45,6 +45,10 @@ final class FeedbackLinkTests: XCTestCase {
         XCTAssertEqual(Links.feedback(appStoreID: "$(APP_STORE_ID)").scheme, "mailto")
     }
 
+    func testGameCenterIsOffUntilItsLeaderboardsAreSetUp() {
+        XCTAssertFalse(FeatureFlags.gameCenter, "no sign-in sheet or empty dashboard until App Store Connect has them")
+    }
+
     func testTipsAreOffInTheShippedApp() {
         XCTAssertFalse(FeatureFlags.tips, "no In-App Purchase until the Paid Apps Agreement is active")
     }

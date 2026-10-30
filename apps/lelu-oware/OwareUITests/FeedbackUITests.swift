@@ -1,7 +1,8 @@
 import XCTest
 
 /// While tips are off (no Paid Apps Agreement yet), the home screen offers Feedback instead of
-/// Support me, and Settings has no tip jar: nothing in the app can be bought.
+/// Support me, and Settings has no tip jar: nothing in the app can be bought. Game Center is off
+/// too until its leaderboards and achievements exist in App Store Connect.
 final class FeedbackUITests: XCTestCase {
     private var app: XCUIApplication!
 
@@ -20,7 +21,7 @@ final class FeedbackUITests: XCTestCase {
     }
 
     @MainActor
-    func testSettingsHasNoTipJar() throws {
+    func testSettingsHasNoTipJarOrGameCenter() throws {
         let more = app.buttons["btn-more"]
         let settings = app.buttons["btn-settings"]
         XCTAssertTrue(more.waitForExistence(timeout: 10))
@@ -30,9 +31,10 @@ final class FeedbackUITests: XCTestCase {
             if settings.waitForExistence(timeout: 6) { break }
         }
         settings.tap()
-        XCTAssertTrue(app.buttons["btn-game-center"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.switches["setting-usage-stats"].waitForExistence(timeout: 10))
         for _ in 0..<4 { app.swipeUp() }
         XCTAssertTrue(app.links["link-support"].exists || app.buttons["link-support"].exists, "scrolled to the end of Settings")
         XCTAssertFalse(app.buttons["btn-tip-jar"].exists, "no tip jar in Settings")
+        XCTAssertFalse(app.buttons["btn-game-center"].exists, "Game Center is off until its leaderboards are set up")
     }
 }
