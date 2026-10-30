@@ -18,3 +18,23 @@ final class LinksTests: XCTestCase {
         XCTAssertNil(Links.writeReview(appStoreID: "$(APP_STORE_ID)"))
     }
 }
+
+/// Feedback replaces Support me on the home screen while tips are off (the Paid Apps Agreement is
+/// not active yet): an email to the support address, with what helps answer it already filled in.
+final class FeedbackLinkTests: XCTestCase {
+    func testFeedbackIsAnEmailToTheSupportAddress() throws {
+        let url = Links.feedback(version: "1.0.1", build: "202610301200", system: "iOS 27.1", device: "iPhone")
+        XCTAssertEqual(url.scheme, "mailto")
+        let parts = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+        XCTAssertEqual(parts.path, "trendnestorg34@gmail.com")
+        let query = Dictionary(uniqueKeysWithValues: (parts.queryItems ?? []).map { ($0.name, $0.value ?? "") })
+        XCTAssertEqual(query["subject"], "Lelu Oware feedback")
+        XCTAssertTrue(query["body"]?.contains("1.0.1 (202610301200)") == true, "the version, to tell builds apart")
+        XCTAssertTrue(query["body"]?.contains("iOS 27.1") == true)
+        XCTAssertTrue(query["body"]?.contains("iPhone") == true)
+    }
+
+    func testTipsAreOffInTheShippedApp() {
+        XCTAssertFalse(FeatureFlags.tipsShipped, "no In-App Purchase until the Paid Apps Agreement is active")
+    }
+}

@@ -26,7 +26,7 @@ final class AccessibilityAuditUITests: XCTestCase {
     }
 
     @MainActor func testSettingsAndTipJar() throws {
-        let app = launch([])
+        let app = launch(["--tips"])
         let more = app.buttons["btn-more"]
         XCTAssertTrue(more.waitForExistence(timeout: 10))
         if !more.isHittable { app.swipeUp() }

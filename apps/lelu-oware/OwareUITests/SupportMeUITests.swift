@@ -2,6 +2,8 @@ import XCTest
 
 /// "Support me" (the tip jar) from the home screen. App Review (30 Oct 2026) found tips that never
 /// loaded; the jar must show the tips, or a plain message with Try again, never an empty sheet.
+/// Tips are off in the shipped app until the Paid Apps Agreement is active (FeedbackUITests);
+/// these tests turn them on with `--tips`.
 final class SupportMeUITests: XCTestCase {
     private var app: XCUIApplication!
 
@@ -11,7 +13,7 @@ final class SupportMeUITests: XCTestCase {
     }
 
     private func launch(_ extra: [String] = []) {
-        app.launchArguments = ["--reset-state", "--fast-animations"] + extra
+        app.launchArguments = ["--reset-state", "--fast-animations", "--tips"] + extra
         app.launch()
         XCTAssertTrue(app.staticTexts["home-title"].waitForExistence(timeout: 10))
     }
