@@ -7,6 +7,10 @@ The design shared with Lelu Ludo is in [MULTIPLAYER.md](../../../docs/MULTIPLAYE
 MatchKit, feature switches, Apple requirements and the test pyramid. This file covers what is
 specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–5 built (2026-10-28/29); step 0 (two real phones) still to do.
 
+**2026-10-30: the owner's review redesigns the screens.** Read [NEARBY_PLAY_REDESIGN.md](NEARBY_PLAY_REDESIGN.md)
+first: one screen with no Host / Join, a Ready handshake, default names, reconnect and rejoin, and
+the carved-wood kit in `art/nearby/`.
+
 ## What the player sees
 
 1. **Home ▸ Play nearby**, a new tile, shown when `FeatureGate.isShown(Feature.nearbyPlay)`.
