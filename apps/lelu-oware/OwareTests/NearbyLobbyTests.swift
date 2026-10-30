@@ -27,11 +27,16 @@ final class NearbyLobbyTests: XCTestCase {
         return (lobby, session)
     }
 
-    /// One screen: games nearby are listed by themselves, with no Join to tap first.
-    func testOpeningListsGamesNearbyByItself() async {
+    /// Opening Play nearby does not look by itself: Look for games does, and lists them.
+    func testLookingForGamesIsATap() async {
         let (lobby, _) = lobby()
         lobby.open()
         XCTAssertEqual(lobby.phase, .lobby)
+        XCTAssertFalse(lobby.isLooking)
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertTrue(lobby.games.isEmpty, "nothing until asked")
+        lobby.look()
+        XCTAssertTrue(lobby.isLooking)
         await until("Ama's game is listed") { lobby.games.map(\.name) == ["Ama's game"] }
         XCTAssertEqual(lobby.games.first?.rules, "Abapa")
         XCTAssertEqual(lobby.games.first?.creatorName, "Ama")
@@ -45,7 +50,7 @@ final class NearbyLobbyTests: XCTestCase {
         let (lobby, session) = lobby()
         var started = false
         lobby.onStart = { started = true }
-        lobby.start(name: "Kofi", rules: .namNam, starter: .creatorStarts)
+        lobby.start(name: "Kofi", rules: .namNam)
         XCTAssertEqual(lobby.phase, .waiting)
         await until("Ama comes") { lobby.phase == .ready }
         XCTAssertEqual(lobby.opponent?.name, "Ama")
@@ -60,25 +65,14 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertEqual(session.remoteGame?.mySide, .south)
         XCTAssertEqual(session.state.rules, .namNam, "the creator's rules")
         XCTAssertTrue(session.isStarted)
-        XCTAssertTrue(session.humanToMove)
+        XCTAssertTrue(session.humanToMove, "whoever starts the game moves first")
         XCTAssertEqual(events.first, .nearbyHosted(demo: true))
-    }
-
-    func testTheCreatorCanLetThemStart() async {
-        let (lobby, session) = lobby()
-        lobby.onStart = {}
-        lobby.start(name: "Kofi", rules: .abapa, starter: .joiningPlayerStarts)
-        await until("Ama comes") { lobby.phase == .ready }
-        await lobby.ready()
-        await until("the game starts") { lobby.phase == .playing }
-        await until("Ama moves first") { session.state.moveNumber == 1 }
-        XCTAssertTrue(session.humanToMove)
     }
 
     /// Not now sends Ama away; the game stays listed for someone else.
     func testNotNowKeepsTheGameWaiting() async {
         let (lobby, _) = lobby()
-        lobby.start(name: "Kofi", rules: .abapa, starter: .creatorStarts)
+        lobby.start(name: "Kofi", rules: .abapa)
         await until("Ama comes") { lobby.phase == .ready }
         await lobby.notNow()
         XCTAssertEqual(lobby.phase, .waiting, "still waiting for someone else")
@@ -92,6 +86,7 @@ final class NearbyLobbyTests: XCTestCase {
         var started = false
         lobby.onStart = { started = true }
         lobby.open()
+        lobby.look()
         await until("Ama's game is listed") { !lobby.games.isEmpty }
         lobby.join(lobby.games[0], name: "Esi")
         XCTAssertEqual(lobby.phase, .ready)
@@ -113,7 +108,7 @@ final class NearbyLobbyTests: XCTestCase {
     func testAmaResignsWhenScriptedAndAgreesToARematch() async {
         let (lobby, session) = lobby(.init(resignAfter: 0, thinkTime: 0.01, joinDelay: 0.01))
         lobby.onStart = {}
-        lobby.start(name: "Kofi", rules: .abapa, starter: .creatorStarts)
+        lobby.start(name: "Kofi", rules: .abapa)
         await until("Ama comes") { lobby.phase == .ready }
         await lobby.ready()
         await until("the game starts") { lobby.phase == .playing }
@@ -129,14 +124,14 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertEqual(events.last, .nearbyFinished(result: "win", rules: "abapa"))
     }
 
-    /// Cancel takes the game down and goes back to the games nearby.
-    func testCancellingTakesTheGameDownAndLooksAgain() async {
+    /// Cancel takes the game down and goes back to Play nearby, not looking until asked.
+    func testCancellingTakesTheGameDown() {
         let (lobby, session) = lobby()
-        lobby.start(name: "Kofi", rules: .abapa, starter: .creatorStarts)
+        lobby.start(name: "Kofi", rules: .abapa)
         lobby.cancel()
         XCTAssertEqual(lobby.phase, .lobby)
         XCTAssertNil(session.remoteGame)
-        await until("looking again") { !lobby.games.isEmpty }
+        XCTAssertFalse(lobby.isLooking)
     }
 
     /// What nearby players see: the saved name, else the Game Center name, else Oware Player;
@@ -164,13 +159,8 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertEqual(NearbyLobby.savedName(defaults), "Kofi")
     }
 
-    /// The choice is stored by what it means, not by "you" or "them", which swap between phones;
-    /// random is settled before the game is listed, so both phones agree.
-    func testWhoStartsIsStoredByMeaningAndShownPerPhone() {
-        XCTAssertEqual(NearbyLobby.Starter.allCases.map(\.title), ["Me", "Other player", "Random"])
-        XCTAssertEqual(NearbyLobby.Starter.creatorStarts.firstPlayer, .south)
-        XCTAssertEqual(NearbyLobby.Starter.joiningPlayerStarts.firstPlayer, .north)
-        XCTAssertTrue([.south, .north].contains(NearbyLobby.Starter.random.firstPlayer))
+    /// Whoever starts the game moves first; the card says so on the other phone.
+    func testTheCardSaysWhoStarts() {
         XCTAssertEqual(NearbyLobby.startNote(creatorStarts: true, creatorName: "Richard"), "Richard starts")
         XCTAssertEqual(NearbyLobby.startNote(creatorStarts: false, creatorName: "Richard"), "You start")
     }

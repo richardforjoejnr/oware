@@ -91,14 +91,17 @@ final class NearbyUITests: XCTestCase {
         if turn.label != "Your turn" { wait(for: turn, label: "Your turn") }
     }
 
-    /// One screen: no Host or Join. Ama's game turns up by itself; join it, press Ready.
+    /// One screen: no Host or Join. Look for games finds Ama's; join it, press Ready.
     @MainActor
     func testTheGuestsBoardIsTurnedRound() throws {
         openNearby()
         XCTAssertFalse(app.buttons["btn-host"].exists)
         XCTAssertFalse(app.buttons["btn-join"].exists)
+        XCTAssertFalse(app.buttons["nearby-starter"].exists, "whoever starts the game moves first")
         let game = app.buttons["nearby-game-Ama's game"]
-        XCTAssertTrue(game.waitForExistence(timeout: 10), "the demo's game is listed by itself")
+        XCTAssertFalse(game.exists, "nothing is looked for until asked")
+        app.buttons["btn-look-nearby"].tap()
+        XCTAssertTrue(game.waitForExistence(timeout: 10), "the demo's game is listed")
         game.tap()
         let ready = app.buttons["btn-ready"]
         XCTAssertTrue(ready.waitForExistence(timeout: 5))
