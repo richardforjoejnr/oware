@@ -34,6 +34,8 @@ protocol GameServices: AnyObject {
 final class GameCenter: GameServices {
     static let shared = GameCenter()
     private(set) var isAuthenticated = false
+    /// The signed-in player's name, the fallback for the Nearby name.
+    var playerName: String? { isAuthenticated ? GKLocalPlayer.local.displayName : nil }
 
     func authenticate() {
         GKLocalPlayer.local.authenticateHandler = Self.authenticationHandler()

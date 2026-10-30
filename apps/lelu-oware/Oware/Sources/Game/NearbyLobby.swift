@@ -4,9 +4,11 @@ import MatchKitNearby
 import Observation
 import OwareEngine
 
-/// A game found nearby, as the Join list shows it: "Kofi's game · Abapa · Kofi starts".
+/// A game found nearby, as its card shows it: "Kofi's game · Abapa · Kofi starts".
 struct NearbyListing: Identifiable, Hashable {
     let name: String
+    /// Who made it (an older app lists only "Kofi's game").
+    let creatorName: String
     let rules: String?
     /// Whether the player who made the game starts (nil from an older app).
     var creatorStarts: Bool?
@@ -20,6 +22,7 @@ struct NearbyListing: Identifiable, Hashable {
     /// What a game's Bonjour TXT record carries (`NearbyLobby.host`).
     fileprivate init(name: String, info: [String: String], game: NearbyGame?) {
         self.name = name
+        creatorName = info["name"] ?? (name.hasSuffix("'s game") ? String(name.dropLast(7)) : "Nearby Player")
         rules = info["rules"]
         creatorStarts = info["starter"].map { $0 == "creator" }
         gameID = info["game"]
@@ -31,7 +34,8 @@ struct NearbyListing: Identifiable, Hashable {
 @MainActor
 protocol NearbyNetwork: AnyObject {
     var isDemo: Bool { get }
-    /// Lists a game under `gameName` and returns the transport its guests arrive on.
+    /// Lists a game under `gameName` and returns the transport its guests arrive on. Stops looking
+    /// for other games first.
     func host(gameName: String, info: [String: String], status: @escaping @MainActor (NearbyStatus) -> Void) throws -> any MatchTransport
     func browse(games: @escaping @MainActor ([NearbyListing]) -> Void, status: @escaping @MainActor (NearbyStatus) -> Void)
     func connect(to listing: NearbyListing) -> any MatchTransport
@@ -41,21 +45,30 @@ protocol NearbyNetwork: AnyObject {
     func shutDown()
 }
 
-/// Host / Join (docs/NEARBY_PLAY.md): finds the other phone and, once a seat is taken, hands the
-/// room to the `GameSession`. Lives as long as the app, so a game's demo player outlives the
-/// Nearby screen.
+/// Play nearby (NEARBY_PLAY_REDESIGN.md §2): one screen that lists the games nearby by itself, or
+/// starts yours; then Ready to play on both phones, and the room goes to the `GameSession`. Lives
+/// as long as the app, so a game's demo player outlives the Nearby screen.
 @MainActor
 @Observable
 final class NearbyLobby {
     enum Phase: Equatable {
-        case choosing
-        case hosting
-        case browsing
-        /// Guest: waiting for the host to say yes to the named game.
-        case asking(String)
-        /// Guest: the host said no, or cannot play this version.
+        /// Games nearby, and Start nearby game.
+        case lobby
+        /// Your game is listed: looking for another player.
+        case waiting
+        /// Ready to play: both players on the screen; the game starts when both press Ready.
+        case ready
+        /// The game went away, or the creator said not now, or the versions differ.
         case refused(String)
         case playing
+    }
+
+    /// The other player on the Ready screen.
+    struct Opponent: Equatable {
+        var name: String
+        /// Seated in the game (the creator sees someone asking as here already).
+        var isConnected: Bool
+        var isReady: Bool
     }
 
     /// Who starts, by what it means rather than "you" or "them", which swap between the phones.
@@ -86,18 +99,29 @@ final class NearbyLobby {
         creatorStarts ? "\(creatorName) starts" : "You start"
     }
 
-    private(set) var phase: Phase = .choosing
+    private(set) var phase: Phase = .lobby
     private(set) var games: [NearbyListing] = []
     private(set) var status: NearbyStatus = .working
     private(set) var link: MatchLink?
     private(set) var network: any NearbyNetwork
-    /// Called once a seat is taken and the game is on the session.
+    /// Ready to play: the other player, and what this game is ("Abapa · You start").
+    private(set) var opponent: Opponent?
+    private(set) var gameNote = ""
+    private(set) var iAmReady = false
+    /// The creator's own choice of who starts, as Your game is ready shows it ("Random" stays).
+    private(set) var startedWith: Starter = .creatorStarts
+    /// Called once both are ready and the game is on the session.
     @ObservationIgnored var onStart: (() -> Void)?
     let session: GameSession
+    /// The one asking to play, while the creator decides.
+    private var asking: MatchLink.JoinRequest?
 
     var isDemo: Bool { network.isDemo }
-    /// Host: people asking to play.
-    var joinRequests: [MatchLink.JoinRequest] { phase == .hosting ? link?.joinRequests ?? [] : [] }
+    var isCreator: Bool { link?.isHost ?? false }
+    /// Only the creator turns someone away, and only before saying Ready.
+    var canSayNotNow: Bool { isCreator && asking != nil && !iAmReady }
+    /// The guest has the game once seated; the creator any time someone is there.
+    var canPressReady: Bool { phase == .ready && !iAmReady && (isCreator ? asking != nil : link?.table != nil) }
 
     init(session: GameSession, network: any NearbyNetwork) {
         self.session = session
@@ -108,10 +132,17 @@ final class NearbyLobby {
     func prepare(demo: Bool) {
         reset()
         if demo != network.isDemo { network = demo ? DemoNetwork() : LiveNearbyNetwork() }
+        open()
     }
 
-    /// `pace`: this phone's sowing speed; both phones sow at the slower of the two.
-    func host(name: String, rules: RuleSet, starter: Starter, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
+    /// Back to the games nearby, looking for them.
+    func open() {
+        reset()
+        network.browse(games: { [weak self] in self?.games = $0 }, status: { [weak self] in self?.status = $0 })
+    }
+
+    /// Start nearby game. `pace`: this phone's sowing speed; both phones sow at the slower of the two.
+    func start(name: String, rules: RuleSet, starter: Starter, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
         reset()
         let match = OwareMatch(rules: rules, starter: starter.firstPlayer)
         let info = ["rules": Self.rulesName(rules), "starter": match.starter == .south ? "creator" : "joiner",
@@ -121,17 +152,13 @@ final class NearbyLobby {
             let link = MatchLink(hosting: match, name: name, pace: pace, transport: transport)
             link.onEvent = { [weak self] in self?.handle($0) }
             self.link = link
-            phase = .hosting
+            startedWith = starter
+            gameNote = "\(Self.rulesName(rules)) · \(match.starter == .south ? "You start" : "\(Self.otherPlayer) starts")"
+            phase = .waiting
             session.events.nearbyHosted(demo: isDemo)
         } catch {
             status = .failed
         }
-    }
-
-    func browse() {
-        reset()
-        phase = .browsing
-        network.browse(games: { [weak self] in self?.games = $0 }, status: { [weak self] in self?.status = $0 })
     }
 
     func join(_ listing: NearbyListing, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
@@ -139,41 +166,99 @@ final class NearbyLobby {
         link.onEvent = { [weak self] in self?.handle($0) }
         self.link?.room.stop()
         self.link = link
-        phase = .asking(listing.name)
+        opponent = Opponent(name: listing.creatorName, isConnected: false, isReady: false)
+        gameNote = [listing.rules, listing.creatorStarts.map { Self.startNote(creatorStarts: $0, creatorName: listing.creatorName) }]
+            .compactMap { $0 }.joined(separator: " · ")
+        iAmReady = false
+        phase = .ready
     }
 
-    func accept(_ request: MatchLink.JoinRequest) async { await link?.accept(request.peer) }
-    func decline(_ request: MatchLink.JoinRequest) async { await link?.decline(request.peer) }
+    /// The Ready button. The creator seats the one asking, then both say ready; the game starts
+    /// when the creator's phone has both.
+    func ready() async {
+        guard let link, canPressReady else { return }
+        iAmReady = true
+        if let asking {
+            self.asking = nil
+            await link.accept(asking.peer)
+        }
+        await link.ready()
+        refresh()
+    }
 
-    /// Back to Host / Join: stop listing or looking, and drop any room not yet playing.
-    func cancel() { reset() }
+    /// The creator: not this player. The game stays listed for someone else.
+    func notNow() async {
+        guard canSayNotNow, let asking, let link else { return }
+        self.asking = nil
+        await link.decline(asking.peer)
+        opponent = nil
+        phase = .waiting
+    }
+
+    /// Cancel: take your game down, or leave the one you were joining, and look again.
+    func cancel() { open() }
 
     private func reset() {
         network.shutDown()
         if phase != .playing, let link { Task { await link.leave() } }
         link = nil
+        asking = nil
+        opponent = nil
+        iAmReady = false
         games = []
         status = .working
-        phase = .choosing
+        phase = .lobby
     }
 
     private func handle(_ event: RoomEvent<OwareTable>) {
         guard let link else { return }
         switch event {
+        case let .joinRequest(peer, name):
+            guard asking == nil, phase == .waiting else { return }
+            asking = MatchLink.JoinRequest(peer: peer, name: name)
+            opponent = Opponent(name: name, isConnected: true, isReady: false)
+            phase = .ready
         case .seated:
             network.stopFinding()
             if link.room.role == .guest { session.events.nearbyJoined(demo: isDemo) }
-            phase = .playing
-            session.startRemote(link)
             link.startHeartbeat()
-            onStart?()
         case let .refused(refusal):
             link.room.stop()
             self.link = nil
+            opponent = nil
             phase = .refused(Self.explain(refusal))
+            return
+        case .left, .seatLost:
+            guard phase == .ready else { break }
+            let name = opponent?.name ?? Self.otherPlayer
+            Task { await link.leave() }
+            self.link = nil
+            opponent = nil
+            phase = .refused("\(name) has gone.")
+            return
         default:
             break
         }
+        refresh()
+    }
+
+    /// The Ready screen from the table; once both are ready, the game.
+    private func refresh() {
+        guard phase == .ready, let link else { return }
+        if let table = link.table, link.room.mySeat != nil, opponent != nil {
+            let theirs: Player = link.isHost ? .north : .south
+            opponent?.isConnected = link.isHost ? (asking != nil || link.room.seats[1] != nil) : true
+            opponent?.isReady = table.ready.contains(theirs)
+            iAmReady = iAmReady || link.iAmReady
+            if table.isStarted { begin(link) }
+        }
+    }
+
+    private func begin(_ link: MatchLink) {
+        network.stopFinding()
+        phase = .playing
+        session.startRemote(link)
+        onStart?()
     }
 
     static func explain(_ refusal: Refusal) -> String {
@@ -189,15 +274,32 @@ final class NearbyLobby {
 
     static func rulesName(_ rules: RuleSet) -> String { rules.variant == .namNam ? "Nam-Nam" : "Abapa" }
 
-    // MARK: Your name
+    // MARK: Names
 
+    static let defaultName = "Oware Player"
+    static let otherPlayer = "Other player"
     private static let nameKey = "nearbyName"
 
-    /// What nearby players call you, asked once (iOS no longer gives apps the phone's name).
+    /// What nearby players see: the Nearby name saved in Settings, else the Game Center name, else
+    /// Oware Player (iOS no longer gives apps the phone's name).
+    static func myName(saved: String?, gameCenter: String?) -> String {
+        [saved, gameCenter].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.first { !$0.isEmpty }
+            ?? defaultName
+    }
+
+    static var myName: String { myName(saved: savedName(), gameCenter: GameCenter.shared.playerName) }
+
+    /// Two players with the same name (both Oware Player): add the side's colour, which is the same
+    /// on both phones.
+    static func tellApart(_ theirs: String, from mine: String?, side: Player) -> String {
+        theirs == mine ? "\(theirs) · \(side == .south ? "gold" : "red")" : theirs
+    }
+
     static func savedName(_ defaults: UserDefaults = .standard) -> String? {
         defaults.string(forKey: nameKey).flatMap { $0.isEmpty ? nil : $0 }
     }
 
+    /// Trimmed; a blank name is not a name.
     static func saveName(_ name: String, _ defaults: UserDefaults = .standard) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }

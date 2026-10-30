@@ -17,9 +17,13 @@ final class NearbyLobbyTests: XCTestCase {
         }
     }
 
+    /// Kept for the whole test, as the app keeps it: Ama's phone lives in the lobby's network.
+    private var kept: NearbyLobby?
+
     private func lobby(_ script: DemoPlayer.Script = .init(thinkTime: 0.01, joinDelay: 0.01)) -> (NearbyLobby, GameSession) {
         let session = TestSupport.session(track: { [weak self] in self?.events.append($0) })
         let lobby = NearbyLobby(session: session, network: DemoNetwork(script: script))
+        kept = lobby
         return (lobby, session)
     }
 
@@ -66,6 +70,7 @@ final class NearbyLobbyTests: XCTestCase {
         lobby.start(name: "Kofi", rules: .abapa, starter: .joiningPlayerStarts)
         await until("Ama comes") { lobby.phase == .ready }
         await lobby.ready()
+        await until("the game starts") { lobby.phase == .playing }
         await until("Ama moves first") { session.state.moveNumber == 1 }
         XCTAssertTrue(session.humanToMove)
     }
@@ -111,6 +116,7 @@ final class NearbyLobbyTests: XCTestCase {
         lobby.start(name: "Kofi", rules: .abapa, starter: .creatorStarts)
         await until("Ama comes") { lobby.phase == .ready }
         await lobby.ready()
+        await until("the game starts") { lobby.phase == .playing }
         await until("my turn") { session.humanToMove }
         session.play(house: 0)
         await until("Ama resigns") { session.isGameOver }

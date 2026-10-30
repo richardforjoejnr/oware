@@ -36,9 +36,13 @@ final class NearbyUITests: XCTestCase {
     /// Start nearby game, Ama comes, both press Ready: the game starts with you to move.
     private func startAndPressReady() {
         openNearby()
-        app.buttons["btn-start-nearby"].tap()
-        XCTAssertTrue(app.staticTexts["nearby-waiting"].waitForExistence(timeout: 5), "Your game is ready")
+        let start = app.buttons["btn-start-nearby"]
+        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: start)
+        XCTAssertEqual(XCTWaiter().wait(for: [hittable], timeout: 5), .completed)
+        start.tap()
+        // Your game is ready, until Ama's phone turns up (a second and a half; a slow run can miss it).
         let ready = app.buttons["btn-ready"]
+        XCTAssertTrue(app.staticTexts["nearby-waiting"].waitForExistence(timeout: 5) || ready.exists, "Your game is ready")
         XCTAssertTrue(ready.waitForExistence(timeout: 10), "Ama comes: Ready to play")
         XCTAssertTrue(app.staticTexts["Ama"].exists)
         XCTAssertTrue(app.buttons["btn-not-now"].exists, "the creator can turn her away")

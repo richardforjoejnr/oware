@@ -117,15 +117,25 @@ final class MatchLink {
 
     var isHost: Bool { room.role == .host }
     var mySide: Player? { room.mySeat.map(OwareRoomRules.player(seat:)) }
-    var opponentName: String? { room.seats[room.mySeat == 0 ? 1 : 0]?.name }
+    /// With the side's colour added when both players have the same name (Oware Player).
+    var opponentName: String? {
+        let theirSeat = room.mySeat == 0 ? 1 : 0
+        guard let theirs = room.seats[theirSeat]?.name else { return nil }
+        let mine = room.mySeat.flatMap { room.seats[$0]?.name } ?? myName
+        return NearbyLobby.tellApart(theirs, from: mine, side: OwareRoomRules.player(seat: theirSeat))
+    }
+    /// Whether this phone has pressed Ready (and the host has it).
+    var iAmReady: Bool { mySide.map { table?.ready.contains($0) ?? false } ?? false }
     var table: OwareTable? { room.match }
 
-    /// This phone's sowing speed (`AppSettings.effectiveSpeed`), shared once seated.
+    /// This phone's sowing speed (`AppSettings.effectiveSpeed`), shared on Ready.
     private let pace: Double
+    private let myName: String
 
     init(hosting match: OwareMatch, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
          transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
         self.pace = pace
+        myName = name
         room = Room(hosting: OwareTable.opening(match, paces: [.south: pace]), name: name, rules: OwareRoomRules(),
                     transport: transport, clock: clock)
         room.onEvent = { [weak self] in self?.handle($0) }
@@ -134,6 +144,7 @@ final class MatchLink {
     init(joiningAs name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
          transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
         self.pace = pace
+        myName = name
         room = Room(joiningAs: name, rules: OwareRoomRules(), transport: transport, clock: clock)
         room.onEvent = { [weak self] in self?.handle($0) }
     }
@@ -144,29 +155,22 @@ final class MatchLink {
             joinRequests.append(JoinRequest(peer: peer, name: name))
         case .seated:
             joinRequests = []
-            if room.role == .host { announce() }
-        case .snapshot:
-            if room.role == .guest { announce() }
         default:
             break
         }
         onEvent?(event)
     }
 
-    private var announced = false
+    private var saidReady = false
 
-    /// Once the game is here (host: a guest seated; guest: the first snapshot): the guest's sowing
-    /// speed (the host's went in with the match), and ready, with the fingerprint of the opening
-    /// as this phone's own engine replays it.
-    // NEARBY_PLAY_REDESIGN.md step 2 moves "ready" to the Ready button on both phones.
-    private func announce() {
-        guard !announced, let table = room.match, let fingerprint = try? table.match.state().fingerprint else { return }
-        announced = true
-        let pace = pace
-        Task { [room] in
-            if room.role == .guest { try? await room.send(.pace(pace)) }
-            try? await room.send(.ready(stateHash: fingerprint))
-        }
+    /// The Ready button: the guest's sowing speed (the host's went in with the match), then ready,
+    /// with the fingerprint of the opening as this phone's own engine replays it. The game starts
+    /// once both have said it.
+    func ready() async {
+        guard !saidReady, let table = room.match, let fingerprint = try? table.match.state().fingerprint else { return }
+        saidReady = true
+        if room.role == .guest { try? await room.send(.pace(pace)) }
+        try? await room.send(.ready(stateHash: fingerprint))
     }
 
     func accept(_ peer: PeerID) async {

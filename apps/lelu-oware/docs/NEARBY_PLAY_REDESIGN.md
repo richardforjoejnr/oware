@@ -221,6 +221,19 @@ not in the kit; `wood-book` exists already. The owner will make carved ones for 
    step it reads "Update Lelu Oware on both phones".
 2. **Lobby:** one screen with discovery, Start nearby game (rules, who starts, name), Your game is
    ready, game cards, Ready to play; default names; new help sheet and Local Network text.
+
+   **Built (2026-10-30).** `NearbyLobby` phases are `lobby / waiting / ready / refused / playing`:
+   opening Play nearby looks for games at once (`open()`); `start(…)` lists yours and stops
+   looking; someone asking, or tapping a game card, shows Ready to play. The creator's **Ready**
+   seats the one asking (`accept`) and says ready; **Not now** declines and keeps the game listed;
+   the guest's Ready sends its pace and ready. `MatchLink.ready()` replaces the automatic ready of
+   step 1, so a connection alone never starts a game: the session gets the room only once the
+   table `isStarted`. Names: `NearbyLobby.myName` (Nearby name, else Game Center
+   `GameCenter.playerName`, else *Oware Player*); `tellApart` adds *· gold* / *· red* when both
+   names match (`MatchLink.opponentName`). No name prompt; the lobby and Settings have a *Nearby
+   name* field (*Shown only to players near you.*). Help is three steps plus *Having trouble
+   connecting?*; the Local Network text is the brief's. Plain SwiftUI for now (tiles, seals and
+   cards in the wood colours); the kit pieces come in step 4.
 3. **Connections:** Connection lost sheet, reconnect over a new connection (30 s), Rejoin card,
    deliberate leave.
 4. **Look:** install the kit pieces, the components (NearbyPlayIcon, NearbyGameCard,

@@ -149,15 +149,18 @@ struct SettingsView: View {
             Spacer()
             if Feature.showsNearbyPlay {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Your name for nearby play")
+                    Text("Nearby name")
                         .font(Theme.caption())
                         .foregroundStyle(Theme.ivoryDim)
-                    TextField("Not set yet", text: $nearbyName)
+                    TextField(NearbyLobby.myName(saved: nil, gameCenter: GameCenter.shared.playerName), text: $nearbyName)
                         .textContentType(.givenName)
                         .submitLabel(.done)
                         .onSubmit { NearbyLobby.saveName(nearbyName) }
                         .onChange(of: nearbyName) { _, name in NearbyLobby.saveName(name) }
                         .accessibilityIdentifier("setting-nearby-name")
+                    Text("Shown only to players near you.")
+                        .font(Theme.caption())
+                        .foregroundStyle(Theme.ivoryDim)
                 }
                 QuietButton(title: "Try nearby play", subtitle: "a game against a pretend second phone") { tryNearby() }
                     .accessibilityIdentifier("btn-try-nearby")

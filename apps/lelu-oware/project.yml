@@ -81,7 +81,7 @@ targets:
         TelemetryDeckAppID: $(TELEMETRYDECK_APP_ID)
         AppStoreID: $(APP_STORE_ID)
         # Nearby play: finding the other phone (MatchKitNearby, LiveNearbyNetwork.serviceType).
-        NSLocalNetworkUsageDescription: Lelu Oware looks for phones near you so two people can play one game, each on their own phone. Nothing leaves the room.
+        NSLocalNetworkUsageDescription: Lelu Oware uses your local network to find another nearby player and play directly between your phones.
         NSBonjourServices: [_leluoware._tcp]
         UILaunchScreen:
           UIColorName: LaunchBackground
