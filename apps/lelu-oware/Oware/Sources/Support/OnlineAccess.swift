@@ -14,6 +14,10 @@ enum FeatureFlags {
     /// load. While off, nothing in the app can be bought and Home shows Feedback instead. Set to true
     /// to bring Support me back on Home and in Settings.
     static let tips = false
+    /// Game Center: sign-in at launch, leaderboards, achievements and the Settings row. Off until
+    /// the 3 leaderboards and 6 achievements exist in App Store Connect (docs/SERVICES.md section 3);
+    /// until then nothing is signed in, so scores and achievements are not sent.
+    static let gameCenter = false
 }
 
 /// Who may start and join online matches. The plan: a one-time "Play online" purchase; a player

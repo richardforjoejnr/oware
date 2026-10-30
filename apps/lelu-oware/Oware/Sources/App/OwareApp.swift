@@ -39,7 +39,7 @@ struct OwareApp: App {
         // Analytics and Game Center stay silent in test launches.
         Analytics.shared.configure(enabled: settings.effectiveUsageStats)
         Analytics.shared.track(.appLaunched)
-        if !settings.testMode { GameCenter.shared.authenticate() }
+        if FeatureFlags.gameCenter, !settings.testMode { GameCenter.shared.authenticate() }
     }
 
     var body: some Scene {
