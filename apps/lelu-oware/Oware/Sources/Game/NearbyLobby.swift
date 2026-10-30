@@ -4,14 +4,27 @@ import MatchKitNearby
 import Observation
 import OwareEngine
 
-/// A game found nearby, as the Join list shows it: "Kofi's game · Abapa".
+/// A game found nearby, as the Join list shows it: "Kofi's game · Abapa · Kofi starts".
 struct NearbyListing: Identifiable, Hashable {
     let name: String
     let rules: String?
+    /// Whether the player who made the game starts (nil from an older app).
+    var creatorStarts: Bool?
+    /// The game's `matchID`, for finding it again after a lost connection.
+    var gameID: String?
     /// Where to connect; nil for the demo player's game.
     fileprivate var game: NearbyGame?
 
     var id: String { name }
+
+    /// What a game's Bonjour TXT record carries (`NearbyLobby.host`).
+    fileprivate init(name: String, info: [String: String], game: NearbyGame?) {
+        self.name = name
+        rules = info["rules"]
+        creatorStarts = info["starter"].map { $0 == "creator" }
+        gameID = info["game"]
+        self.game = game
+    }
 }
 
 /// What the lobby needs from the phones around: real ones over Bonjour, or the demo player.
@@ -45,16 +58,32 @@ final class NearbyLobby {
         case playing
     }
 
+    /// Who starts, by what it means rather than "you" or "them", which swap between the phones.
     enum Starter: String, CaseIterable, Identifiable {
-        case me, them, random
+        case creatorStarts, joiningPlayerStarts, random
         var id: String { rawValue }
+        /// As the player making the game reads it.
         var title: String {
             switch self {
-            case .me: "You"
-            case .them: "Them"
-            case .random: "Either"
+            case .creatorStarts: "Me"
+            case .joiningPlayerStarts: "Other player"
+            case .random: "Random"
             }
         }
+        /// The creator plays South. Random is settled here, before the game is listed, so both
+        /// phones agree.
+        var firstPlayer: Player {
+            switch self {
+            case .creatorStarts: .south
+            case .joiningPlayerStarts: .north
+            case .random: Bool.random() ? .south : .north
+            }
+        }
+    }
+
+    /// How a game card says who starts, on the joining phone.
+    static func startNote(creatorStarts: Bool, creatorName: String) -> String {
+        creatorStarts ? "\(creatorName) starts" : "You start"
     }
 
     private(set) var phase: Phase = .choosing
@@ -84,15 +113,12 @@ final class NearbyLobby {
     /// `pace`: this phone's sowing speed; both phones sow at the slower of the two.
     func host(name: String, rules: RuleSet, starter: Starter, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
         reset()
-        let first: Player = switch starter {
-        case .me: .south
-        case .them: .north
-        case .random: Bool.random() ? .south : .north
-        }
+        let match = OwareMatch(rules: rules, starter: starter.firstPlayer)
+        let info = ["rules": Self.rulesName(rules), "starter": match.starter == .south ? "creator" : "joiner",
+                    "game": match.matchID.uuidString, "name": name]
         do {
-            let transport = try network.host(gameName: "\(name)'s game", info: ["rules": Self.rulesName(rules)],
-                                              status: { [weak self] in self?.status = $0 })
-            let link = MatchLink(hosting: OwareMatch(rules: rules, starter: first), name: name, pace: pace, transport: transport)
+            let transport = try network.host(gameName: "\(name)'s game", info: info, status: { [weak self] in self?.status = $0 })
+            let link = MatchLink(hosting: match, name: name, pace: pace, transport: transport)
             link.onEvent = { [weak self] in self?.handle($0) }
             self.link = link
             phase = .hosting
@@ -203,7 +229,7 @@ final class LiveNearbyNetwork: NearbyNetwork {
         self.browser = browser
         let found = browser.games, updates = browser.status
         watchers.append(Task {
-            for await list in found { games(list.map { NearbyListing(name: $0.name, rules: $0.info["rules"], game: $0) }) }
+            for await list in found { games(list.map { NearbyListing(name: $0.name, info: $0.info, game: $0) }) }
         })
         watchers.append(Task { for await update in updates { status(update) } })
     }
@@ -231,6 +257,8 @@ final class LiveNearbyNetwork: NearbyNetwork {
 @MainActor
 final class DemoNetwork: NearbyNetwork {
     let isDemo = true
+    /// The demo game Ama lists, and hosts when joined.
+    private let gameID = UUID()
     let script: DemoPlayer.Script
     private(set) var player: DemoPlayer?
     private var arriving: Task<Void, Never>?
@@ -247,12 +275,16 @@ final class DemoNetwork: NearbyNetwork {
     }
 
     func browse(games: @escaping @MainActor ([NearbyListing]) -> Void, status: @escaping @MainActor (NearbyStatus) -> Void) {
-        games([NearbyListing(name: "\(DemoPlayer.name)'s game", rules: NearbyLobby.rulesName(.abapa))])
+        // Ama makes the game and starts it, as `DemoPlayer(hosting:)` sets up.
+        games([NearbyListing(name: "\(DemoPlayer.name)'s game",
+                             info: ["rules": NearbyLobby.rulesName(.abapa), "starter": "creator",
+                                    "game": gameID.uuidString, "name": DemoPlayer.name],
+                             game: nil)])
     }
 
     func connect(to listing: NearbyListing) -> any MatchTransport {
         let mine = LoopbackTransport(), hers = LoopbackTransport()
-        player = DemoPlayer(hosting: hers, rules: .abapa, script: script)
+        player = DemoPlayer(hosting: hers, match: OwareMatch(rules: .abapa, matchID: gameID), script: script)
         arrive(mine, hers)
         return mine
     }
@@ -312,10 +344,10 @@ final class DemoPlayer {
         start()
     }
 
-    init(hosting transport: LoopbackTransport, rules: RuleSet, script: Script) {
+    init(hosting transport: LoopbackTransport, match: OwareMatch, script: Script) {
         self.transport = transport
         self.script = script
-        room = Room(hosting: OwareTable(match: OwareMatch(rules: rules)), name: Self.name, rules: OwareRoomRules(), transport: transport)
+        room = Room(hosting: OwareTable.opening(match), name: Self.name, rules: OwareRoomRules(), transport: transport)
         start()
     }
 
@@ -347,22 +379,27 @@ final class DemoPlayer {
         let me = OwareRoomRules.player(seat: seat)
         let id = table.match.matchID
         if firstGame == nil { firstGame = id }
+        // Like any phone: acknowledge the opening as her own engine replays it, then wait for both.
+        if !table.ready.contains(me), !table.isOutOfStep {
+            act(.ready(stateHash: state.fingerprint), pause: 0)
+            return
+        }
+        guard table.isStarted else { return }
         if state.isOver {
-            if !table.rematchAsked.contains(me) { act(.rematch) }
+            if !table.rematchAsked.contains(me) { act(.game(.rematch)) }
             return
         }
         guard state.sideToMove == me else { return }
         if let limit = script.resignAfter, id == firstGame, movesIn[id, default: 0] >= limit {
-            act(.resign)
+            act(.game(.resign))
         } else if let move = state.legalMoves().first {
             movesIn[id, default: 0] += 1
-            act(.play(house: move.absoluteIndex))
+            act(.game(.play(house: move.absoluteIndex)))
         }
     }
 
-    private func act(_ intent: OwareIntent) {
-        let intent = TableIntent.game(intent)
-        let pause = script.thinkTime
+    private func act(_ intent: TableIntent, pause: Double? = nil) {
+        let pause = pause ?? script.thinkTime
         turn = Task { [weak self] in
             try? await Task.sleep(for: .seconds(pause))
             guard let self, !Task.isCancelled else { return }

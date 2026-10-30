@@ -317,9 +317,10 @@ struct RoomTests {
     }
 
     @Test func theHostLeavingIsToldToTheGuest() async throws {
-        let (table, _, _, log) = await seated()
+        let (table, guest, _, log) = await seated()
         await table.host.leave()
         await eventually("the guest hears it") { log.events.contains(.left(seat: 0)) }
         #expect(!log.events.contains(.seatLost(seat: 0)))
+        withExtendedLifetime(guest) {}
     }
 }

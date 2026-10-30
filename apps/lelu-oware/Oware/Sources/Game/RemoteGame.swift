@@ -14,24 +14,44 @@ struct RemoteGame: Codable, Hashable, Sendable {
 }
 
 /// What the phones share: the match, who has asked for another game (a rematch starts only once
-/// both have asked), and each player's sowing speed (both phones sow at the slower).
+/// both have asked), each player's sowing speed (both phones sow at the slower), and the start
+/// handshake: nobody moves until both phones have acknowledged the same opening.
 struct OwareTable: Codable, Sendable, Equatable {
     var match: OwareMatch
     var rematchAsked: Set<Player> = []
     var paces: [Player: Double] = [:]
+    /// Players whose phone has replayed the opening and got the host's fingerprint.
+    var ready: Set<Player> = []
+    /// The host's fingerprint of the position now (`GameState.fingerprint`), for phones to check
+    /// their own replay against.
+    var stateHash: String?
+    /// A phone replayed the opening differently (another version of the game): no game.
+    var isOutOfStep = false
 
     /// The speed both phones sow at: the slower of the two, once both are known.
     var sharedPace: Double? { paces.values.min() }
+    /// Both phones hold the same opening and are ready: moves may be played.
+    var isStarted: Bool { ready.count == Player.allCases.count && !isOutOfStep }
+
+    /// A new table on the host, stamped with the opening's fingerprint.
+    static func opening(_ match: OwareMatch, paces: [Player: Double] = [:]) -> OwareTable {
+        OwareTable(match: match, paces: paces, stateHash: try? match.state().fingerprint)
+    }
 }
 
-/// What a phone may ask the host: a move, resign or rematch, or its sowing speed.
+/// What a phone may ask the host: a move, resign or rematch, its sowing speed, or to start, with
+/// the fingerprint of the opening it replayed.
 enum TableIntent: Codable, Sendable, Equatable {
     case game(OwareIntent)
     case pace(Double)
+    case ready(stateHash: String)
 }
 
 /// The host's checks, through the engine. Seat 0 (the host) is South, seat 1 North.
 struct OwareRoomRules: RoomRules {
+    /// A move before both phones are ready, or after they were found out of step.
+    struct NotStarted: Error {}
+
     let seatCount = 2
 
     static func player(seat: Int) -> Player { seat == 0 ? .south : .north }
@@ -44,7 +64,16 @@ struct OwareRoomRules: RoomRules {
         case let .pace(pace):
             next.paces[player] = min(max(pace, 0.1), AppSettings.AnimationSpeed.instant.rawValue)
             return next
+        case let .ready(stateHash):
+            guard !table.isStarted else { return table }
+            if stateHash == (try table.match.state().fingerprint) {
+                next.ready.insert(player)
+            } else {
+                next.isOutOfStep = true
+            }
+            return next
         case let .game(intent):
+            guard table.isStarted else { throw NotStarted() }
             game = intent
         }
         switch game {
@@ -56,16 +85,21 @@ struct OwareRoomRules: RoomRules {
             if next.rematchAsked.count == seatCount {
                 next.match = try table.match.applying(.rematch, from: player)
                 next.rematchAsked = []
+                // Both asked, so both are here: the new game starts at once.
+                next.ready = Set(Player.allCases)
             }
         }
+        next.stateHash = try? next.match.state().fingerprint
         return next
     }
 
     func shouldReplace(_ current: OwareTable, with snapshot: OwareTable) -> Bool {
         if snapshot.match.supersedes(current.match) { return true }
-        // The same match, with more asked for a rematch or more speeds known.
+        // The same match, with more asked for a rematch, more speeds known or more phones ready.
         return snapshot.match == current.match && snapshot.rematchAsked.isSuperset(of: current.rematchAsked)
-            && Set(snapshot.paces.keys).isSuperset(of: current.paces.keys) && snapshot != current
+            && Set(snapshot.paces.keys).isSuperset(of: current.paces.keys)
+            && snapshot.ready.isSuperset(of: current.ready) && (snapshot.isOutOfStep || !current.isOutOfStep)
+            && snapshot != current
     }
 }
 
@@ -92,7 +126,7 @@ final class MatchLink {
     init(hosting match: OwareMatch, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
          transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
         self.pace = pace
-        room = Room(hosting: OwareTable(match: match, paces: [.south: pace]), name: name, rules: OwareRoomRules(),
+        room = Room(hosting: OwareTable.opening(match, paces: [.south: pace]), name: name, rules: OwareRoomRules(),
                     transport: transport, clock: clock)
         room.onEvent = { [weak self] in self?.handle($0) }
     }
@@ -110,15 +144,29 @@ final class MatchLink {
             joinRequests.append(JoinRequest(peer: peer, name: name))
         case .seated:
             joinRequests = []
-            // The guest tells the host its speed; the host's went in with the match.
-            if room.role == .guest {
-                let pace = pace
-                Task { try? await room.send(.pace(pace)) }
-            }
+            if room.role == .host { announce() }
+        case .snapshot:
+            if room.role == .guest { announce() }
         default:
             break
         }
         onEvent?(event)
+    }
+
+    private var announced = false
+
+    /// Once the game is here (host: a guest seated; guest: the first snapshot): the guest's sowing
+    /// speed (the host's went in with the match), and ready, with the fingerprint of the opening
+    /// as this phone's own engine replays it.
+    // NEARBY_PLAY_REDESIGN.md step 2 moves "ready" to the Ready button on both phones.
+    private func announce() {
+        guard !announced, let table = room.match, let fingerprint = try? table.match.state().fingerprint else { return }
+        announced = true
+        let pace = pace
+        Task { [room] in
+            if room.role == .guest { try? await room.send(.pace(pace)) }
+            try? await room.send(.ready(stateHash: fingerprint))
+        }
     }
 
     func accept(_ peer: PeerID) async {

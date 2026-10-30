@@ -66,6 +66,12 @@ final class GameSession {
     private(set) var offersComputer = false
     /// The other phone has left or been lost: no rematch.
     private(set) var opponentGone = false
+    /// The other player left on purpose (not a lost connection).
+    private(set) var opponentLeft = false
+    /// Both phones hold the same opening and are ready; until then nobody moves.
+    private(set) var isStarted = false
+    /// The phones replayed the opening differently (different versions of the game).
+    private(set) var isOutOfStep = false
     /// Who has asked for another game after this one.
     private(set) var rematchAsked: Set<Player> = []
     /// The speed both phones sow at (the slower of the two); nil when this phone plays alone.
@@ -107,6 +113,7 @@ final class GameSession {
     var humanToMove: Bool {
         if case .puzzle = mode, puzzleAttempt == .solved { return false }
         if case .tutorial = mode, tutorialStepDone { return false }
+        if case .remote = mode, !isStarted { return false }
         return !state.isOver && !isAnimating && !isThinking && mode.otherSide != state.sideToMove
     }
     var canUndo: Bool {
@@ -196,6 +203,8 @@ final class GameSession {
         case .passAndPlay: return state.sideToMove == .south ? "A to move" : "B to move"
         case .puzzle, .tutorial: return ""
         case let .remote(game):
+            if isOutOfStep { return "Update Lelu Oware on both phones" }
+            if !isStarted { return "Waiting for the other player…" }
             if humanToMove { return "Your turn" }
             return state.sideToMove == game.mySide ? "…" : "\(game.opponentName)'s turn"
         }
@@ -398,7 +407,7 @@ final class GameSession {
 
     /// A game in progress that a player may end (resign or agree to stop). Not while seeds are
     /// still moving: the result would be drawn under the animation.
-    var canEndGame: Bool { (mode.isResumable || mode.remoteGame != nil) && !state.isOver && !isAnimating }
+    var canEndGame: Bool { (mode.isResumable || (mode.remoteGame != nil && isStarted)) && !state.isOver && !isAnimating }
     /// Stopping by agreement needs both players at one board; on two phones there is Resign.
     var canAgreeToStop: Bool { mode.isResumable && canEndGame }
 
@@ -639,6 +648,9 @@ final class GameSession {
         isReconnecting = false
         offersComputer = false
         opponentGone = false
+        opponentLeft = false
+        isStarted = link.table?.isStarted ?? false
+        isOutOfStep = link.table?.isOutOfStep ?? false
         rematchAsked = []
         sharedPace = link.table?.sharedPace
         refusal = nil
@@ -678,6 +690,7 @@ final class GameSession {
         if offersComputer { events.nearbyDropped(finishedAgainstComputer: false) }
         offersComputer = false
         isReconnecting = false
+        isStarted = false
         leaveRemote()
     }
 
@@ -704,6 +717,8 @@ final class GameSession {
         case let .snapshot(table):
             rematchAsked = table.rematchAsked
             sharedPace = table.sharedPace
+            isStarted = table.isStarted
+            isOutOfStep = table.isOutOfStep
             latestMatch = table.match
             sync()
         case let .reconnecting(seat):
@@ -714,6 +729,12 @@ final class GameSession {
             guard seat != mySeat else { return }
             isReconnecting = false
             opponentGone = true
+            offersComputer = !state.isOver
+        case let .left(seat):
+            guard seat != mySeat else { return }
+            isReconnecting = false
+            opponentGone = true
+            opponentLeft = true
             offersComputer = !state.isOver
         case let .refused(reason):
             refusal = reason

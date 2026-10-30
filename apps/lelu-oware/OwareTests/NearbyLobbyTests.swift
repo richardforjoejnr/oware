@@ -37,6 +37,7 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertEqual(session.remoteGame?.opponentName, "Ama")
         XCTAssertEqual(session.remoteGame?.mySide, .south)
         XCTAssertEqual(session.state.rules, .namNam, "the host's rules")
+        await until("both phones ready, Ama too") { session.isStarted }
         XCTAssertTrue(session.humanToMove)
         XCTAssertEqual(events.first, .nearbyHosted(demo: true))
     }

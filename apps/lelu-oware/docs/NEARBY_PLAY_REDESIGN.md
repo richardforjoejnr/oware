@@ -205,6 +205,20 @@ not in the kit; `wood-book` exists already. The owner will make carved ones for 
 
 1. **Protocol:** ready handshake + state hash in `OwareTable`, `RoomEvent.left`, starter stored as
    `creatorStarts / joiningPlayerStarts / random`, game ID and starter in the TXT record.
+
+   **Built (2026-10-30).** `GameState.fingerprint` (engine): FNV-1a over a fixed text form,
+   format "v1", pinned in `FingerprintTests`. `OwareTable` gains `ready`, `stateHash` and
+   `isOutOfStep`; `TableIntent.ready(stateHash:)`; `OwareRoomRules` refuses every move
+   (`NotStarted`) until both are ready, marks the table out of step if a phone's opening differs,
+   stamps `stateHash` after each change, and a rematch starts ready. For now `MatchLink` sends
+   ready by itself once the game is there (host: guest seated; guest: first snapshot), so the
+   current screens still work; step 2 moves it to the Ready button. `RoomEvent.left(seat:)` for a
+   `bye`; the session's `opponentLeft` gives "Ama left the game". `NearbyLobby.Starter` is
+   `creatorStarts / joiningPlayerStarts / random` (titled Me / Other player / Random), random
+   settled before listing. The TXT record carries `rules`, `starter` (creator / joiner), `game`
+   (the match ID) and `name`; `NearbyListing` reads them. The demo player Ama does the handshake
+   like a phone. Until both are ready the turn line reads "Waiting for the other player…"; out of
+   step it reads "Update Lelu Oware on both phones".
 2. **Lobby:** one screen with discovery, Start nearby game (rules, who starts, name), Your game is
    ready, game cards, Ready to play; default names; new help sheet and Local Network text.
 3. **Connections:** Connection lost sheet, reconnect over a new connection (30 s), Rejoin card,
