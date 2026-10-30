@@ -154,10 +154,10 @@ struct HomeView: View {
 
     /// While tips are off (`LaunchOptions.showsTips`): a review on the App Store, in Support me's place.
     private var feedbackPlank: some View {
-        WoodPlank(title: "Feedback", subtitle: "rate it on the App Store",
-                  glyph: "info", height: 56) { openURL(Links.feedback()) }
+        WoodPlank(title: "Rate Lelu Oware", subtitle: "a review helps others find it",
+                  glyph: "star", height: 56) { openURL(Links.feedback()) }
             .accessibilityIdentifier("btn-feedback")
-            .accessibilityLabel("Feedback. Rate it on the App Store")
+            .accessibilityLabel("Rate Lelu Oware. A review on the App Store helps others find it")
     }
 
     private var titleBlock: some View {
