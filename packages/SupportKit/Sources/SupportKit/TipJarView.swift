@@ -25,6 +25,8 @@ public struct TipJarStyle: Sendable {
 public struct TipJarView: View {
     @Environment(TipJar.self) private var jar
     @Environment(\.dismiss) private var dismiss
+    /// SwiftUI's purchase action: Apple's confirmation sheet appears over this window.
+    @Environment(\.purchase) private var purchase
     let title: String
     let message: String
     let labels: [String]
@@ -80,20 +82,12 @@ public struct TipJarView: View {
                     .accessibilityIdentifier("tip-jar-thanks")
             }
 
-            if jar.tips.isEmpty {
-                HStack(spacing: 10) {
-                    if jar.isLoading { ProgressView().tint(style.accent) }
-                    Text(jar.lastError ?? "Loading…")
-                        .font(style.bodyFont)
-                        .foregroundStyle(style.secondaryText)
-                        .accessibilityIdentifier("tip-jar-status")
-                }
-                .frame(minHeight: 44)
-            } else {
+            switch jar.loadState {
+            case .loaded:
                 VStack(spacing: 10) {
                     ForEach(Array(jar.tips.enumerated()), id: \.element.id) { index, product in
                         Button {
-                            Task { await jar.tip(product) }
+                            Task { await jar.tip(product) { try await purchase($0) } }
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
@@ -105,8 +99,12 @@ public struct TipJarView: View {
                                     }
                                 }
                                 Spacer()
-                                Text(product.displayPrice)
-                                    .monospacedDigit()
+                                if jar.purchasingID == product.id {
+                                    ProgressView().tint(style.accent)
+                                } else {
+                                    Text(product.displayPrice)
+                                        .monospacedDigit()
+                                }
                             }
                             .font(style.bodyFont)
                             .padding(.vertical, 4)
@@ -114,14 +112,44 @@ public struct TipJarView: View {
                             .contentShape(Rectangle())
                         }
                         .modifier(TipButtonStyle(accent: style.accent, text: style.text))
+                        .disabled(jar.purchasingID != nil)
                         .accessibilityIdentifier("tip-\(index)")
                     }
                 }
-                if let error = jar.lastError {
-                    Text(error)
+                if let message = jar.purchaseMessage {
+                    Text(message)
                         .font(.footnote)
                         .foregroundStyle(style.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("tip-jar-purchase-status")
                 }
+            case .failed:
+                // Never an empty sheet: say plainly what happened and offer another try.
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(jar.loadMessage ?? TipJar.unavailableMessage)
+                        .font(style.bodyFont)
+                        .foregroundStyle(style.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("tip-jar-status")
+                    Button {
+                        Task { await jar.retry() }
+                    } label: {
+                        Label("Try again", systemImage: "arrow.clockwise")
+                            .font(style.bodyFont)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .modifier(TipButtonStyle(accent: style.accent, text: style.text))
+                    .accessibilityIdentifier("tip-jar-retry")
+                }
+            case .idle, .loading:
+                HStack(spacing: 10) {
+                    ProgressView().tint(style.accent)
+                    Text("Loading the tips…")
+                        .font(style.bodyFont)
+                        .foregroundStyle(style.secondaryText)
+                        .accessibilityIdentifier("tip-jar-status")
+                }
+                .frame(minHeight: 44)
             }
 
             if let appName, let reviewURL {

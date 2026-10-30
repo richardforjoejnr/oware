@@ -1,6 +1,7 @@
 import SwiftUI
 import OwareEngine
 import OwareAI
+import SupportKit
 
 /// Home: dark wood, the title, one dominant Continue (or Play), then a 2×2 grid of flat wooden
 /// tiles. Red · gold · green appear only as tiny inlays. Everything here vanishes once you play.
@@ -9,6 +10,7 @@ struct HomeView: View {
     @Environment(PuzzleLibrary.self) private var library
     @Environment(JourneyProgress.self) private var progress
     @Environment(AppSettings.self) private var settings
+    @Environment(TipJar.self) private var tipJar
     let startGame: () -> Void
     let openPuzzles: () -> Void
     let openHeritage: () -> Void
@@ -20,6 +22,7 @@ struct HomeView: View {
     @State private var showMore = false
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showLevels = false
+    @State private var showTipJar = false
 
     private var difficulty: Difficulty { (Difficulty(rawValue: preferredDifficulty) ?? .beginner).menuLevel }
 
@@ -78,6 +81,7 @@ struct HomeView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: showMore)
         .animation(.easeInOut(duration: 0.2), value: showLevels)
+        .sheet(isPresented: $showTipJar) { OwareTipJar() }
     }
 
     /// Portrait: a photograph of a board on a table is pinned behind the top ~30 % of the screen,
@@ -125,7 +129,7 @@ struct HomeView: View {
         }
     }
 
-    /// Continue/Play, the 2×2 grid and the More rows — shared by both orientations.
+    /// Continue/Play, the 2×2 grid, the More rows and Support me — shared by both orientations.
     private var controls: some View {
         VStack(spacing: 14) {
             primary
@@ -134,7 +138,17 @@ struct HomeView: View {
                 moreList
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
+            supportPlank
         }
+    }
+
+    /// The tip jar, always on the menu (not only in Settings). Tips are thanks and unlock nothing.
+    private var supportPlank: some View {
+        WoodPlank(title: "Support me",
+                  subtitle: tipJar.hasTipped ? "medaase, thank you" : "a tip for the maker",
+                  glyph: "star", height: 56) { showTipJar = true }
+            .accessibilityIdentifier("btn-support")
+            .accessibilityLabel(tipJar.hasTipped ? "Support me. Medaase, thank you" : "Support me. A tip for the maker; it unlocks nothing")
     }
 
     private var titleBlock: some View {

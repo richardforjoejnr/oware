@@ -45,6 +45,28 @@ final class SupportMeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["tip-jar-retry"].exists)
     }
 
+    /// A tip goes through with the local test store (Tips.storekit) and the jar says thank you.
+    @MainActor
+    func testATipGoesThroughAndSaysThankYou() throws {
+        launch()
+        openSupportFromHome()
+        let small = app.buttons["tip-0"]
+        XCTAssertTrue(small.waitForExistence(timeout: 20))
+        small.tap()
+        // Apple's confirmation sheet (the local test store shows one, as the App Store does).
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let confirm = NSPredicate(format: "label IN %@", ["Purchase", "Buy", "Confirm", "OK"])
+        let deadline = Date().addingTimeInterval(20)
+        while Date() < deadline, !app.staticTexts["tip-jar-thanks"].exists {
+            if let button = [app, springboard].lazy.map({ $0.buttons.matching(confirm).firstMatch }).first(where: { $0.exists && $0.isHittable }) {
+                button.tap()
+            }
+            _ = app.staticTexts["tip-jar-thanks"].waitForExistence(timeout: 1)
+        }
+        XCTAssertTrue(app.staticTexts["tip-jar-thanks"].exists, "the tip went through")
+        XCTAssertFalse(app.staticTexts["tip-jar-purchase-status"].exists, "no failure message")
+    }
+
     @MainActor
     func testTipsThatCannotLoadSayWhyAndOfferTryAgain() throws {
         launch(["--tips-unavailable"])

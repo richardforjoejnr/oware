@@ -39,7 +39,7 @@ final class TipStoreTests: XCTestCase {
     private func storeSession() throws -> SKTestSession {
         let session = try SKTestSession(contentsOf: Self.storeFile)
         session.disableDialogs = true
-        session.resetToDefaultState()
+        session.failTransactionsEnabled = false
         session.clearTransactions()
         return session
     }
@@ -54,24 +54,22 @@ final class TipStoreTests: XCTestCase {
         XCTAssertNil(jar.loadMessage)
     }
 
-    /// A tip goes through, is counted once and its transaction is finished, so StoreKit does not
-    /// offer it again at the next launch.
-    func testATipCompletesAndItsTransactionIsFinished() async throws {
+    /// A tip bought outside the sheet (Ask to Buy approved later, an interrupted purchase, or one
+    /// left unfinished last launch) reaches the jar, is counted once and its transaction is
+    /// finished, so StoreKit does not offer it again at the next launch. (A purchase from the sheet
+    /// needs an on-screen window, so `tip(_:)` itself is covered by SupportMeUITests.)
+    func testATipFromTheStoreIsCountedAndFinished() async throws {
         let session = try storeSession()
         let jar = TipJar(productIDs: Tips.productIDs, defaults: TestSupport.defaults(), storageKey: "test.\(UUID())")
-        await jar.load()
-        let small = try XCTUnwrap(jar.tips.first)
-        await jar.tip(small)
+        try await session.buyProduct(identifier: Tips.productIDs[1])
+        for _ in 0..<50 where jar.tipCount == 0 { try await Task.sleep(for: .milliseconds(100)) }
         XCTAssertEqual(jar.tipCount, 1)
-        XCTAssertEqual(jar.lastTippedProductID, Tips.productIDs[0])
-        XCTAssertNil(jar.purchaseMessage)
-        XCTAssertNil(jar.purchasingID, "the buttons are free again")
+        XCTAssertEqual(jar.lastTippedProductID, Tips.productIDs[1])
         var unfinished = 0
         for await result in Transaction.unfinished where Tips.productIDs.contains(result.unsafePayloadValue.productID) {
             unfinished += 1
         }
-        XCTAssertEqual(unfinished, 0)
-        XCTAssertEqual(session.allTransactions().filter { $0.productIdentifier == Tips.productIDs[0] }.count, 1)
+        XCTAssertEqual(unfinished, 0, "every tip transaction is finished")
     }
 
     /// A purchase that fails says so plainly and leaves the jar usable.
@@ -80,7 +78,10 @@ final class TipStoreTests: XCTestCase {
         let jar = TipJar(productIDs: Tips.productIDs, defaults: TestSupport.defaults(), storageKey: "test.\(UUID())")
         await jar.load()
         let small = try XCTUnwrap(jar.tips.first)
+        // The test store's settings outlive the session on this simulator, so switch failures off
+        // again or later purchases (other tests, the UI tests) fail too.
         session.failTransactionsEnabled = true
+        defer { session.failTransactionsEnabled = false }
         await jar.tip(small)
         XCTAssertEqual(jar.tipCount, 0)
         XCTAssertEqual(jar.purchaseMessage, TipJar.purchaseFailedMessage)

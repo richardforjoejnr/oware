@@ -17,6 +17,23 @@
 - **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
   `packages/*/.swiftpm` after `swift test`; run `make project` after pulling.
 
+## App Review rejection of 1.0.0 (30 Oct 2026, branch `fix/oware-app-review-iap`)
+
+Build 202610102016 was rejected on an iPad Air (iPadOS 27.2) for 2.1(b) tips failed to load, 2.1(b)
+in-app purchases not submitted, and 2.2 "pre-release, test or trial version". Causes found in code:
+- **Tips did not load:** the app asks only for the three tips (`Tips.productIDs`), but the App Store
+  returns no products while the Paid Apps Agreement is not active and the tips are not submitted. The
+  old jar then showed one grey line, "Tips are not available right now.", and nothing else.
+- **Not submitted:** the three tips were never attached to the version. Owner's job in App Store Connect.
+- **2.2:** Settings showed "Version 1.0.0 (…) · Beta" in App Review, because review builds run in
+  StoreKit's sandbox like TestFlight (`AppChannel`); plus the empty tip jar and the Support me line
+  "tips … bring new features".
+Fixes: SupportKit `TipJar` has a load state (loading, loaded, failed), a 20 s timeout, Try again, a
+pending/failed message and one purchase at a time; Support me is on the home menu (`btn-support`,
+`OwareTipJar`); sandbox builds show no channel label; "Play online" removed from `Tips.storekit`.
+Nearby play is not on main at all (only on the `feat/oware-nearby-*` branches). Steps for the owner:
+[APP_STORE.md](APP_STORE.md) ▸ In-app purchases.
+
 ## Nearby play (planned 2026-10-28)
 
 Two phones, no router, free, behind a feature switch that can become paid later. Plan, tests first:

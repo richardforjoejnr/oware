@@ -29,7 +29,9 @@ struct OwareApp: App {
         _session = State(initialValue: session)
         _progress = State(initialValue: progress)
         // Every tip is counted, including ones the App Store delivers later (Ask to Buy).
-        let tipJar = TipJar(productIDs: Tips.productIDs)
+        // `--tips-unavailable` (Debug only): the App Store returns nothing, to test the Try again path.
+        let noTips: TipJar.ProductLoader = { _ in [] }
+        let tipJar = TipJar(productIDs: Tips.productIDs, loader: LaunchOptions.tipsUnavailable ? noTips : nil)
         tipJar.onTip = { PlayerEvents.shared.tipPurchased(productID: $0) }
         _tipJar = State(initialValue: tipJar)
         let settings = AppSettings()
@@ -54,7 +56,9 @@ struct OwareApp: App {
     }
 }
 
-/// The tip jar's products. Consumables, nothing unlocked: the whole game is free.
+/// The tip jar's products. Consumables, nothing unlocked: the whole game is free. These are the
+/// only in-app purchases this version asks for, so they are the only ones to submit with it
+/// (online play's product stays out until that feature ships: see OnlineAccess.swift).
 enum Tips {
     static let productIDs = ["com.richardforjoe.oware.tip.small", "com.richardforjoe.oware.tip.medium", "com.richardforjoe.oware.tip.large"]
 }
@@ -87,6 +91,8 @@ enum LaunchOptions {
     /// `--real-speed`: with `--fast-animations`, still sow at normal speed (tests that need a move
     /// in flight, e.g. leaving the game mid-sowing).
     static var realSpeed: Bool { flag("--real-speed") }
+    /// `--tips-unavailable`: the tip jar gets no products, as when the App Store cannot be reached.
+    static var tipsUnavailable: Bool { flag("--tips-unavailable") }
     /// `--ask-usage-stats`: show the one-time usage-stats question even in a test launch.
     static var askUsageStats: Bool { flag("--ask-usage-stats") }
     /// `--report-launch-time`: the home menu reports how long launch took (LaunchTimeUITests).
