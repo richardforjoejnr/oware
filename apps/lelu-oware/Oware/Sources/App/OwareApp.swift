@@ -77,7 +77,17 @@ enum LaunchOptions {
     #endif
     private static func flag(_ name: String, defaultsKey: String? = nil) -> Bool {
         guard enabled else { return false }
-        return CommandLine.arguments.contains(name) || (defaultsKey.map { UserDefaults.standard.bool(forKey: $0) } ?? false)
+        return isOn(name, defaultsKey: defaultsKey, in: CommandLine.arguments)
+            || (defaultsKey.map { UserDefaults.standard.bool(forKey: $0) } ?? false)
+    }
+    /// `name` itself, or `defaultsKey true`: Maestro passes a true/false argument as a bare key and
+    /// its value, with no dash, so the defaults never see it.
+    static func isOn(_ name: String, defaultsKey: String?, in arguments: [String]) -> Bool {
+        if arguments.contains(name) { return true }
+        guard let defaultsKey else { return false }
+        return zip(arguments, arguments.dropFirst()).contains { key, value in
+            key == defaultsKey && ["true", "yes", "1"].contains(value.lowercased())
+        }
     }
     private static func value(_ prefix: String) -> String? {
         guard enabled else { return nil }
