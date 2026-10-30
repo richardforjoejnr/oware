@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Web pages the app links to (leluoware.com: built from docs/lelu-oware, hosted on AWS by infra/site).
 enum Links {
@@ -7,6 +8,22 @@ enum Links {
     static let support = URL(string: "https://leluoware.com/lelu-oware/support")!
     /// Newsletter sign-up lives on the website so the app never asks for an email address.
     static let newsletter = URL(string: "https://leluoware.com/lelu-oware/newsletter")!
+    /// The address on the support page (docs/lelu-oware/support.md).
+    static let supportEmail = "trendnestorg34@gmail.com"
+
+    /// Feedback by email, with the version and phone already written in so a reply can help.
+    @MainActor static func feedback(version: String = AppVersion.version, build: String = AppVersion.build,
+                         system: String = "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)",
+                         device: String = UIDevice.current.model) -> URL {
+        var parts = URLComponents()
+        parts.scheme = "mailto"
+        parts.path = supportEmail
+        parts.queryItems = [
+            URLQueryItem(name: "subject", value: "Lelu Oware feedback"),
+            URLQueryItem(name: "body", value: "\n\n\n—\nLelu Oware \(version) (\(build)) · \(device) · \(system)"),
+        ]
+        return parts.url!
+    }
 
     /// The App Store's write-a-review page, from `APP_STORE_ID` (Info.plist key `AppStoreID`).
     /// Nil while the id is empty, which hides the Rate button.

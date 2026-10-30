@@ -154,10 +154,12 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("btn-newsletter")
             }
-            QuietButton(title: "Support me", subtitle: tipJar.hasTipped ? "medaase — thank you for your support" : "a tip for the maker; it unlocks nothing") {
-                showTipJar = true
+            if LaunchOptions.showsTips {
+                QuietButton(title: "Support me", subtitle: tipJar.hasTipped ? "medaase — thank you for your support" : "a tip for the maker; it unlocks nothing") {
+                    showTipJar = true
+                }
+                .accessibilityIdentifier("btn-tip-jar")
             }
-            .accessibilityIdentifier("btn-tip-jar")
             Text("Lelu Oware · \(settings.rules.variant == .namNam ? "Nam-Nam" : "Abapa") rules")
                 .font(Theme.caption())
                 .foregroundStyle(Theme.ivoryDim)

@@ -21,6 +21,7 @@ final class LinksTests: XCTestCase {
 
 /// Feedback replaces Support me on the home screen while tips are off (the Paid Apps Agreement is
 /// not active yet): an email to the support address, with what helps answer it already filled in.
+@MainActor
 final class FeedbackLinkTests: XCTestCase {
     func testFeedbackIsAnEmailToTheSupportAddress() throws {
         let url = Links.feedback(version: "1.0.1", build: "202610301200", system: "iOS 27.1", device: "iPhone")
@@ -35,6 +36,6 @@ final class FeedbackLinkTests: XCTestCase {
     }
 
     func testTipsAreOffInTheShippedApp() {
-        XCTAssertFalse(FeatureFlags.tipsShipped, "no In-App Purchase until the Paid Apps Agreement is active")
+        XCTAssertFalse(FeatureFlags.tips, "no In-App Purchase until the Paid Apps Agreement is active")
     }
 }

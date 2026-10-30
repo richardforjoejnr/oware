@@ -23,6 +23,7 @@ struct HomeView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showLevels = false
     @State private var showTipJar = false
+    @Environment(\.openURL) private var openURL
 
     private var difficulty: Difficulty { (Difficulty(rawValue: preferredDifficulty) ?? .beginner).menuLevel }
 
@@ -129,7 +130,7 @@ struct HomeView: View {
         }
     }
 
-    /// Continue/Play, the 2×2 grid, the More rows and Support me — shared by both orientations.
+    /// Continue/Play, the 2×2 grid, the More rows and Support me (or Feedback) — shared by both orientations.
     private var controls: some View {
         VStack(spacing: 14) {
             primary
@@ -138,7 +139,7 @@ struct HomeView: View {
                 moreList
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
-            supportPlank
+            if LaunchOptions.showsTips { supportPlank } else { feedbackPlank }
         }
     }
 
@@ -149,6 +150,14 @@ struct HomeView: View {
                   glyph: "star", height: 56) { showTipJar = true }
             .accessibilityIdentifier("btn-support")
             .accessibilityLabel(tipJar.hasTipped ? "Support me. Medaase, thank you" : "Support me. A tip for the maker; it unlocks nothing")
+    }
+
+    /// While tips are off (`LaunchOptions.showsTips`): an email to the maker, in Support me's place.
+    private var feedbackPlank: some View {
+        WoodPlank(title: "Feedback", subtitle: "tell the maker what you think",
+                  glyph: "info", height: 56) { openURL(Links.feedback()) }
+            .accessibilityIdentifier("btn-feedback")
+            .accessibilityLabel("Feedback. Email the maker")
     }
 
     private var titleBlock: some View {

@@ -9,6 +9,11 @@ enum FeatureFlags {
     /// The "News by email" links. Off until the Kit form is on the newsletter page
     /// (docs/lelu-oware/newsletter.md); a "sign-ups open soon" page reads as unfinished in App Review.
     static let newsletter = false
+    /// The tip jar (Support me). Off until the Paid Apps Agreement is active in App Store Connect and
+    /// the three tips are submitted with a build: App Review rejected 1.0.0 because the tips could not
+    /// load. While off, nothing in the app can be bought and Home shows Feedback instead. Set to true
+    /// to bring Support me back on Home and in Settings.
+    static let tips = false
 }
 
 /// Who may start and join online matches. The plan: a one-time "Play online" purchase; a player
