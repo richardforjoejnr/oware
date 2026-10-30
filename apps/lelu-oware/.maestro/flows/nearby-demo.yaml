@@ -1,4 +1,4 @@
-# Nearby play against the demo player: host, Ama joins, play until she resigns, rematch.
+# Nearby play against the demo player: start a game, Ama comes, both Ready, play until she resigns, rematch.
 # Run locally:  make e2e   (or: maestro test .maestro)
 appId: com.richardforjoe.oware
 ---
@@ -17,17 +17,13 @@ appId: com.richardforjoe.oware
 - tapOn:
     id: "btn-nearby"
 - tapOn:
-    id: "btn-host"
-- tapOn:
-    id: "nearby-name-field"
-- inputText: "Kofi"
-- tapOn:
-    id: "btn-name-done"
+    id: "btn-start-nearby"
 - extendedWaitUntil:
-    visible: "Ama wants to play"
+    visible:
+      id: "btn-ready"
     timeout: 10000
 - tapOn:
-    id: "btn-accept"
+    id: "btn-ready"
 - extendedWaitUntil:
     visible:
       id: "turn-indicator"

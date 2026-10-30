@@ -1,7 +1,7 @@
 import XCTest
 
 /// Nearby play against the demo player (`--nearby-demo`): a pretend second phone inside the app,
-/// over the same rooms and messages as two real phones (docs/NEARBY_PLAY.md step 5). The demo is
+/// over the same rooms and messages as two real phones (docs/NEARBY_PLAY.md step 5, NEARBY_PLAY_REDESIGN.md step 2). The demo is
 /// called Ama; she plays the first move she can, two seconds after her turn comes, and the launch
 /// arguments tell her when to resign (first game only) or go quiet.
 final class NearbyUITests: XCTestCase {
@@ -27,34 +27,22 @@ final class NearbyUITests: XCTestCase {
         nearby.tap()
     }
 
-    /// The first time: "What should nearby players call you?" A name saved by the test before can
-    /// outlive `--reset-state` when tests run back to back, so it is typed only when asked;
-    /// `NearbyLobbyTests.testTheNameIsKept` and the Maestro flow (a cleared app) check the asking.
-    /// Waits for whichever comes first: the name prompt, or `next` (the screen after it).
-    private func giveName(_ name: String, orSee next: XCUIElement) {
-        let field = app.textFields["nearby-name-field"]
-        let end = Date().addingTimeInterval(10)
-        while !field.exists && !next.exists && Date() < end { _ = field.waitForExistence(timeout: 0.5) }
-        guard field.exists else { return }
-        field.tap()
-        field.typeText(name)
-        app.buttons["btn-name-done"].tap()
-    }
-
     private func wait(for element: XCUIElement, label: String, timeout: TimeInterval = 15) {
         let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: element)
         XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: timeout), .completed,
                        "\(element) never read \"\(label)\" (it reads \"\(element.label)\")")
     }
 
-    /// Host, Ama asks to join, accept: the game starts with you to move.
-    private func hostAndAccept() {
+    /// Start nearby game, Ama comes, both press Ready: the game starts with you to move.
+    private func startAndPressReady() {
         openNearby()
-        app.buttons["btn-host"].tap()
-        giveName("Kofi", orSee: app.staticTexts["nearby-waiting"])
-        XCTAssertTrue(app.staticTexts["nearby-waiting"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Ama wants to play"].waitForExistence(timeout: 10))
-        app.buttons["btn-accept"].tap()
+        app.buttons["btn-start-nearby"].tap()
+        XCTAssertTrue(app.staticTexts["nearby-waiting"].waitForExistence(timeout: 5), "Your game is ready")
+        let ready = app.buttons["btn-ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 10), "Ama comes: Ready to play")
+        XCTAssertTrue(app.staticTexts["Ama"].exists)
+        XCTAssertTrue(app.buttons["btn-not-now"].exists, "the creator can turn her away")
+        ready.tap()
         let turn = app.staticTexts["turn-indicator"]
         XCTAssertTrue(turn.waitForExistence(timeout: 10))
         wait(for: turn, label: "Your turn")
@@ -75,7 +63,7 @@ final class NearbyUITests: XCTestCase {
     @MainActor
     func testHostPlaysAmaToAWinThenRematch() throws {
         app.launchArguments += ["--demo-resign-after=1"]
-        hostAndAccept()
+        startAndPressReady()
         XCTAssertFalse(app.buttons["btn-undo"].exists, "no undo on two phones")
         XCTAssertFalse(app.buttons["btn-hint"].exists, "no hints on two phones")
         XCTAssertEqual(app.buttons["btn-mode-title"].exists, false, "no level to change")
@@ -99,28 +87,46 @@ final class NearbyUITests: XCTestCase {
         if turn.label != "Your turn" { wait(for: turn, label: "Your turn") }
     }
 
+    /// One screen: no Host or Join. Ama's game turns up by itself; join it, press Ready.
     @MainActor
     func testTheGuestsBoardIsTurnedRound() throws {
         openNearby()
-        app.buttons["btn-join"].tap()
-        giveName("Esi", orSee: app.buttons["nearby-game-Ama's game"])
+        XCTAssertFalse(app.buttons["btn-host"].exists)
+        XCTAssertFalse(app.buttons["btn-join"].exists)
         let game = app.buttons["nearby-game-Ama's game"]
-        XCTAssertTrue(game.waitForExistence(timeout: 10), "the demo host's game is listed")
+        XCTAssertTrue(game.waitForExistence(timeout: 10), "the demo's game is listed by itself")
         game.tap()
+        let ready = app.buttons["btn-ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["btn-not-now"].exists, "only the creator turns someone away")
+        let canPress = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: ready)
+        XCTAssertEqual(XCTWaiter().wait(for: [canPress], timeout: 10), .completed)
+        ready.tap()
 
         let turn = app.staticTexts["turn-indicator"]
         XCTAssertTrue(turn.waitForExistence(timeout: 10))
-        // Ama hosts, so she plays South and moves first; you play North, nearest you.
+        // Ama made the game, so she plays South and moves first; you play North, nearest you.
         let a1 = app.buttons["house-A1"].frame, b1 = app.buttons["house-B1"].frame
         XCTAssertGreaterThan(b1.midY, a1.midY, "your row (B) is the near one")
         wait(for: turn, label: "Your turn")
         XCTAssertEqual(app.otherElements["plaque-B"].label.hasPrefix("You"), true)
     }
 
+    /// How nearby play works: three steps, and help with connecting.
+    @MainActor
+    func testTheHelpSaysItInThreeSteps() throws {
+        openNearby()
+        app.buttons["btn-nearby-help"].tap()
+        XCTAssertTrue(app.staticTexts["Keep both phones close"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Start on one phone"].exists)
+        XCTAssertTrue(app.staticTexts["Join on the other"].exists)
+        XCTAssertTrue(app.buttons["btn-trouble-connecting"].exists)
+    }
+
     @MainActor
     func testABannerShowsWhileAmasPhoneIsQuiet() throws {
         app.launchArguments += ["--demo-quiet-after=1"]
-        hostAndAccept()
+        startAndPressReady()
         playAndWaitForReply()
         let banner = app.staticTexts["reconnect-banner"]
         // Six seconds of silence makes a seat "reconnecting"; the heartbeat checks every two.

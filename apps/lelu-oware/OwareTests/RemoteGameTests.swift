@@ -30,20 +30,26 @@ final class RemoteGameTests: XCTestCase {
         let guestTransport: LoopbackTransport
     }
 
-    private func pair(rules: RuleSet = .abapa, starter: Player = .south, hostPace: Double = 1, guestPace: Double = 1) async -> Pair {
+    /// `ready`: both players press Ready, as on the Ready to play screen.
+    private func pair(rules: RuleSet = .abapa, starter: Player = .south, hostPace: Double = 1, guestPace: Double = 1,
+                      names: (host: String, guest: String) = ("Kofi", "Ama"), ready: Bool = true) async -> Pair {
         let host = TestSupport.session(track: { [weak self] in self?.hostEvents.append($0) })
         let guest = TestSupport.session()
         let hostTransport = LoopbackTransport(), guestTransport = LoopbackTransport()
-        let hostLink = MatchLink(hosting: OwareMatch(rules: rules, starter: starter), name: "Kofi", pace: hostPace,
+        let hostLink = MatchLink(hosting: OwareMatch(rules: rules, starter: starter), name: names.host, pace: hostPace,
                                  transport: hostTransport, clock: clock)
-        let guestLink = MatchLink(joiningAs: "Ama", pace: guestPace, transport: guestTransport, clock: clock)
+        let guestLink = MatchLink(joiningAs: names.guest, pace: guestPace, transport: guestTransport, clock: clock)
         host.startRemote(hostLink)
         guest.startRemote(guestLink)
         hostTransport.connect(guestTransport)
-        await until("Ama asks to join") { hostLink.joinRequests.count == 1 }
+        await until("the guest asks to join") { hostLink.joinRequests.count == 1 }
         await hostLink.accept(hostLink.joinRequests[0].peer)
-        await until("both seated") { host.remoteGame?.opponentName == "Ama" && guest.remoteGame?.opponentName == "Kofi" }
-        await until("both phones ready") { host.isStarted && guest.isStarted }
+        await until("both seated") { host.remoteGame?.opponentName.isEmpty == false && guest.remoteGame?.opponentName.isEmpty == false }
+        if ready {
+            await hostLink.ready()
+            await guestLink.ready()
+            await until("both phones ready") { host.isStarted && guest.isStarted }
+        }
         return Pair(host: host, guest: guest, hostLink: hostLink, guestLink: guestLink, guestTransport: guestTransport)
     }
 
@@ -94,6 +100,27 @@ final class RemoteGameTests: XCTestCase {
         await settle()
         XCTAssertEqual(host.state.moveNumber, 0)
         XCTAssertEqual(host.turnDescription, "Waiting for the other player…")
+    }
+
+    /// Being seated is not enough: the game starts only once both players have pressed Ready.
+    func testNeitherPhoneStartsUntilBothPressReady() async {
+        let p = await pair(ready: false)
+        await settle()
+        XCTAssertFalse(p.host.isStarted)
+        await p.hostLink.ready()
+        await settle()
+        XCTAssertFalse(p.host.isStarted, "the guest has not pressed Ready")
+        XCTAssertFalse(p.guest.isStarted)
+        await p.guestLink.ready()
+        await until("both start") { p.host.isStarted && p.guest.isStarted }
+        XCTAssertTrue(p.host.humanToMove)
+    }
+
+    /// iOS only says "iPhone", so two players often keep the default name: add the side's colour.
+    func testTwoPlayersWithTheSameNameAreToldApartByColour() async {
+        let p = await pair(names: ("Oware Player", "Oware Player"))
+        XCTAssertEqual(p.host.opponentName, "Oware Player · red")
+        XCTAssertEqual(p.guest.opponentName, "Oware Player · gold")
     }
 
     /// Leaving on purpose is not a lost connection: no "reconnecting", the computer is offered at once.

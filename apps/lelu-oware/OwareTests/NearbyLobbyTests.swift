@@ -3,7 +3,7 @@ import OwareEngine
 import XCTest
 @testable import Oware
 
-/// Hosting and joining against the demo player: the same rooms and messages as two phones, with
+/// Starting and joining against the demo player: the same rooms and messages as two phones, with
 /// the demo's phone inside the app.
 @MainActor
 final class NearbyLobbyTests: XCTestCase {
@@ -23,55 +23,81 @@ final class NearbyLobbyTests: XCTestCase {
         return (lobby, session)
     }
 
-    func testHostingTheDemoAmaAsksAndTheGameStartsOnAccept() async {
+    /// One screen: games nearby are listed by themselves, with no Join to tap first.
+    func testOpeningListsGamesNearbyByItself() async {
+        let (lobby, _) = lobby()
+        lobby.open()
+        XCTAssertEqual(lobby.phase, .lobby)
+        await until("Ama's game is listed") { lobby.games.map(\.name) == ["Ama's game"] }
+        XCTAssertEqual(lobby.games.first?.rules, "Abapa")
+        XCTAssertEqual(lobby.games.first?.creatorName, "Ama")
+        XCTAssertEqual(lobby.games.first?.creatorStarts, true, "the card can say Ama starts")
+        XCTAssertNotNil(lobby.games.first?.gameID)
+    }
+
+    /// Start nearby game: listed and waiting; when someone comes, both see Ready to play, and the
+    /// game starts only once both have pressed Ready (a connection alone never starts it).
+    func testStartingWaitsThenBothPressReady() async {
         let (lobby, session) = lobby()
         var started = false
         lobby.onStart = { started = true }
-        lobby.host(name: "Kofi", rules: .namNam, starter: .creatorStarts)
-        XCTAssertEqual(lobby.phase, .hosting)
-        await until("Ama asks") { lobby.joinRequests.map(\.name) == ["Ama"] }
+        lobby.start(name: "Kofi", rules: .namNam, starter: .creatorStarts)
+        XCTAssertEqual(lobby.phase, .waiting)
+        await until("Ama comes") { lobby.phase == .ready }
+        XCTAssertEqual(lobby.opponent?.name, "Ama")
+        XCTAssertTrue(lobby.isCreator)
+        XCTAssertTrue(lobby.canSayNotNow)
         XCTAssertFalse(started)
-        await lobby.accept(lobby.joinRequests[0])
+        XCTAssertNil(session.remoteGame)
+        await lobby.ready()
         await until("the game starts") { started }
         XCTAssertEqual(lobby.phase, .playing)
         XCTAssertEqual(session.remoteGame?.opponentName, "Ama")
         XCTAssertEqual(session.remoteGame?.mySide, .south)
-        XCTAssertEqual(session.state.rules, .namNam, "the host's rules")
-        await until("both phones ready, Ama too") { session.isStarted }
+        XCTAssertEqual(session.state.rules, .namNam, "the creator's rules")
+        XCTAssertTrue(session.isStarted)
         XCTAssertTrue(session.humanToMove)
         XCTAssertEqual(events.first, .nearbyHosted(demo: true))
     }
 
-    func testTheHostCanLetThemStart() async {
+    func testTheCreatorCanLetThemStart() async {
         let (lobby, session) = lobby()
         lobby.onStart = {}
-        lobby.host(name: "Kofi", rules: .abapa, starter: .joiningPlayerStarts)
-        await until("Ama asks") { !lobby.joinRequests.isEmpty }
-        await lobby.accept(lobby.joinRequests[0])
+        lobby.start(name: "Kofi", rules: .abapa, starter: .joiningPlayerStarts)
+        await until("Ama comes") { lobby.phase == .ready }
+        await lobby.ready()
         await until("Ama moves first") { session.state.moveNumber == 1 }
         XCTAssertTrue(session.humanToMove)
     }
 
-    func testDecliningSendsAmaAway() async {
+    /// Not now sends Ama away; the game stays listed for someone else.
+    func testNotNowKeepsTheGameWaiting() async {
         let (lobby, _) = lobby()
-        lobby.host(name: "Kofi", rules: .abapa, starter: .creatorStarts)
-        await until("Ama asks") { !lobby.joinRequests.isEmpty }
-        await lobby.decline(lobby.joinRequests[0])
-        XCTAssertTrue(lobby.joinRequests.isEmpty)
-        XCTAssertEqual(lobby.phase, .hosting, "still waiting for someone else")
+        lobby.start(name: "Kofi", rules: .abapa, starter: .creatorStarts)
+        await until("Ama comes") { lobby.phase == .ready }
+        await lobby.notNow()
+        XCTAssertEqual(lobby.phase, .waiting, "still waiting for someone else")
+        XCTAssertNil(lobby.opponent)
     }
 
-    func testJoiningTheDemoPlaysNorthAndAmaMovesFirst() async {
+    /// Joining shows Ready to play at once; Ama (the creator) is ready, and nothing starts until
+    /// this phone presses Ready too.
+    func testJoiningStartsOnlyWhenIPressReady() async {
         let (lobby, session) = lobby()
         var started = false
         lobby.onStart = { started = true }
-        lobby.browse()
-        await until("Ama's game is listed") { lobby.games.map(\.name) == ["Ama's game"] }
-        XCTAssertEqual(lobby.games.first?.rules, "Abapa")
-        XCTAssertEqual(lobby.games.first?.creatorStarts, true, "the card can say Ama starts")
-        XCTAssertNotNil(lobby.games.first?.gameID)
+        lobby.open()
+        await until("Ama's game is listed") { !lobby.games.isEmpty }
         lobby.join(lobby.games[0], name: "Esi")
-        await until("seated") { started }
+        XCTAssertEqual(lobby.phase, .ready)
+        XCTAssertFalse(lobby.isCreator)
+        XCTAssertFalse(lobby.canSayNotNow)
+        XCTAssertEqual(lobby.opponent?.name, "Ama")
+        await until("Ama is there and ready") { lobby.opponent?.isReady == true && lobby.canPressReady }
+        try? await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertFalse(started)
+        await lobby.ready()
+        await until("the game starts") { started }
         XCTAssertEqual(session.remoteGame?.mySide, .north)
         XCTAssertEqual(session.bottomSide, .north)
         await until("Ama moves") { session.state.moveNumber == 1 }
@@ -82,9 +108,9 @@ final class NearbyLobbyTests: XCTestCase {
     func testAmaResignsWhenScriptedAndAgreesToARematch() async {
         let (lobby, session) = lobby(.init(resignAfter: 0, thinkTime: 0.01, joinDelay: 0.01))
         lobby.onStart = {}
-        lobby.host(name: "Kofi", rules: .abapa, starter: .creatorStarts)
-        await until("Ama asks") { !lobby.joinRequests.isEmpty }
-        await lobby.accept(lobby.joinRequests[0])
+        lobby.start(name: "Kofi", rules: .abapa, starter: .creatorStarts)
+        await until("Ama comes") { lobby.phase == .ready }
+        await lobby.ready()
         await until("my turn") { session.humanToMove }
         session.play(house: 0)
         await until("Ama resigns") { session.isGameOver }
@@ -97,15 +123,32 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertEqual(events.last, .nearbyFinished(result: "win", rules: "abapa"))
     }
 
-    func testCancellingStopsHostingAndLeavesNoGame() async {
+    /// Cancel takes the game down and goes back to the games nearby.
+    func testCancellingTakesTheGameDownAndLooksAgain() async {
         let (lobby, session) = lobby()
-        lobby.host(name: "Kofi", rules: .abapa, starter: .creatorStarts)
+        lobby.start(name: "Kofi", rules: .abapa, starter: .creatorStarts)
         lobby.cancel()
-        XCTAssertEqual(lobby.phase, .choosing)
+        XCTAssertEqual(lobby.phase, .lobby)
         XCTAssertNil(session.remoteGame)
+        await until("looking again") { !lobby.games.isEmpty }
     }
 
-    /// The name is asked once and kept, trimmed; a blank one is not a name.
+    /// What nearby players see: the saved name, else the Game Center name, else Oware Player;
+    /// never "Me" or "You".
+    func testMyNameFallsBackToGameCenterThenOwarePlayer() {
+        XCTAssertEqual(NearbyLobby.myName(saved: "Kofi", gameCenter: "kofi99"), "Kofi")
+        XCTAssertEqual(NearbyLobby.myName(saved: nil, gameCenter: "kofi99"), "kofi99")
+        XCTAssertEqual(NearbyLobby.myName(saved: nil, gameCenter: " "), "Oware Player")
+        XCTAssertEqual(NearbyLobby.myName(saved: nil, gameCenter: nil), "Oware Player")
+    }
+
+    func testTheSameNameIsToldApartByTheSidesColour() {
+        XCTAssertEqual(NearbyLobby.tellApart("Oware Player", from: "Oware Player", side: .north), "Oware Player · red")
+        XCTAssertEqual(NearbyLobby.tellApart("Oware Player", from: "Oware Player", side: .south), "Oware Player · gold")
+        XCTAssertEqual(NearbyLobby.tellApart("Ama", from: "Oware Player", side: .north), "Ama")
+    }
+
+    /// The Nearby name is kept, trimmed; a blank one is not a name.
     func testTheNameIsKept() {
         let defaults = TestSupport.defaults()
         XCTAssertNil(NearbyLobby.savedName(defaults))
