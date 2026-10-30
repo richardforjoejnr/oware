@@ -144,18 +144,18 @@ struct SettingsView: View {
             }
 
             Spacer()
-            QuietButton(title: "Leaderboards & achievements", subtitle: "Game Center") {
+            QuietButton(title: "Leaderboards & achievements", subtitle: "see how you rank, in Game Center", opens: true) {
                 GameCenter.shared.showDashboard()
             }
             .accessibilityIdentifier("btn-game-center")
             if FeatureFlags.newsletter {
-                QuietButton(title: "News by email", subtitle: "new chapters and features, from the website") {
+                QuietButton(title: "News by email", subtitle: "new chapters and features, from the website", opens: true) {
                     openURL(Links.newsletter)
                 }
                 .accessibilityIdentifier("btn-newsletter")
             }
             if LaunchOptions.showsTips {
-                QuietButton(title: "Support me", subtitle: tipJar.hasTipped ? "medaase — thank you for your support" : "a tip for the maker; it unlocks nothing") {
+                QuietButton(title: "Support me", subtitle: tipJar.hasTipped ? "medaase — thank you for your support" : "a tip for the maker; it unlocks nothing", opens: true) {
                     showTipJar = true
                 }
                 .accessibilityIdentifier("btn-tip-jar")
