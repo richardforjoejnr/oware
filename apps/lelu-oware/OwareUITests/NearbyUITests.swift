@@ -57,13 +57,16 @@ final class NearbyUITests: XCTestCase {
         wait(for: turn, label: "Your turn")
     }
 
-    /// Plays the first house of yours with seeds in it, then waits for Ama's reply.
+    /// Plays the first house of yours with seeds in it, then waits until the turn has passed: to
+    /// Ama, or (if she resigns at once) to the result. On a slow machine her two-second turn can be
+    /// over before the label is read, so "Ama's turn" itself is not waited for.
     private func playAndWaitForReply() {
         let houses = (1...6).map { app.buttons["house-A\($0)"] }
         guard let house = houses.first(where: { $0.value as? String != "0 seeds" }) else { return XCTFail("no seeds to sow") }
         house.tap()
         let turn = app.staticTexts["turn-indicator"]
-        wait(for: turn, label: "Ama's turn")
+        let passed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "Your turn"), object: turn)
+        XCTAssertEqual(XCTWaiter().wait(for: [passed], timeout: 15), .completed, "the turn never passed to Ama")
     }
 
     @MainActor
@@ -86,8 +89,9 @@ final class NearbyUITests: XCTestCase {
 
         // Ama always agrees, and she starts the rematch: the starter swaps.
         XCTAssertTrue(title.waitForNonExistence(timeout: 10), "the rematch starts once both have asked")
+        // A new game: nothing in the stores (Ama's opening move, if already made, captures nothing).
         XCTAssertEqual(app.otherElements["store-A"].value as? String, "0 seeds")
-        XCTAssertEqual(app.buttons["house-A1"].value as? String, "4 seeds")
+        XCTAssertEqual(app.otherElements["store-B"].value as? String, "0 seeds")
         let turn = app.staticTexts["turn-indicator"]
         if turn.label != "Your turn" { wait(for: turn, label: "Your turn") }
     }
