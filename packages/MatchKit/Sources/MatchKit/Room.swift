@@ -276,7 +276,10 @@ public final class Room<Rules: RoomRules> {
         }
         guard let envelope = try? JSONDecoder().decode(Envelope<Message>.self, from: data),
               filter.accept(envelope.sequence, from: peer) else { return }
-        if let seat = seat(of: peer) { heard(seat) }
+        if let seat = seat(of: peer), heard(seat), role == .host, let match {
+            // Back from a quiet spell: it may have missed moves.
+            await post(.snapshot(match), to: peer)
+        }
         switch role {
         case .host: await hostReceives(envelope.body, from: peer)
         case .guest: if peer == hostPeer { guestReceives(envelope.body) }
@@ -344,12 +347,14 @@ public final class Room<Rules: RoomRules> {
         role == .guest ? (peer == hostPeer && mySeat != nil ? 0 : nil) : peerForSeat.first { $0.value == peer }?.key
     }
 
-    private func heard(_ seat: Int) {
+    /// True when the seat was reconnecting and is back.
+    @discardableResult
+    private func heard(_ seat: Int) -> Bool {
         lastHeard[seat] = clock.now
-        if seats[seat]?.isReconnecting == true {
-            seats[seat]?.isReconnecting = false
-            onEvent?(.back(seat: seat))
-        }
+        guard seats[seat]?.isReconnecting == true else { return false }
+        seats[seat]?.isReconnecting = false
+        onEvent?(.back(seat: seat))
+        return true
     }
 
     private func take(_ snapshot: Match) {

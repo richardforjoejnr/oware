@@ -30,12 +30,13 @@ final class RemoteGameTests: XCTestCase {
         let guestTransport: LoopbackTransport
     }
 
-    private func pair(rules: RuleSet = .abapa, starter: Player = .south) async -> Pair {
+    private func pair(rules: RuleSet = .abapa, starter: Player = .south, hostPace: Double = 1, guestPace: Double = 1) async -> Pair {
         let host = TestSupport.session(track: { [weak self] in self?.hostEvents.append($0) })
         let guest = TestSupport.session()
         let hostTransport = LoopbackTransport(), guestTransport = LoopbackTransport()
-        let hostLink = MatchLink(hosting: OwareMatch(rules: rules, starter: starter), name: "Kofi", transport: hostTransport, clock: clock)
-        let guestLink = MatchLink(joiningAs: "Ama", transport: guestTransport, clock: clock)
+        let hostLink = MatchLink(hosting: OwareMatch(rules: rules, starter: starter), name: "Kofi", pace: hostPace,
+                                 transport: hostTransport, clock: clock)
+        let guestLink = MatchLink(joiningAs: "Ama", pace: guestPace, transport: guestTransport, clock: clock)
         host.startRemote(hostLink)
         guest.startRemote(guestLink)
         hostTransport.connect(guestTransport)
@@ -56,7 +57,29 @@ final class RemoteGameTests: XCTestCase {
         XCTAssertEqual(p.guest.sideName(.north), "You")
         XCTAssertEqual(p.guest.sideName(.south), "Kofi")
         XCTAssertEqual(p.guest.turnDescription, "Kofi's turn")
-        XCTAssertEqual(p.host.turnDescription, "Your move")
+        XCTAssertEqual(p.host.turnDescription, "Your turn")
+        XCTAssertEqual(p.host.bottomSide, .south)
+        XCTAssertEqual(p.guest.bottomSide, .north, "the guest's board is turned round")
+    }
+
+    /// Each phone has its own sowing speed; in a game on two phones both sow at the slower one, so
+    /// the boards keep in step, and nobody who chose Slow is hurried.
+    func testBothPhonesSowAtTheSlowerSpeed() async {
+        let p = await pair(hostPace: AppSettings.AnimationSpeed.fast.rawValue, guestPace: AppSettings.AnimationSpeed.slow.rawValue)
+        await until("both know both speeds") { p.host.sharedPace == 0.7 && p.guest.sharedPace == 0.7 }
+
+        // A rematch keeps it.
+        let q = await pair(hostPace: 0.7, guestPace: 1.6)
+        await until("the host's Slow wins") { q.host.sharedPace == 0.7 && q.guest.sharedPace == 0.7 }
+        q.host.resign()
+        await until("over") { q.guest.isGameOver }
+        q.host.requestRematch()
+        q.guest.requestRematch()
+        await until("rematch") { !q.host.isGameOver && !q.guest.isGameOver }
+        XCTAssertEqual(q.guest.sharedPace, 0.7)
+
+        // Alone, a phone keeps its own speed.
+        XCTAssertNil(TestSupport.session().sharedPace)
     }
 
     func testTheHostMovesAndTheGuestsBoardMatches() async {

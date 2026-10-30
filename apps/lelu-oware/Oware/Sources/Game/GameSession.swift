@@ -64,8 +64,12 @@ final class GameSession {
     private(set) var isReconnecting = false
     /// The other phone has been gone a minute: the player may finish against the computer.
     private(set) var offersComputer = false
+    /// The other phone has left or been lost: no rematch.
+    private(set) var opponentGone = false
     /// Who has asked for another game after this one.
     private(set) var rematchAsked: Set<Player> = []
+    /// The speed both phones sow at (the slower of the two); nil when this phone plays alone.
+    private(set) var sharedPace: Double?
     /// Guest: why the host's phone said no.
     private(set) var refusal: Refusal?
     /// The match as the board shows it, and the latest from the host.
@@ -74,6 +78,13 @@ final class GameSession {
     private var syncTask: Task<Void, Never>?
 
     var remoteGame: RemoteGame? { mode.remoteGame }
+    /// The row nearest the player: on two phones the guest plays North, so their board is turned round.
+    var bottomSide: Player { remoteGame?.mySide ?? .south }
+    /// The game on two phones is over and this phone has not yet asked for another.
+    var canAskRematch: Bool {
+        guard link != nil, let game = remoteGame, state.isOver, !isAnimating else { return false }
+        return !opponentGone && !rematchAsked.contains(game.mySide)
+    }
 
     init(store: GameStore = .shared) {
         self.store = store
@@ -185,7 +196,7 @@ final class GameSession {
         case .passAndPlay: return state.sideToMove == .south ? "A to move" : "B to move"
         case .puzzle, .tutorial: return ""
         case let .remote(game):
-            if humanToMove { return "Your move" }
+            if humanToMove { return "Your turn" }
             return state.sideToMove == game.mySide ? "…" : "\(game.opponentName)'s turn"
         }
     }
@@ -627,7 +638,9 @@ final class GameSession {
         roundMessage = nil
         isReconnecting = false
         offersComputer = false
+        opponentGone = false
         rematchAsked = []
+        sharedPace = link.table?.sharedPace
         refusal = nil
         link.onEvent = { [weak self] in self?.handle($0) }
         animator?.render(state)
@@ -643,10 +656,12 @@ final class GameSession {
     /// ordinary game.
     func finishAgainstComputer(difficulty: Difficulty = .player) {
         guard offersComputer, let game = remoteGame else { return }
+        events.nearbyDropped(finishedAgainstComputer: true)
         link?.room.stop()
         link = nil
         interrupt()
         mode = .versusAI(difficulty: difficulty, personality: .balanced, humanPlays: game.mySide)
+        sharedPace = nil
         offersComputer = false
         isReconnecting = false
         rematchAsked = []
@@ -657,7 +672,17 @@ final class GameSession {
         scheduleAIIfNeeded()
     }
 
+    /// Leaves the game on two phones, saying goodbye to the other phone.
+    func leaveNearbyGame() {
+        guard link != nil else { return }
+        if offersComputer { events.nearbyDropped(finishedAgainstComputer: false) }
+        offersComputer = false
+        isReconnecting = false
+        leaveRemote()
+    }
+
     private func leaveRemote() {
+        sharedPace = nil
         syncTask?.cancel()
         syncTask = nil
         shownMatch = nil
@@ -678,6 +703,7 @@ final class GameSession {
             }
         case let .snapshot(table):
             rematchAsked = table.rematchAsked
+            sharedPace = table.sharedPace
             latestMatch = table.match
             sync()
         case let .reconnecting(seat):
@@ -687,6 +713,7 @@ final class GameSession {
         case let .seatLost(seat):
             guard seat != mySeat else { return }
             isReconnecting = false
+            opponentGone = true
             offersComputer = !state.isOver
         case let .refused(reason):
             refusal = reason

@@ -12,6 +12,9 @@ import OwareEngine
 ///   B1…B6 top to bottom on the left. Each store sits by its player: south's (you) at the bottom
 ///   next to your name, north's (the opponent) at the top next to theirs. Stores are not part of
 ///   the sowing path, so this only changes where the captured seeds are shown.
+///
+/// `bottomSide` is the player nearest you: South unless you play North on your own phone (a game
+/// on two phones), when the board is turned round so your row is still the near one.
 struct BoardLayout: Equatable {
     enum Orientation { case horizontal, vertical }
 
@@ -24,9 +27,11 @@ struct BoardLayout: Equatable {
     let pitch: CGFloat
     /// Depth of each store zone at the ends, including the board's edge.
     let storeZone: CGFloat
+    let bottomSide: Player
 
-    init(size: CGSize) {
+    init(size: CGSize, bottomSide: Player = .south) {
         self.size = size
+        self.bottomSide = bottomSide
         boardRect = CGRect(origin: .zero, size: size)
         if size.height > size.width * 1.05 {
             orientation = .vertical
@@ -64,10 +69,16 @@ struct BoardLayout: Equatable {
     private var firstLane: CGFloat { (orientation == .vertical ? boardRect.midX : boardRect.midY) - cell * 0.86 }
     private var secondLane: CGFloat { (orientation == .vertical ? boardRect.midX : boardRect.midY) + cell * 0.86 }
 
+    /// Where a house or a player sits as if South were nearest: turned round half the board when
+    /// North is.
+    private func near(_ index: Int) -> Int { bottomSide == .south ? index : (index + 6) % 12 }
+    private func near(_ player: Player) -> Player { bottomSide == .south ? player : player.opponent }
+
     // MARK: Positions
 
     /// Centre of an absolute house index 0–11.
     func houseCenter(_ index: Int) -> CGPoint {
+        let index = near(index)
         switch orientation {
         case .horizontal:
             // south along the bottom (second lane) left→right; north along the top right→left
@@ -91,6 +102,7 @@ struct BoardLayout: Equatable {
 
     /// The store's bowl at either end: the area seeds may rest in.
     func storeRect(_ player: Player) -> CGRect {
+        let player = near(player)
         switch orientation {
         case .horizontal:
             let x = player == .south ? boardRect.maxX - storeZone * 0.52 : boardRect.minX + storeZone * 0.52
@@ -111,6 +123,7 @@ struct BoardLayout: Equatable {
     /// real board) or is too narrow to fit one clear of the houses and their counts.
     func railRect(_ player: Player) -> CGRect? {
         guard orientation == .vertical, railRoom >= 30 else { return nil }
+        let player = near(player)
         let width = min(railRoom, max(cell * 0.6, 40))
         let x = player == .south ? boardRect.maxX - railInset - width : boardRect.minX + railInset
         return CGRect(x: x, y: boardRect.minY + railInset, width: width, height: boardRect.height - railInset * 2)
@@ -122,7 +135,7 @@ struct BoardLayout: Equatable {
         guard let rail = railRect(player) else { return nil }
         let width = min(railRoom, rail.width * 1.7)
         let height = width * 600 / 258
-        let x = player == .south ? rail.maxX - width : rail.minX
+        let x = near(player) == .south ? rail.maxX - width : rail.minX
         return CGRect(x: x, y: boardRect.midY - height / 2, width: width, height: height)
     }
 
@@ -136,7 +149,7 @@ struct BoardLayout: Equatable {
     func storeLabelPoint(_ player: Player) -> CGPoint {
         let r = storeRect(player)
         switch orientation {
-        case .horizontal: return CGPoint(x: r.midX, y: player == .south ? r.maxY - r.width * 0.5 : r.minY + r.width * 0.5)
+        case .horizontal: return CGPoint(x: r.midX, y: near(player) == .south ? r.maxY - r.width * 0.5 : r.minY + r.width * 0.5)
         case .vertical:   return CGPoint(x: r.maxX - r.height * 0.5, y: r.midY)
         }
     }
@@ -148,9 +161,9 @@ struct BoardLayout: Equatable {
         let shift = withName ? houseRadius * 0.34 : 0
         switch orientation {
         case .horizontal:
-            return CGPoint(x: c.x + shift, y: c.y + (Player.south.owns(house) ? labelOffset : -labelOffset))
+            return CGPoint(x: c.x + shift, y: c.y + (Player.south.owns(near(house)) ? labelOffset : -labelOffset))
         case .vertical:
-            return CGPoint(x: c.x + (Player.south.owns(house) ? labelOffset : -labelOffset), y: c.y + shift)
+            return CGPoint(x: c.x + (Player.south.owns(near(house)) ? labelOffset : -labelOffset), y: c.y + shift)
         }
     }
 
@@ -170,9 +183,9 @@ struct BoardLayout: Equatable {
         let c = houseCenter(house)
         switch orientation {
         case .horizontal:
-            return CGPoint(x: c.x, y: c.y + (Player.south.owns(house) ? -cell * 0.5 : cell * 0.5))
+            return CGPoint(x: c.x, y: c.y + (Player.south.owns(near(house)) ? -cell * 0.5 : cell * 0.5))
         case .vertical:
-            return CGPoint(x: c.x + (Player.south.owns(house) ? -cell * 0.5 : cell * 0.5), y: c.y)
+            return CGPoint(x: c.x + (Player.south.owns(near(house)) ? -cell * 0.5 : cell * 0.5), y: c.y)
         }
     }
 
@@ -211,7 +224,7 @@ struct BoardLayout: Equatable {
             let cx = r.minX + seedRadius * 1.3 + long / 2
             return CGPoint(x: cx + alongOffset, y: r.midY + acrossOffset)
         case .horizontal:
-            let labelAtBottom = player == .south
+            let labelAtBottom = near(player) == .south
             let cy = labelAtBottom ? r.minY + seedRadius * 1.3 + long / 2 : r.maxY - seedRadius * 1.3 - long / 2
             return CGPoint(x: r.midX + acrossOffset, y: cy + alongOffset)
         }

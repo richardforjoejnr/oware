@@ -180,4 +180,26 @@ final class PlayerEventsTests: XCTestCase {
         XCTAssertFalse(settings.effectiveUsageStats)
         XCTAssertFalse(AppSettings(defaults: TestSupport.defaults(), testMode: true).shouldAskUsageStats)
     }
+
+    /// A game on two phones reports how it ended from this phone's side, and nothing about who
+    /// played. It earns no Game Center scores (NEARBY_PLAY.md, still to decide).
+    func testANearbyGameReportsItsResultOnly() {
+        let remote = GameMode.remote(RemoteGame(mySide: .north, opponentName: "Ama"))
+        player.gameFinished(mode: remote, state: finished(.north))
+        player.gameFinished(mode: remote, state: finished(.south, reason: .agreement, rules: .namNam))
+        player.gameFinished(mode: remote, state: finished(nil))
+        XCTAssertEqual(events, [.nearbyFinished(result: "win", rules: "abapa"),
+                                .nearbyFinished(result: "loss", rules: "namNam"),
+                                .nearbyFinished(result: "draw", rules: "abapa")])
+        XCTAssertTrue(services.achievements.isEmpty && services.scores.isEmpty)
+    }
+
+    func testNearbyEventsCarryNoNames() {
+        XCTAssertEqual(AnalyticsEvent.nearbyHosted(demo: false).name, "nearby.hosted")
+        XCTAssertEqual(AnalyticsEvent.nearbyJoined(demo: true).name, "nearby.joined")
+        XCTAssertEqual(AnalyticsEvent.nearbyJoined(demo: true).parameters, ["demo": "yes"])
+        XCTAssertEqual(AnalyticsEvent.nearbyFinished(result: "win", rules: "abapa").name, "nearby.finished")
+        XCTAssertEqual(AnalyticsEvent.nearbyDropped(finishedAgainstComputer: true).name, "nearby.dropped")
+        XCTAssertEqual(AnalyticsEvent.nearbyDropped(finishedAgainstComputer: true).parameters, ["then": "computer"])
+    }
 }

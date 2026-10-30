@@ -17,6 +17,35 @@ enum Nearby {
     }
 }
 
+/// How finding phones is going. `localNetworkDenied`: the player said no to Local Network (or turned
+/// it off in Settings), and nothing nearby can be found until they turn it on.
+public enum NearbyStatus: Sendable, Equatable {
+    case working
+    case localNetworkDenied
+    case failed
+
+    /// `kDNSServiceErr_PolicyDenied`: what Bonjour reports without the Local Network permission.
+    static let policyDenied: Int32 = -65570
+
+    init(_ state: NWBrowser.State) {
+        switch state {
+        case let .waiting(error), let .failed(error): self.init(error)
+        default: self = .working
+        }
+    }
+
+    init(_ state: NWListener.State) {
+        switch state {
+        case let .waiting(error), let .failed(error): self.init(error)
+        default: self = .working
+        }
+    }
+
+    init(_ error: NWError) {
+        if case let .dns(code) = error, code == Self.policyDenied { self = .localNetworkDenied } else { self = .failed }
+    }
+}
+
 /// A game found nearby.
 public struct NearbyGame: Sendable, Hashable, Identifiable {
     /// The host's game name, such as "Kofi's game".
@@ -132,6 +161,8 @@ public class NearbyTransport: MatchTransport, @unchecked Sendable {
 /// Hosts a game: advertises it nearby and takes every phone that connects. The room decides
 /// who gets a seat.
 public final class NearbyHost: NearbyTransport, @unchecked Sendable {
+    /// Whether the game can be found, each time that changes.
+    public let status: AsyncStream<NearbyStatus>
     private let listener: NWListener
     private let service: NWListener.Service
 
@@ -139,7 +170,13 @@ public final class NearbyHost: NearbyTransport, @unchecked Sendable {
     public init(serviceType: String, name: String, info: [String: String] = [:]) throws {
         listener = try NWListener(using: Nearby.parameters())
         service = NWListener.Service(name: name, type: serviceType, domain: nil, txtRecord: NWTXTRecord(info))
+        let (status, statusContinuation) = AsyncStream.makeStream(of: NearbyStatus.self, bufferingPolicy: .bufferingNewest(1))
+        self.status = status
         super.init()
+        listener.stateUpdateHandler = { state in
+            if case .cancelled = state { return statusContinuation.finish() }
+            statusContinuation.yield(NearbyStatus(state))
+        }
         listener.service = service
         listener.newConnectionHandler = { [weak self] connection in self?.adopt(connection) }
         listener.start(queue: queue)
@@ -160,6 +197,8 @@ public final class NearbyHost: NearbyTransport, @unchecked Sendable {
 public final class NearbyBrowser: @unchecked Sendable {
     /// The games around, every time the list changes.
     public let games: AsyncStream<[NearbyGame]>
+    /// Whether games can be found, each time that changes.
+    public let status: AsyncStream<NearbyStatus>
 
     private let browser: NWBrowser
     private let continuation: AsyncStream<[NearbyGame]>.Continuation
@@ -168,6 +207,12 @@ public final class NearbyBrowser: @unchecked Sendable {
     public init(serviceType: String) {
         (games, continuation) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(1))
         browser = NWBrowser(for: .bonjourWithTXTRecord(type: serviceType, domain: nil), using: Nearby.parameters())
+        let (status, statusContinuation) = AsyncStream.makeStream(of: NearbyStatus.self, bufferingPolicy: .bufferingNewest(1))
+        self.status = status
+        browser.stateUpdateHandler = { state in
+            if case .cancelled = state { return statusContinuation.finish() }
+            statusContinuation.yield(NearbyStatus(state))
+        }
         browser.browseResultsChangedHandler = { [continuation] results, _ in
             let found = results.compactMap { result -> NearbyGame? in
                 guard case let .service(name, _, _, _) = result.endpoint else { return nil }

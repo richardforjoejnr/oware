@@ -13,6 +13,7 @@ struct HomeView: View {
     let openPuzzles: () -> Void
     let openHeritage: () -> Void
     let openJourney: () -> Void
+    var openNearby: () -> Void = {}
     let openSettings: () -> Void
 
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
@@ -260,7 +261,7 @@ struct HomeView: View {
                 }
                 .accessibilityIdentifier("btn-learn")
             }
-            WoodTile(title: showMore ? "Less" : "More", subtitle: showMore ? "" : "two players, riddles, rules", glyph: "more") { showMore.toggle() }
+            WoodTile(title: showMore ? "Less" : "More", subtitle: showMore ? "" : (Feature.showsNearbyPlay ? "two players, nearby, rules" : "two players, riddles, rules"), glyph: "more") { showMore.toggle() }
                 .accessibilityIdentifier("btn-more")
                 .accessibilityLabel(showMore ? "Fewer options" : "More options")
         }
@@ -273,6 +274,10 @@ struct HomeView: View {
                 startGame()
             }
             .accessibilityIdentifier("btn-pass-play")
+            if Feature.showsNearbyPlay {
+                WoodPlank(title: "Play nearby", subtitle: "two phones, one game", glyph: "people", height: 56) { openNearby() }
+                    .accessibilityIdentifier("btn-nearby")
+            }
             if session.hasResumableGame {
                 WoodPlank(title: "Riddles", subtitle: library.dailySolved ? "today's solved · \(library.solvedIDs.count) of \(library.puzzles.count)" : "a new one every day", glyph: "knot", height: 56) { openPuzzles() }
                     .accessibilityIdentifier("btn-puzzles")

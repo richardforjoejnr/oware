@@ -5,7 +5,11 @@ Bonjour over Apple's phone-to-phone Wi-Fi. **Free**, behind the `nearbyPlay` fea
 
 The design shared with Lelu Ludo is in [MULTIPLAYER.md](../../../docs/MULTIPLAYER.md): the layers,
 MatchKit, feature switches, Apple requirements and the test pyramid. This file covers what is
-specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–4 built (2026-10-28/29); step 0 (two real phones) still to do.
+specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–5 built (2026-10-28/29); step 0 (two real phones) still to do.
+
+**2026-10-30: the owner's review redesigns the screens.** Read [NEARBY_PLAY_REDESIGN.md](NEARBY_PLAY_REDESIGN.md)
+first: one screen with no Host / Join, a Ready handshake, default names, reconnect and rejoin, and
+the carved-wood kit in `art/nearby/`.
 
 ## What the player sees
 
@@ -167,6 +171,18 @@ Then:
 - Info.plist keys, analytics;
 - Settings ▸ Try nearby play.
 
+**Built.** `NearbyLobby` (Game/NearbyLobby.swift) runs Host / Join over a `NearbyNetwork`: the
+live one wraps `NearbyHost` / `NearbyBrowser`, and `DemoNetwork` puts the demo player, Ama, on a
+`LoopbackTransport`. Ama plays the first legal move two seconds after her turn comes, always agrees
+to a rematch, and follows `--demo-resign-after=N` (first game only) and `--demo-quiet-after=N`
+(twelve seconds of silence). `BoardLayout(size:bottomSide:)` turns the board round for the guest, so
+the scene and the touch areas move together. Your name is kept under `nearbyName` and can be changed
+in Settings. To try it on two phones in a Debug build before step 6, launch with `-nearbyPlay YES`
+(or `--nearby`). Writing the demo found a MatchKit bug: a guest out of range missed the host's
+moves and both phones then waited. The host now resends the match when a quiet seat is heard
+again (`aGuestBackFromAQuietSpellCatchesUp`). `NearbyHost` and `NearbyBrowser` report
+`NearbyStatus.localNetworkDenied`, and the Nearby screen then says how to turn Local Network on.
+
 ### Step 6: `feat(oware): turn on nearby play`
 - `nearbyPlay: .free`;
 - the privacy page and the App Review note;
@@ -184,8 +200,9 @@ Real-phone checklist before TestFlight:
 
 ## Still to decide (later, not blocking)
 
-- **Saved games:** should a nearby game be resumable after both apps are closed? v1 says no. The
-  `matchID` makes it possible later.
+- **Saved games:** decided 2026-10-30: no. A nearby game does not survive both apps being closed.
+  (The `matchID` would make it possible later.)
 - **Join code:** should joining need a 4-digit code shown on the host? Accepting each player is
   enough between friends. A code could also key encryption (TLS with a pre-shared key) if wanted.
-- **Game Center:** should nearby wins count towards achievements?
+- **Game Center:** decided 2026-10-30: no. Nearby wins earn no achievements or scores (easy to
+  farm against a second phone of your own).

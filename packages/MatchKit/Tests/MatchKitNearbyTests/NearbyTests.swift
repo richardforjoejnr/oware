@@ -3,6 +3,7 @@ import Foundation
 import Testing
 import MatchKit
 @testable import MatchKitNearby
+import Network
 
 /// A host and a browser on one Mac find each other over Bonjour and talk.
 @Suite("Nearby transport on this Mac", .timeLimit(.minutes(1)))
@@ -60,6 +61,17 @@ struct NearbyTests {
             if case .disconnected(guestPeer!) = event { left = true }
         }
         #expect(left)
+    }
+
+    /// Bonjour's "policy denied" is the Local Network permission being off; the app then shows
+    /// how to turn it on rather than an empty list.
+    @Test func aDeniedPermissionIsToldApartFromOtherFailures() {
+        #expect(NearbyStatus(.dns(-65570)) == .localNetworkDenied)
+        #expect(NearbyStatus(.dns(-65537)) == .failed)
+        #expect(NearbyStatus(.posix(.ECONNREFUSED)) == .failed)
+        #expect(NearbyStatus(NWBrowser.State.ready) == .working)
+        #expect(NearbyStatus(NWBrowser.State.waiting(.dns(-65570))) == .localNetworkDenied)
+        #expect(NearbyStatus(NWListener.State.ready) == .working)
     }
 }
 #endif
