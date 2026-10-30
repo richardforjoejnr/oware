@@ -7,6 +7,7 @@ enum Screen: Hashable {
     case puzzles
     case heritage
     case journey
+    case nearby
 }
 
 struct RootView: View {
@@ -15,7 +16,10 @@ struct RootView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(PuzzleLibrary.self) private var library
     @Environment(RiddleReminder.self) private var reminder
+    @Environment(NearbyLobby.self) private var lobby
     @Environment(\.scenePhase) private var scenePhase
+    /// Nearby with the demo player (Settings ▸ Try nearby play) rather than real phones.
+    @State private var nearbyDemo = false
     @State private var screen: Screen = .home
     @State private var showSettings = false
     /// The carved-map opening; skipped for test launches so suites are not slowed.
@@ -24,6 +28,14 @@ struct RootView: View {
     private static let splashThisLaunch: Duration? =
         !LaunchOptions.fastAnimations && !LaunchOptions.startGame && LaunchOptions.startScreen == nil
             ? SplashSchedule.durationForThisLaunch() : nil
+
+    /// Nearby starts afresh here, as it is opened, not when its screen appears: an appearing view
+    /// can run after the first tap (a quick Join) and undo it.
+    private func openNearby(demo: Bool) {
+        nearbyDemo = demo
+        lobby.prepare(demo: demo || LaunchOptions.nearbyDemo)
+        screen = .nearby
+    }
 
     var body: some View {
         ZStack {
@@ -39,6 +51,7 @@ struct RootView: View {
                          openPuzzles: { screen = .puzzles },
                          openHeritage: { screen = .heritage },
                          openJourney: { screen = .journey },
+                         openNearby: { openNearby(demo: false) },
                          openSettings: { showSettings = true })
                     .transition(.opacity)
             case .game:
@@ -52,6 +65,10 @@ struct RootView: View {
                     screen = .game
                 })
                 .transition(.opacity)
+            case .nearby:
+                NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home },
+                           tryDemo: { openNearby(demo: true) })
+                    .transition(.opacity)
             case .heritage:
                 HeritageView(goBack: { screen = .home })
                     .transition(.opacity)
@@ -64,6 +81,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.45), value: screen)
+        .task { TestFeatures.shared.channel = await AppChannel.current() }
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .presentationDetents([.large])
@@ -80,6 +98,7 @@ struct RootView: View {
             Task { await reminder.reschedule(solvedToday: library.dailySolved, streak: library.currentStreak()) }
         }
         .onAppear {
+            lobby.onStart = { screen = .game }
             library.variant = settings.rules.variant
             switch LaunchOptions.startScreen {
             case "journey": screen = .journey

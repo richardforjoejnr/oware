@@ -33,7 +33,7 @@ final class TipStoreTests: XCTestCase {
     }
 
     func testOnlinePlayIsSwitchedOff() {
-        XCTAssertFalse(FeatureFlags.onlinePlay)
+        XCTAssertEqual(Feature.table[Feature.online], .off)
     }
 
     /// The local test store. On some simulators (the CI runner's) it gives back no products at

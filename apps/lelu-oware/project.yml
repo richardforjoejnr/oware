@@ -36,6 +36,8 @@ packages:
     path: ../../packages/OwareEngine
   SupportKit:
     path: ../../packages/SupportKit
+  MatchKit:
+    path: ../../packages/MatchKit
   # Anonymous analytics (see Oware/Sources/Support/Analytics.swift and docs/lelu-oware/privacy.md).
   TelemetryDeck:
     url: https://github.com/TelemetryDeck/SwiftSDK
@@ -58,6 +60,10 @@ targets:
         product: OwareAI
       - package: SupportKit
         product: SupportKit
+      - package: MatchKit
+        product: MatchKit
+      - package: MatchKit
+        product: MatchKitNearby
       - package: TelemetryDeck
         product: TelemetryDeck
       - sdk: GameKit.framework
@@ -74,6 +80,9 @@ targets:
         # Set TELEMETRYDECK_APP_ID (e.g. in CI or a local xcconfig); empty leaves analytics off.
         TelemetryDeckAppID: $(TELEMETRYDECK_APP_ID)
         AppStoreID: $(APP_STORE_ID)
+        # Nearby play: finding the other phone (MatchKitNearby, LiveNearbyNetwork.serviceType).
+        NSLocalNetworkUsageDescription: Lelu Oware uses your local network to find another nearby player and play directly between your phones.
+        NSBonjourServices: [_leluoware._tcp]
         UILaunchScreen:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]

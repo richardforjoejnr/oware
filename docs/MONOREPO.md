@@ -14,6 +14,10 @@ the "Engine (swift test)" CI job runs.
 `packages/SupportKit` is the tip jar every app can adopt: `TipJar(productIDs:)` in the environment plus
 `TipJarView(style:)`. Product ids follow `<bundle id>.tip.small|medium|large`.
 
+`packages/MatchKit` is how phones play one game together ([MULTIPLAYER.md](MULTIPLAYER.md)): `MatchKit`
+(rooms, envelopes, the framer, `LoopbackTransport`; pure Swift, tested on Linux) and `MatchKitNearby`
+(Network framework, Bonjour, peer-to-peer; empty where `Network` is missing, tested on macOS).
+
 ## Bundle ids and names
 `com.richardforjoe.<app-slug-without-dashes>`; display names live in each `project.yml`.
 Fastlane's `Appfile` reads `APP_IDENTIFIER` from the environment with the app's id as default.
@@ -34,7 +38,7 @@ calls:
 
 | Change | Runs |
 | --- | --- |
-| `apps/lelu-oware/**`, `packages/OwareEngine/**`, `packages/SupportKit/**`, `docs/lelu-oware/**` | Lelu Oware: `ci.yml` ("CI") and `e2e.yml` ("E2E (Maestro)") |
+| `apps/lelu-oware/**`, `packages/OwareEngine/**`, `packages/SupportKit/**`, `packages/MatchKit/**`, `docs/lelu-oware/**` | Lelu Oware: `ci.yml` ("CI") and `e2e.yml` ("E2E (Maestro)") |
 | The scripts Oware's jobs use (`release_readiness.py`, `next_version.py`, `build_release_notes.py`, `site_pretty_urls.py`, their tests, `pick-simulator.sh`), `Gemfile*`, `ci.yml` | Lelu Oware `ci.yml` (`pick-simulator.sh` also runs `e2e.yml`; editing `e2e.yml` runs only `e2e.yml`) |
 | `apps/lelu-ludo/**`, `packages/LudoEngine/**`, `ludo-ci.yml` | Lelu Ludo: `ludo-ci.yml` only |
 | `reusable-swift-package.yml` | every app that calls it (Oware CI and Ludo CI): it affects both |

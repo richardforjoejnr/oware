@@ -181,16 +181,25 @@ final class PlayerEventsTests: XCTestCase {
         XCTAssertFalse(AppSettings(defaults: TestSupport.defaults(), testMode: true).shouldAskUsageStats)
     }
 
-    // MARK: Online access ("the host pays")
+    /// A game on two phones reports how it ended from this phone's side, and nothing about who
+    /// played. It earns no Game Center scores (NEARBY_PLAY.md, still to decide).
+    func testANearbyGameReportsItsResultOnly() {
+        let remote = GameMode.remote(RemoteGame(mySide: .north, opponentName: "Ama"))
+        player.gameFinished(mode: remote, state: finished(.north))
+        player.gameFinished(mode: remote, state: finished(.south, reason: .agreement, rules: .namNam))
+        player.gameFinished(mode: remote, state: finished(nil))
+        XCTAssertEqual(events, [.nearbyFinished(result: "win", rules: "abapa"),
+                                .nearbyFinished(result: "loss", rules: "namNam"),
+                                .nearbyFinished(result: "draw", rules: "abapa")])
+        XCTAssertTrue(services.achievements.isEmpty && services.scores.isEmpty)
+    }
 
-    func testOnlinePolicy() {
-        let policy = OnlinePolicy()
-        XCTAssertTrue(policy.canHost(purchased: true, founding: false))
-        XCTAssertFalse(policy.canHost(purchased: false, founding: true), "founding players are not included unless switched on")
-        XCTAssertTrue(policy.canJoin(invitedByPlayerWhoCanHost: true, purchased: false, founding: false), "invited friends play free")
-        XCTAssertFalse(policy.canJoin(invitedByPlayerWhoCanHost: false, purchased: false, founding: false))
-        let generous = OnlinePolicy(hostPays: true, foundingPlayersIncluded: true)
-        XCTAssertTrue(generous.canHost(purchased: false, founding: true))
-        XCTAssertFalse(FeatureFlags.onlinePlay, "online play stays hidden until it ships")
+    func testNearbyEventsCarryNoNames() {
+        XCTAssertEqual(AnalyticsEvent.nearbyHosted(demo: false).name, "nearby.hosted")
+        XCTAssertEqual(AnalyticsEvent.nearbyJoined(demo: true).name, "nearby.joined")
+        XCTAssertEqual(AnalyticsEvent.nearbyJoined(demo: true).parameters, ["demo": "yes"])
+        XCTAssertEqual(AnalyticsEvent.nearbyFinished(result: "win", rules: "abapa").name, "nearby.finished")
+        XCTAssertEqual(AnalyticsEvent.nearbyDropped(finishedAgainstComputer: true).name, "nearby.dropped")
+        XCTAssertEqual(AnalyticsEvent.nearbyDropped(finishedAgainstComputer: true).parameters, ["then": "computer"])
     }
 }

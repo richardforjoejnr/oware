@@ -36,6 +36,11 @@ final class PlayerEvents {
         case .journey: modeName = "journey"; level = mode.journeyOpponent?.difficulty
         case .passAndPlay: modeName = "passAndPlay"
         case .puzzle, .tutorial: return
+        case let .remote(game):
+            // No Game Center for nearby games yet (NEARBY_PLAY.md, still to decide).
+            let result = outcome.winner == nil ? "draw" : (outcome.winner == game.mySide ? "win" : "loss")
+            track(.nearbyFinished(result: result, rules: rules))
+            return
         }
         let result: String
         if case .passAndPlay = mode {
@@ -82,6 +87,10 @@ final class PlayerEvents {
     }
 
     func tipJarViewed() { track(.tipJarViewed) }
+
+    func nearbyHosted(demo: Bool) { track(.nearbyHosted(demo: demo)) }
+    func nearbyJoined(demo: Bool) { track(.nearbyJoined(demo: demo)) }
+    func nearbyDropped(finishedAgainstComputer: Bool) { track(.nearbyDropped(finishedAgainstComputer: finishedAgainstComputer)) }
 
     func tipPurchased(productID: String?) {
         let tier = productID?.split(separator: ".").last.map(String.init) ?? "unknown"

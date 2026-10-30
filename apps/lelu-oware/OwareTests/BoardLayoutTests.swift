@@ -135,4 +135,26 @@ final class BoardLayoutTests: XCTestCase {
             }
         }
     }
+
+    /// Playing North on your own phone, the board is turned round: your row, store and rail are
+    /// where South's would be, and every house sits where the house opposite it would.
+    func testNorthAtTheBottomIsTheBoardTurnedRound() {
+        for size in sizes {
+            let south = BoardLayout(size: size), north = BoardLayout(size: size, bottomSide: .north)
+            for house in 0..<12 {
+                XCTAssertEqual(north.houseCenter(house), south.houseCenter((house + 6) % 12), "\(size) house \(house)")
+                XCTAssertEqual(north.countLabelPoint(house), south.countLabelPoint((house + 6) % 12))
+                XCTAssertEqual(north.handPoint(for: house), south.handPoint(for: (house + 6) % 12))
+            }
+            for player in Player.allCases {
+                XCTAssertEqual(north.storeRect(player), south.storeRect(player.opponent))
+                XCTAssertEqual(north.storeLabelPoint(player), south.storeLabelPoint(player.opponent))
+                XCTAssertEqual(north.railRect(player), south.railRect(player.opponent))
+                XCTAssertEqual(north.plaqueRect(player), south.plaqueRect(player.opponent))
+                XCTAssertEqual(north.storeSlot(player, index: 5), south.storeSlot(player.opponent, index: 5))
+            }
+        }
+        let upright = BoardLayout(size: CGSize(width: 440, height: 956), bottomSide: .north)
+        XCTAssertGreaterThan(upright.storeRect(.north).midY, upright.storeRect(.south).midY, "your store at the bottom")
+    }
 }

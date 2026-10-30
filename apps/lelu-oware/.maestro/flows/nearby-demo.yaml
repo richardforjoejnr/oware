@@ -1,0 +1,43 @@
+# Nearby play against the demo player: start a game, Ama comes, both Ready, play until she resigns, rematch.
+# Run locally:  make e2e   (or: maestro test .maestro)
+appId: com.richardforjoe.oware
+---
+- launchApp:
+    clearState: true
+    arguments:
+      fastAnimations: true
+      rules: abapa
+      nearbyDemo: true
+      demoResignAfter: 0
+- tapOn:
+    id: "btn-more"
+- scrollUntilVisible:
+    element:
+      id: "btn-nearby"
+- tapOn:
+    id: "btn-nearby"
+- tapOn:
+    id: "btn-start-nearby"
+- extendedWaitUntil:
+    visible:
+      id: "btn-ready"
+    timeout: 10000
+- tapOn:
+    id: "btn-ready"
+- extendedWaitUntil:
+    visible:
+      id: "turn-indicator"
+      text: "Your turn"
+    timeout: 10000
+- tapOn:
+    id: "house-A1"
+- extendedWaitUntil:
+    visible:
+      id: "game-over-title"
+    timeout: 15000
+- tapOn:
+    id: "btn-rematch"
+- extendedWaitUntil:
+    notVisible:
+      id: "game-over-title"
+    timeout: 10000

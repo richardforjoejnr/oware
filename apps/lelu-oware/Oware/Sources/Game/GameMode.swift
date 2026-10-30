@@ -11,6 +11,8 @@ enum GameMode: Codable, Hashable, Sendable {
     case tutorial(step: Int)
     /// A Journey match against `Journey.chapters[chapter].opponents[opponent]`; the human is south.
     case journey(chapter: Int, opponent: Int)
+    /// A game on two phones; the other phone's player moves `remoteSide`.
+    case remote(RemoteGame)
 
     var journeyOpponent: Journey.Opponent? {
         if case let .journey(c, o) = self { return Journey.opponent(chapter: c, index: o) }
@@ -24,6 +26,17 @@ enum GameMode: Codable, Hashable, Sendable {
         default: nil
         }
     }
+
+    var remoteGame: RemoteGame? {
+        if case let .remote(game) = self { return game }
+        return nil
+    }
+
+    /// The side the other phone's player moves.
+    var remoteSide: Player? { remoteGame?.mySide.opponent }
+
+    /// The side nobody on this phone moves: the computer's or the other phone's.
+    var otherSide: Player? { aiSide ?? remoteSide }
 
     var aiPlayer: AIPlayer? {
         switch self {
@@ -39,7 +52,8 @@ enum GameMode: Codable, Hashable, Sendable {
     var isResumable: Bool {
         switch self {
         case .versusAI, .passAndPlay, .journey: true
-        case .puzzle, .tutorial: false
+        // Not resumable after the app is closed, in v1 (NEARBY_PLAY.md, still to decide).
+        case .puzzle, .tutorial, .remote: false
         }
     }
 
@@ -50,6 +64,7 @@ enum GameMode: Codable, Hashable, Sendable {
         case let .puzzle(puzzle): puzzle.kind.title
         case .tutorial: "Learn"
         case .journey: journeyOpponent.map { "\($0.name) · \($0.role)" } ?? "Journey"
+        case let .remote(game): "vs \(game.opponentName)"
         }
     }
 }

@@ -49,8 +49,8 @@ the host logic and the game screen stay as they are.
 public struct PeerID: Hashable, Sendable, Codable { public let raw: String }
 
 public enum TransportEvent: Sendable {
-    case joined(PeerID, name: String)
-    case left(PeerID)
+    case connected(PeerID)      // names come in the room's hello, not from the transport
+    case disconnected(PeerID)
     case received(Data, from: PeerID)
 }
 
@@ -89,8 +89,8 @@ public struct Envelope<Body: Codable & Sendable>: Codable, Sendable {
 }
 
 public enum RoomMessage<Match: Codable & Sendable, Intent: Codable & Sendable>: Codable, Sendable {
-    case hello(name: String, appBuild: Int)
-    case welcome(seat: Int, snapshot: Match)
+    case hello(name: String, rejoin: UUID?)   // rejoin: the token from an earlier welcome
+    case welcome(seat: Int, token: UUID, names: [Int: String], snapshot: Match)
     case refused(Refusal)             // room full, game started, newer version, host said no
     case intent(Intent)
     case snapshot(Match)
@@ -103,6 +103,12 @@ Room behaviour, all tested with `LoopbackTransport`:
 - **Messages:** a framed message is at most 64 KB (Game Center's turn-based limit, so online fits).
 - **Heartbeat:** a ping every 2 s. A peer silent for 6 s is shown as "reconnecting".
 - **Rejoining:** a peer gone for 60 s loses its seat. If it comes back in time it gets the same seat.
+  A seat heard again after a quiet spell is sent the match as it stands, since it may have missed moves.
+- **Leaving:** a peer that says `bye` is reported as `left(seat:)` at once, not as `seatLost`, so the
+  app can say "Richard left the game" rather than wait for a connection to come back.
+- **Starting (each game's rules):** connected is not started. In Oware the `OwareTable` holds a
+  `ready` set: each phone sends `ready(stateHash:)` with the fingerprint of the opening as its own
+  engine replays it, and the host refuses moves until both match (`GameState.fingerprint`).
 - **Who decides:** only the host's phone decides. A guest's own engine never moves the game on.
   It only checks what the host sends.
 

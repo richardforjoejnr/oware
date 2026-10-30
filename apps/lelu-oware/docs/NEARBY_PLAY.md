@@ -5,7 +5,11 @@ Bonjour over Apple's phone-to-phone Wi-Fi. **Free**, behind the `nearbyPlay` fea
 
 The design shared with Lelu Ludo is in [MULTIPLAYER.md](../../../docs/MULTIPLAYER.md): the layers,
 MatchKit, feature switches, Apple requirements and the test pyramid. This file covers what is
-specific to Oware and the order of work. Planned 2026-10-28; nothing is built yet.
+specific to Oware and the order of work. Planned 2026-10-28. Progress: steps 1–5 built (2026-10-28/29); step 0 (two real phones) still to do.
+
+**2026-10-30: the owner's review redesigns the screens.** Read [NEARBY_PLAY_REDESIGN.md](NEARBY_PLAY_REDESIGN.md)
+first: one screen with no Host / Join, a Ready handshake, default names, reconnect and rejoin, and
+the carved-wood kit in `art/nearby/`.
 
 ## What the player sees
 
@@ -88,6 +92,10 @@ Tests first (`OwareEngineTests/OwareMatchTests.swift`):
 
 Then: the rename, `OwareIntent`, `starter`, `matchID`.
 
+**Built.** `OwareMatch` also has `game` (1, 2, 3… for rematches) so `supersedes(_:)` can tell a
+rematch from an old game's late message. `starter` sets who sows first in round 1; later Nam-Nam
+rounds still alternate as the engine already does.
+
 ### Step 2: `feat(supportkit): feature switches that can become paid`
 Tests first (`SupportKitTests/FeatureGateTests.swift`):
 - `.off` is not shown;
@@ -99,6 +107,9 @@ Tests first (`SupportKitTests/FeatureGateTests.swift`):
 The app adds `FeatureTableTests`, which lists `nearbyPlay: .free` and `online: .off`.
 
 Then: `FeatureGate`, `Features.swift`, with `OnlineAccess` reading the gate.
+
+**Built.** `OnlinePolicy`'s rules are now `Access.canUse` / `canJoin`. Nothing used `OnlineAccess`, so it
+was removed rather than kept; `Feature.gate()` builds the app's gate. `nearbyPlay` is `.off` until step 6.
 
 ### Step 3: `feat(matchkit): rooms for playing on two phones`
 Tests first (`MatchKitTests`, Linux):
@@ -122,6 +133,11 @@ messages in order.
 Then: the package, CI callers through `reusable-swift-package.yml` (Linux for `MatchKit`, macOS for
 the Nearby tests), and an entry in `MONOREPO.md`.
 
+**Built.** `Room<Rules: RoomRules>` is a `@MainActor` class; heartbeats run from `tick()`, which
+`startHeartbeat()` calls every 2 s and tests call by hand with a `ManualClock`. Rejoining uses a token
+from the welcome (`reconnect(over:)` on the guest). `NearbyHost` / `NearbyBrowser` / `NearbyTransport`
+in `MatchKitNearby`; the macOS test finds a host on the same Mac and sends 100 messages in order.
+
 ### Step 4: `feat(oware): play a game on two phones`, the session, with no screens yet
 Tests first (`OwareTests/RemoteGameTests.swift`, two `GameSession`s joined by `LoopbackTransport`):
 - the host moves and the guest's board matches;
@@ -136,6 +152,11 @@ Tests first (`OwareTests/RemoteGameTests.swift`, two `GameSession`s joined by `L
 
 Then: `GameMode.remote`, `MatchLink`, the `GameSession` changes, and `BoardScene.bottomSide`.
 
+**Built**, except `BoardScene.bottomSide`, which moves to step 5 with the screens. The room's match is
+`OwareTable` (the `OwareMatch` plus who has asked for a rematch). `GameSession.canAgreeToStop` is
+false on two phones, and "Stop here and count" should be hidden there in step 5. In Abapa, a move
+that can feed nobody ends the game without sowing, so it is not counted in `moveNumber`.
+
 ### Step 5: `feat(oware): nearby play screens`
 Tests first:
 - **XCUITest `NearbyUITests` with `--nearby-demo`:**
@@ -149,6 +170,18 @@ Then:
 - `NearbyView`, the `GameView` changes, the name prompt, the local-network help;
 - Info.plist keys, analytics;
 - Settings ▸ Try nearby play.
+
+**Built.** `NearbyLobby` (Game/NearbyLobby.swift) runs Host / Join over a `NearbyNetwork`: the
+live one wraps `NearbyHost` / `NearbyBrowser`, and `DemoNetwork` puts the demo player, Ama, on a
+`LoopbackTransport`. Ama plays the first legal move two seconds after her turn comes, always agrees
+to a rematch, and follows `--demo-resign-after=N` (first game only) and `--demo-quiet-after=N`
+(twelve seconds of silence). `BoardLayout(size:bottomSide:)` turns the board round for the guest, so
+the scene and the touch areas move together. Your name is kept under `nearbyName` and can be changed
+in Settings. To try it on two phones in a Debug build before step 6, launch with `-nearbyPlay YES`
+(or `--nearby`). Writing the demo found a MatchKit bug: a guest out of range missed the host's
+moves and both phones then waited. The host now resends the match when a quiet seat is heard
+again (`aGuestBackFromAQuietSpellCatchesUp`). `NearbyHost` and `NearbyBrowser` report
+`NearbyStatus.localNetworkDenied`, and the Nearby screen then says how to turn Local Network on.
 
 ### Step 6: `feat(oware): turn on nearby play`
 - `nearbyPlay: .free`;
@@ -167,8 +200,9 @@ Real-phone checklist before TestFlight:
 
 ## Still to decide (later, not blocking)
 
-- **Saved games:** should a nearby game be resumable after both apps are closed? v1 says no. The
-  `matchID` makes it possible later.
+- **Saved games:** decided 2026-10-30: no. A nearby game does not survive both apps being closed.
+  (The `matchID` would make it possible later.)
 - **Join code:** should joining need a 4-digit code shown on the host? Accepting each player is
   enough between friends. A code could also key encryption (TLS with a pre-shared key) if wanted.
-- **Game Center:** should nearby wins count towards achievements?
+- **Game Center:** decided 2026-10-30: no. Nearby wins earn no achievements or scores (easy to
+  farm against a second phone of your own).

@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import UIKit
+import MatchKit
 import OwareEngine
 import OwareAI
 
@@ -55,6 +56,42 @@ final class GameSession {
     /// in the move number). Saved with the game; older saves without one draw a new one.
     private var aiSeed = UInt64.random(in: .min ... .max)
 
+    // MARK: Two phones
+
+    /// The other phone, in a `.remote` game.
+    private(set) var link: MatchLink?
+    /// Nothing heard from the other phone for a few seconds.
+    private(set) var isReconnecting = false
+    /// The other phone has been gone a minute: the player may finish against the computer.
+    private(set) var offersComputer = false
+    /// The other phone has left or been lost: no rematch.
+    private(set) var opponentGone = false
+    /// The other player left on purpose (not a lost connection).
+    private(set) var opponentLeft = false
+    /// Both phones hold the same opening and are ready; until then nobody moves.
+    private(set) var isStarted = false
+    /// The phones replayed the opening differently (different versions of the game).
+    private(set) var isOutOfStep = false
+    /// Who has asked for another game after this one.
+    private(set) var rematchAsked: Set<Player> = []
+    /// The speed both phones sow at (the slower of the two); nil when this phone plays alone.
+    private(set) var sharedPace: Double?
+    /// Guest: why the host's phone said no.
+    private(set) var refusal: Refusal?
+    /// The match as the board shows it, and the latest from the host.
+    private var shownMatch: OwareMatch?
+    private var latestMatch: OwareMatch?
+    private var syncTask: Task<Void, Never>?
+
+    var remoteGame: RemoteGame? { mode.remoteGame }
+    /// The row nearest the player: on two phones the guest plays North, so their board is turned round.
+    var bottomSide: Player { remoteGame?.mySide ?? .south }
+    /// The game on two phones is over and this phone has not yet asked for another.
+    var canAskRematch: Bool {
+        guard link != nil, let game = remoteGame, state.isOver, !isAnimating else { return false }
+        return !opponentGone && !rematchAsked.contains(game.mySide)
+    }
+
     init(store: GameStore = .shared) {
         self.store = store
         if let saved = store.load(), !saved.state.isOver {
@@ -76,7 +113,8 @@ final class GameSession {
     var humanToMove: Bool {
         if case .puzzle = mode, puzzleAttempt == .solved { return false }
         if case .tutorial = mode, tutorialStepDone { return false }
-        return !state.isOver && !isAnimating && !isThinking && mode.aiSide != state.sideToMove
+        if case .remote = mode, !isStarted { return false }
+        return !state.isOver && !isAnimating && !isThinking && mode.otherSide != state.sideToMove
     }
     var canUndo: Bool {
         mode.isResumable && !history.isEmpty && !isAnimating && !isThinking
@@ -120,6 +158,7 @@ final class GameSession {
         case .journey: mode.journeyOpponent?.name ?? "Journey"
         case .puzzle: "Ananse"
         case .tutorial: "Nana"
+        case let .remote(game): game.opponentName
         }
     }
     /// Who owns a home row, as carved on the strip beside it: "You" for the human against anyone,
@@ -133,6 +172,7 @@ final class GameSession {
         case .journey: player == .south ? "You" : mode.journeyOpponent?.name ?? "Them"
         case .puzzle: player == .south ? "You" : "Ananse"
         case .tutorial: player == .south ? "You" : "Nana"
+        case let .remote(game): player == game.mySide ? "You" : game.opponentName
         }
     }
     var opponentRole: String? {
@@ -142,7 +182,7 @@ final class GameSession {
         default: nil
         }
     }
-    func isHumanSide(_ player: Player) -> Bool { mode.aiSide != player }
+    func isHumanSide(_ player: Player) -> Bool { mode.otherSide != player }
 
     var turnDescription: String {
         if let puzzle = currentPuzzle {
@@ -162,6 +202,11 @@ final class GameSession {
         case .versusAI, .journey: return humanToMove ? "Your move" : "…"
         case .passAndPlay: return state.sideToMove == .south ? "A to move" : "B to move"
         case .puzzle, .tutorial: return ""
+        case let .remote(game):
+            if isOutOfStep { return "Update Lelu Oware on both phones" }
+            if !isStarted { return "Waiting for the other player…" }
+            if humanToMove { return "Your turn" }
+            return state.sideToMove == game.mySide ? "…" : "\(game.opponentName)'s turn"
         }
     }
 
@@ -173,6 +218,7 @@ final class GameSession {
             case .versusAI(_, _, let human): who = player == human ? "You win" : "You lose"
             case .passAndPlay: who = "\(player.label) wins"
             case .puzzle, .tutorial, .journey: who = player == .south ? "You win" : "You lose"
+            case let .remote(game): who = player == game.mySide ? "You win" : "You lose"
             }
             return who + reasonSuffix(reason)
         case let .draw(reason):
@@ -198,6 +244,7 @@ final class GameSession {
     /// `rules` nil keeps the rules of the game on the board (so Play again and Next opponent
     /// stay in the same variant).
     func newGame(_ mode: GameMode, rules: RuleSet? = nil) {
+        leaveRemote()
         interrupt()
         let rules = rules ?? state.rules
         self.mode = mode
@@ -216,6 +263,7 @@ final class GameSession {
 
     /// Start (or restart) a puzzle. Ordinary saved games are left untouched.
     func startPuzzle(_ puzzle: Puzzle) {
+        leaveRemote()
         interrupt()
         mode = .puzzle(puzzle)
         resultRecorded = false
@@ -234,6 +282,7 @@ final class GameSession {
     /// Jump to a tutorial step.
     func startTutorial(step index: Int, variant: RuleSet.Variant? = nil) {
         if let variant { lessonVariant = variant }
+        leaveRemote()
         interrupt()
         let step = tutorialSteps[min(max(index, 0), tutorialSteps.count - 1)]
         mode = .tutorial(step: index)
@@ -259,6 +308,11 @@ final class GameSession {
         guard humanToMove else { return }
         let move = Move(player: state.sideToMove, absoluteHouse: house)
         guard state.isLegal(move) else { return }
+        if let link, case .remote = mode {
+            // The host's phone decides; the move is shown when its snapshot comes back.
+            Task { await link.send(.play(house: house)) }
+            return
+        }
         if let puzzle = currentPuzzle {
             if puzzle.isSolved(by: move) {
                 puzzleAttempt = .solved
@@ -353,12 +407,18 @@ final class GameSession {
 
     /// A game in progress that a player may end (resign or agree to stop). Not while seeds are
     /// still moving: the result would be drawn under the animation.
-    var canEndGame: Bool { mode.isResumable && !state.isOver && !isAnimating }
+    var canEndGame: Bool { (mode.isResumable || (mode.remoteGame != nil && isStarted)) && !state.isOver && !isAnimating }
+    /// Stopping by agreement needs both players at one board; on two phones there is Resign.
+    var canAgreeToStop: Bool { mode.isResumable && canEndGame }
 
     /// `player` resigns (default: you against the computer, or whoever is to move in Pass & Play).
     /// Resigning ends the whole game (in Nam-Nam, not just the round): the other side wins.
     func resign(_ player: Player? = nil) {
         guard canEndGame else { return }
+        if let link, case .remote = mode {
+            Task { await link.send(.resign) }
+            return
+        }
         interrupt()
         let loser = player ?? mode.aiSide?.opponent ?? state.sideToMove
         state.outcome = .win(loser.opponent, .agreement)
@@ -369,7 +429,7 @@ final class GameSession {
     /// Both sides stop here and each keeps the seeds on their own side. Abapa: the game ends and the
     /// scores decide it. Nam-Nam: the round ends and houses are shared out as usual.
     func agreeToStop() {
-        guard canEndGame else { return }
+        guard canAgreeToStop else { return }
         interrupt()
         history.append(state)
         let events = state.endByAgreement()
@@ -433,7 +493,7 @@ final class GameSession {
         isAnimating = true
         let current = generation
         if let animator {
-            animator.humanSide = mode.aiSide?.opponent
+            animator.humanSide = mode.otherSide?.opponent
             await animator.animate(events: result.events, from: before, to: result.state)
         }
         // A new game (or undo, or a resign) while the seeds moved already reset the flags.
@@ -467,7 +527,7 @@ final class GameSession {
             if case .passAndPlay = mode { return p.label }
             if case .puzzle = mode { return "You" }
             if case .tutorial = mode { return "You" }
-            return p == mode.aiSide ? opponentName : "You"
+            return p == mode.otherSide ? opponentName : "You"
         }
         var taken = [0, 0]
         for case let .capture(_, seeds, by) in events { taken[by.rawValue] += seeds }
@@ -486,6 +546,8 @@ final class GameSession {
             parts.append("Your move")
         } else if case .passAndPlay = mode {
             parts.append("\(after.sideToMove.label) to move")
+        } else if case let .remote(game) = mode {
+            parts.append(after.sideToMove == game.mySide ? "Your move" : "\(game.opponentName)'s turn")
         }
         return parts.joined(separator: ". ") + "."
     }
@@ -525,7 +587,7 @@ final class GameSession {
             let what = moved == 0 ? "houses stay as they were" : (moved > 0 ? "A takes \(change(moved))" : "B takes \(change(moved))")
             return "Round \(round.round): A \(round.southSeeds), B \(round.northSeeds) — \(what). A \(after), B \(12 - after)"
         }
-        let you = mode.aiSide?.opponent ?? .south
+        let you = mode.otherSide?.opponent ?? .south
         let mine = you == .south ? round.southSeeds : round.northSeeds
         let theirs = you == .south ? round.northSeeds : round.southSeeds
         let before = houses(previous, you), after = houses(round, you)
@@ -564,6 +626,163 @@ final class GameSession {
             self.isThinking = false
             guard self.state == snapshot, let chosen else { return }
             await self.perform(chosen)
+        }
+    }
+
+    // MARK: - Two phones
+
+    /// Shows the game on the other end of `link`: the host's phone decides every move, and its
+    /// snapshots are played on this board like the computer's moves.
+    func startRemote(_ link: MatchLink) {
+        leaveRemote()
+        interrupt()
+        self.link = link
+        mode = .remote(RemoteGame(mySide: link.mySide ?? (link.isHost ? .south : .north), opponentName: link.opponentName ?? ""))
+        shownMatch = link.table?.match
+        latestMatch = shownMatch
+        state = (try? shownMatch?.state()) ?? .initial
+        history = []
+        resultRecorded = false
+        previewMove = nil
+        roundMessage = nil
+        isReconnecting = false
+        offersComputer = false
+        opponentGone = false
+        opponentLeft = false
+        isStarted = link.table?.isStarted ?? false
+        isOutOfStep = link.table?.isOutOfStep ?? false
+        rematchAsked = []
+        sharedPace = link.table?.sharedPace
+        refusal = nil
+        link.onEvent = { [weak self] in self?.handle($0) }
+        animator?.render(state)
+    }
+
+    /// Asks for another game once this one is over; it starts when both have asked.
+    func requestRematch() {
+        guard let link, case .remote = mode, state.isOver else { return }
+        Task { await link.send(.rematch) }
+    }
+
+    /// The other phone has gone: carry on from this position against the computer, as an
+    /// ordinary game.
+    func finishAgainstComputer(difficulty: Difficulty = .player) {
+        guard offersComputer, let game = remoteGame else { return }
+        events.nearbyDropped(finishedAgainstComputer: true)
+        link?.room.stop()
+        link = nil
+        interrupt()
+        mode = .versusAI(difficulty: difficulty, personality: .balanced, humanPlays: game.mySide)
+        sharedPace = nil
+        offersComputer = false
+        isReconnecting = false
+        rematchAsked = []
+        aiSeed = UInt64.random(in: .min ... .max)
+        history = []
+        persist()
+        animator?.render(state)
+        scheduleAIIfNeeded()
+    }
+
+    /// Leaves the game on two phones, saying goodbye to the other phone.
+    func leaveNearbyGame() {
+        guard link != nil else { return }
+        if offersComputer { events.nearbyDropped(finishedAgainstComputer: false) }
+        offersComputer = false
+        isReconnecting = false
+        isStarted = false
+        leaveRemote()
+    }
+
+    private func leaveRemote() {
+        sharedPace = nil
+        syncTask?.cancel()
+        syncTask = nil
+        shownMatch = nil
+        latestMatch = nil
+        guard let link else { return }
+        self.link = nil
+        link.onEvent = nil
+        Task { await link.leave() }
+    }
+
+    private func handle(_ event: RoomEvent<OwareTable>) {
+        guard let link, case .remote = mode else { return }
+        let mySeat = link.room.mySeat
+        switch event {
+        case .seated:
+            if let side = link.mySide {
+                mode = .remote(RemoteGame(mySide: side, opponentName: link.opponentName ?? ""))
+            }
+        case let .snapshot(table):
+            rematchAsked = table.rematchAsked
+            sharedPace = table.sharedPace
+            isStarted = table.isStarted
+            isOutOfStep = table.isOutOfStep
+            latestMatch = table.match
+            sync()
+        case let .reconnecting(seat):
+            if seat != mySeat { isReconnecting = true }
+        case let .back(seat):
+            if seat != mySeat { isReconnecting = false }
+        case let .seatLost(seat):
+            guard seat != mySeat else { return }
+            isReconnecting = false
+            opponentGone = true
+            offersComputer = !state.isOver
+        case let .left(seat):
+            guard seat != mySeat else { return }
+            isReconnecting = false
+            opponentGone = true
+            opponentLeft = true
+            offersComputer = !state.isOver
+        case let .refused(reason):
+            refusal = reason
+        case .joinRequest:
+            break
+        }
+    }
+
+    /// Plays the host's snapshots on the board one at a time, in order.
+    private func sync() {
+        guard syncTask == nil else { return }
+        syncTask = Task { [weak self] in
+            while true {
+                guard let self, !Task.isCancelled else { return }
+                guard let target = self.latestMatch, target != self.shownMatch else {
+                    self.syncTask = nil
+                    return
+                }
+                await self.show(target)
+            }
+        }
+    }
+
+    private func show(_ match: OwareMatch) async {
+        if let shown = shownMatch, match.matchID == shown.matchID, match.houses.starts(with: shown.houses), !state.isOver {
+            // The same game, further on: sow each new move as it was played.
+            for house in match.houses.dropFirst(shown.houses.count) {
+                guard await perform(Move(player: state.sideToMove, absoluteHouse: house)) else {
+                    shownMatch = nil   // replaced meanwhile: show the next snapshot as it stands
+                    return
+                }
+                shownMatch?.houses.append(house)
+            }
+            if let loser = match.resignedBy, !state.isOver {
+                state.outcome = .win(loser.opponent, .agreement)
+                animator?.render(state)
+            }
+            shownMatch = match
+        } else {
+            // A rematch, or catching up after rejoining: show the match as it stands.
+            interrupt()
+            state = (try? match.state()) ?? state
+            history = []
+            resultRecorded = state.isOver
+            previewMove = nil
+            roundMessage = nil
+            shownMatch = match
+            animator?.render(state)
         }
     }
 

@@ -26,6 +26,12 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_leluoware._tcp</string>
+	</array>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Lelu Oware uses your local network to find another nearby player and play directly between your phones.</string>
 	<key>TelemetryDeckAppID</key>
 	<string>$(TELEMETRYDECK_APP_ID)</string>
 	<key>UIApplicationSceneManifest</key>

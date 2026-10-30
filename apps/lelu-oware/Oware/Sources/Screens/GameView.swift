@@ -18,10 +18,14 @@ struct GameView: View {
     @State private var showRiddle = false
     @State private var showLesson = false
     @State private var showEndGame = false
+    @State private var confirmLeave = false
+    private var isRemote: Bool { session.remoteGame != nil }
+    /// Scores, your strip and the end-game flag: ordinary games and games on two phones.
+    private var showsScores: Bool { session.mode.isResumable || isRemote }
     private var hasFullText: Bool { session.currentPuzzle != nil || session.currentTutorialStep != nil }
     /// The result shows once the last seeds have settled, so Play again cannot start a new game
     /// under a move still being drawn.
-    private var showsGameOver: Bool { session.isGameOver && session.mode.isResumable && !session.isAnimating }
+    private var showsGameOver: Bool { session.isGameOver && showsScores && !session.isAnimating }
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
 
     var body: some View {
@@ -52,10 +56,22 @@ struct GameView: View {
                 bottomBar
                     .dynamicTypeSize(...DynamicTypeSize.xLarge)
             }
-            if showsGameOver {
-                GameOverOverlay(goHome: goHome, goToJourney: goToJourney)
+            if isRemote, !session.isGameOver {
+                connectionNotice
                     .transition(.opacity)
             }
+            if showsGameOver {
+                GameOverOverlay(goHome: leaveGame, goToJourney: goToJourney)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: session.isReconnecting)
+        .animation(.easeInOut(duration: 0.3), value: session.offersComputer)
+        .confirmationDialog("Leave the game?", isPresented: $confirmLeave, titleVisibility: .visible) {
+            Button("Leave", role: .destructive) { leaveGame() }
+            Button("Keep playing", role: .cancel) {}
+        } message: {
+            Text("\(session.opponentName) will see that you have left. A game on two phones can't be picked up again later.")
         }
         .animation(.easeInOut(duration: 0.5), value: showsGameOver)
         .onAppear {
@@ -103,7 +119,9 @@ struct GameView: View {
     /// Home, the opponent, then Hint and Undo: small glass controls, nothing else.
     private var topBar: some View {
         HStack(spacing: 10) {
-            roundButton(systemName: "chevron.left", id: "btn-home", label: "Home", enabled: true, action: goHome)
+            roundButton(systemName: "chevron.left", id: "btn-home", label: "Home", enabled: true) {
+                if isRemote, !session.isGameOver { confirmLeave = true } else { leaveGame() }
+            }
 
             Spacer(minLength: 0)
             if session.canChangeDifficulty {
@@ -135,6 +153,8 @@ struct GameView: View {
                 .accessibilityIdentifier("btn-hint")
                 .accessibilityLabel("Hint")
             }
+            // No undo on two phones (GAME_PLAN §3.2).
+            if !isRemote {
             Button(action: { session.undo() }) {
                 AdinkraGlyph(shape: Adinkra.Sankofa(), size: 21,
                              color: session.canUndo ? Theme.bone : Theme.ivoryDim.opacity(0.4))
@@ -146,6 +166,7 @@ struct GameView: View {
             .disabled(!session.canUndo)
             .accessibilityIdentifier("btn-undo")
             .accessibilityLabel("Undo")
+            }
         }
         .padding(.horizontal, 10)
         .frame(height: 50)
@@ -156,6 +177,7 @@ struct GameView: View {
     private var isNamNam: Bool { session.state.rules.variant == .namNam }
     private var endGameTitle: String { isNamNam ? "End the game or the round?" : "End the game?" }
     private var endGameMessage: String {
+        if isRemote { return "Resigning gives the game to \(session.opponentName)." }
         let stop = isNamNam
             ? "Ending the round: each player keeps the seeds on their own side and houses are shared out."
             : "Stopping here: each player keeps the seeds on their own side and the scores decide."
@@ -169,7 +191,9 @@ struct GameView: View {
         } else {
             Button("Resign (\(session.opponentName) wins)", role: .destructive) { session.resign() }
         }
-        Button(isNamNam ? "End this round" : "Stop here and count") { session.agreeToStop() }
+        if session.canAgreeToStop {
+            Button(isNamNam ? "End this round" : "Stop here and count") { session.agreeToStop() }
+        }
         Button("Keep playing", role: .cancel) {}
     }
 
@@ -190,7 +214,7 @@ struct GameView: View {
 
     /// Who you are playing: a small badge, their name and their captured seeds.
     private func opponentStrip(chevron: Bool) -> some View {
-        let opponentSide: Player = session.mode.aiSide ?? .north
+        let opponentSide: Player = session.mode.otherSide ?? .north
         let seeds = session.state.store(of: opponentSide)
         let active = !session.isGameOver && session.state.sideToMove == opponentSide
         return HStack(spacing: 10) {
@@ -209,8 +233,8 @@ struct GameView: View {
                             .rotationEffect(.degrees(showLevels ? 180 : 0))
                     }
                 }
-                seedLine(session.mode.isResumable ? "\(seeds)" + housesNote(opponentSide) + (session.opponentRole.map { " · \($0)" } ?? "") : session.mode.title,
-                         showSeed: session.mode.isResumable)
+                seedLine(showsScores ? "\(seeds)" + housesNote(opponentSide) + (session.opponentRole.map { " · \($0)" } ?? "") : session.mode.title,
+                         showSeed: showsScores)
             }
         }
         .padding(.leading, 6)
@@ -300,11 +324,11 @@ struct GameView: View {
         VStack(spacing: 6) {
             modeControls
             HStack(spacing: 10) {
-                if session.mode.isResumable {
+                if showsScores {
                     youStrip
                 }
                 // End the game or the round: beside your name, where the top bar has no room left.
-                if session.mode.isResumable && !session.isGameOver {
+                if showsScores && !session.isGameOver {
                     roundButton(systemName: "flag", id: "btn-end-game", label: "End game", enabled: session.canEndGame) { showEndGame = true }
                 }
                 Spacer(minLength: 0)
@@ -372,8 +396,9 @@ struct GameView: View {
     }
 
     private var youStrip: some View {
-        let mine = session.state.store(of: .south)
-        let active = !session.isGameOver && session.state.sideToMove == .south && session.mode.aiSide != .south
+        let me = session.bottomSide
+        let mine = session.state.store(of: me)
+        let active = !session.isGameOver && session.state.sideToMove == me && session.mode.otherSide != me
         let name: String = {
             if case .passAndPlay = session.mode { return session.state.sideToMove == .south ? "A" : "B" }
             return "You"
@@ -383,7 +408,7 @@ struct GameView: View {
             return mine
         }()
         return HStack(spacing: 8) {
-            badge(letter: String(name.prefix(1)), active: active, side: passAndPlaySide ?? .south)
+            badge(letter: String(name.prefix(1)), active: active, side: passAndPlaySide ?? me)
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 5) {
                     Text(name)
@@ -391,7 +416,7 @@ struct GameView: View {
                         .foregroundStyle(Theme.ivory)
                     kenteMark(active: active)
                 }
-                seedLine("\(seeds) seeds" + housesNote(passAndPlaySide ?? .south), showSeed: true)
+                seedLine("\(seeds) seeds" + housesNote(passAndPlaySide ?? me), showSeed: true)
             }
         }
         .padding(.leading, 6)
@@ -500,6 +525,56 @@ struct GameView: View {
         .accessibilityIdentifier(id)
     }
 
+    // MARK: Two phones
+
+    /// Leaving a game on two phones says goodbye to the other phone.
+    private func leaveGame() {
+        session.leaveNearbyGame()
+        goHome()
+    }
+
+    /// The other phone has gone quiet (a banner), or gone for good (finish against the computer).
+    @ViewBuilder private var connectionNotice: some View {
+        if session.offersComputer {
+            VStack(spacing: 14) {
+                Text(session.opponentLeft ? "\(session.opponentName) left the game" : "\(session.opponentName)'s phone has gone")
+                    .font(Theme.title(26))
+                    .accessibilityIdentifier("nearby-gone")
+                Text("You can finish this game against the computer, from where it stands.")
+                    .font(Theme.caption(15))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .multilineTextAlignment(.center)
+                VStack(spacing: 4) {
+                    QuietButton(title: "Finish against the computer", prominent: true) { session.finishAgainstComputer() }
+                        .accessibilityIdentifier("btn-finish-computer")
+                    QuietButton(title: "Leave") { leaveGame() }
+                        .accessibilityIdentifier("btn-leave-nearby")
+                }
+                .frame(maxWidth: 300)
+            }
+            .foregroundStyle(Theme.ivory)
+            .padding(28)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.night.opacity(0.88))
+        } else if session.isReconnecting {
+            VStack {
+                HStack(spacing: 10) {
+                    WaitingMark()
+                    Text("Reconnecting to \(session.opponentName)…")
+                        .font(Theme.serifText(15, weight: .medium, relativeTo: .subheadline))
+                        .foregroundStyle(Theme.ivory)
+                        .accessibilityIdentifier("reconnect-banner")
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .hudChrome(Capsule())
+                .padding(.top, 58)
+                Spacer()
+            }
+            .accessibilityElement(children: .contain)
+        }
+    }
+
     private func showHint(_ text: String, seconds: Double = 1.6) {
         hint = text
         hintTask?.cancel()
@@ -563,6 +638,8 @@ struct GameOverOverlay: View {
                     }
                 }
                 .frame(maxWidth: 260)
+            } else if let game = session.remoteGame {
+                rematch(game)
             } else {
                 VStack(spacing: 4) {
                     QuietButton(title: "Play again", prominent: true) {
@@ -625,6 +702,39 @@ struct UsageStatsQuestion: View {
         .background(Theme.ember.opacity(0.9), in: RoundedRectangle(cornerRadius: 14))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("usage-stats-question")
+    }
+}
+
+extension GameOverOverlay {
+    /// Two phones: both tap Rematch, and the other player starts the next game.
+    func rematch(_ game: RemoteGame) -> some View {
+        let theyAsked = session.rematchAsked.contains(game.mySide.opponent)
+        let iAsked = session.rematchAsked.contains(game.mySide)
+        return VStack(spacing: 4) {
+            if session.opponentGone {
+                Text("\(game.opponentName) has left")
+                    .font(Theme.body(17))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .accessibilityIdentifier("rematch-status")
+            } else if iAsked {
+                HStack(spacing: 10) {
+                    WaitingMark()
+                    Text("Waiting for \(game.opponentName)…")
+                }
+                .font(Theme.body(17))
+                .foregroundStyle(Theme.ivoryDim)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("rematch-status")
+            } else if session.canAskRematch {
+                QuietButton(title: "Rematch", subtitle: theyAsked ? "\(game.opponentName) wants one" : nil, prominent: true) {
+                    session.requestRematch()
+                }
+                .accessibilityIdentifier("btn-rematch")
+            }
+            QuietButton(title: "Home") { goHome() }
+                .accessibilityIdentifier("btn-home-overlay")
+        }
+        .frame(maxWidth: 260)
     }
 }
 
