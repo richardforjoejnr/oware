@@ -3,8 +3,8 @@ import UIKit
 import MatchKitNearby
 import OwareEngine
 
-/// Play nearby (NEARBY_PLAY_REDESIGN.md §2): one screen. Games nearby turn up by themselves while it
-/// is open, or Start nearby game makes yours; then Ready to play on both phones. The game itself is
+/// Play nearby (NEARBY_PLAY_REDESIGN.md §2): one screen. Look for games lists the games nearby, or
+/// Start nearby game makes yours (and you move first); then Ready to play on both phones. The game itself is
 /// the usual game screen. Never "host", "join mode" or "client" in the player's words.
 struct NearbyView: View {
     @Environment(NearbyLobby.self) private var lobby
@@ -14,7 +14,6 @@ struct NearbyView: View {
     let demo: Bool
     let goBack: () -> Void
 
-    @State private var starter: NearbyLobby.Starter = .creatorStarts
     /// Nil until chosen here: the rules from Settings.
     @State private var variant: RuleSet.Variant?
     @State private var name = NearbyLobby.savedName() ?? ""
@@ -121,14 +120,6 @@ struct NearbyView: View {
                 .pickerStyle(.menu)
                 .accessibilityIdentifier("nearby-rules")
             }
-            VStack(alignment: .leading, spacing: 8) {
-                label("Who starts")
-                Picker("Who starts", selection: $starter) {
-                    ForEach(NearbyLobby.Starter.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .accessibilityIdentifier("nearby-starter")
-            }
             row("Nearby name") {
                 TextField(NearbyLobby.myName(saved: nil, gameCenter: GameCenter.shared.playerName), text: $name)
                     .multilineTextAlignment(.trailing)
@@ -137,8 +128,8 @@ struct NearbyView: View {
                     .onChange(of: name) { _, name in NearbyLobby.saveName(name) }
                     .accessibilityIdentifier("nearby-name-field")
             }
-            QuietButton(title: "Start nearby game", subtitle: "\(NearbyLobby.rulesName(rules)) rules", prominent: true) {
-                lobby.start(name: NearbyLobby.myName, rules: rules, starter: starter, pace: settings.effectiveSpeed)
+            QuietButton(title: "Start nearby game", subtitle: "\(NearbyLobby.rulesName(rules)) rules · you start", prominent: true) {
+                lobby.start(name: NearbyLobby.myName, rules: rules, pace: settings.effectiveSpeed)
             }
             .accessibilityIdentifier("btn-start-nearby")
         }
@@ -149,11 +140,14 @@ struct NearbyView: View {
     private var gamesNearby: some View {
         VStack(alignment: .leading, spacing: 12) {
             label("Games nearby")
-            if lobby.games.isEmpty {
+            if !lobby.isLooking {
+                QuietButton(title: "Look for games", subtitle: "on phones near you") { lobby.look() }
+                    .accessibilityIdentifier("btn-look-nearby")
+            } else if lobby.games.isEmpty {
                 HStack(alignment: .top, spacing: 12) {
                     WaitingMark()
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("No games nearby yet")
+                        Text("Looking for games nearby…")
                             .accessibilityIdentifier("nearby-looking")
                         Text("Ask your friend to start a nearby game.")
                             .font(Theme.caption(14))
@@ -213,7 +207,7 @@ struct NearbyView: View {
             }
             VStack(alignment: .leading, spacing: 10) {
                 detail("Rules", NearbyLobby.rulesName(rules))
-                detail("Who starts", lobby.startedWith == .creatorStarts ? "You" : lobby.startedWith.title)
+                detail("Who starts", "You")
                 detail("Your name", NearbyLobby.myName)
             }
             .padding(16)
@@ -429,7 +423,7 @@ private struct NearbyHelp: View {
     static let steps: [(title: String, detail: String)] = [
         ("Keep both phones close", "No internet is needed."),
         ("Start on one phone", "Tap Start nearby game."),
-        ("Join on the other", "Choose the game when it appears."),
+        ("Join on the other", "Tap Look for games, then choose the game."),
     ]
 
     static let trouble = [

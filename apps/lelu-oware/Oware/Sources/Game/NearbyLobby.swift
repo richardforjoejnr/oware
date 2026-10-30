@@ -71,29 +71,6 @@ final class NearbyLobby {
         var isReady: Bool
     }
 
-    /// Who starts, by what it means rather than "you" or "them", which swap between the phones.
-    enum Starter: String, CaseIterable, Identifiable {
-        case creatorStarts, joiningPlayerStarts, random
-        var id: String { rawValue }
-        /// As the player making the game reads it.
-        var title: String {
-            switch self {
-            case .creatorStarts: "Me"
-            case .joiningPlayerStarts: "Other player"
-            case .random: "Random"
-            }
-        }
-        /// The creator plays South. Random is settled here, before the game is listed, so both
-        /// phones agree.
-        var firstPlayer: Player {
-            switch self {
-            case .creatorStarts: .south
-            case .joiningPlayerStarts: .north
-            case .random: Bool.random() ? .south : .north
-            }
-        }
-    }
-
     /// How a game card says who starts, on the joining phone.
     static func startNote(creatorStarts: Bool, creatorName: String) -> String {
         creatorStarts ? "\(creatorName) starts" : "You start"
@@ -108,8 +85,8 @@ final class NearbyLobby {
     private(set) var opponent: Opponent?
     private(set) var gameNote = ""
     private(set) var iAmReady = false
-    /// The creator's own choice of who starts, as Your game is ready shows it ("Random" stays).
-    private(set) var startedWith: Starter = .creatorStarts
+    /// Look for games was tapped: games nearby are being looked for.
+    private(set) var isLooking = false
     /// Called once both are ready and the game is on the session.
     @ObservationIgnored var onStart: (() -> Void)?
     let session: GameSession
@@ -135,25 +112,29 @@ final class NearbyLobby {
         open()
     }
 
-    /// Back to the games nearby, looking for them.
-    func open() {
+    /// Back to Play nearby, not looking for games until asked.
+    func open() { reset() }
+
+    /// Look for games: lists the games nearby as they turn up.
+    func look() {
         reset()
+        isLooking = true
         network.browse(games: { [weak self] in self?.games = $0 }, status: { [weak self] in self?.status = $0 })
     }
 
-    /// Start nearby game. `pace`: this phone's sowing speed; both phones sow at the slower of the two.
-    func start(name: String, rules: RuleSet, starter: Starter, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
+    /// Start nearby game: whoever starts it moves first (the owner's call, 2026-10-30). `pace`: this
+    /// phone's sowing speed; both phones sow at the slower of the two.
+    func start(name: String, rules: RuleSet, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
         reset()
-        let match = OwareMatch(rules: rules, starter: starter.firstPlayer)
-        let info = ["rules": Self.rulesName(rules), "starter": match.starter == .south ? "creator" : "joiner",
-                    "game": match.matchID.uuidString, "name": name]
+        let match = OwareMatch(rules: rules, starter: .south)
+        // "starter" stays in the listing so a card can say "Kofi starts".
+        let info = ["rules": Self.rulesName(rules), "starter": "creator", "game": match.matchID.uuidString, "name": name]
         do {
             let transport = try network.host(gameName: "\(name)'s game", info: info, status: { [weak self] in self?.status = $0 })
             let link = MatchLink(hosting: match, name: name, pace: pace, transport: transport)
             link.onEvent = { [weak self] in self?.handle($0) }
             self.link = link
-            startedWith = starter
-            gameNote = "\(Self.rulesName(rules)) · \(match.starter == .south ? "You start" : "\(Self.otherPlayer) starts")"
+            gameNote = "\(Self.rulesName(rules)) · You start"
             phase = .waiting
             session.events.nearbyHosted(demo: isDemo)
         } catch {
@@ -195,7 +176,7 @@ final class NearbyLobby {
         phase = .waiting
     }
 
-    /// Cancel: take your game down, or leave the one you were joining, and look again.
+    /// Cancel: take your game down, or leave the one you were joining.
     func cancel() { open() }
 
     private func reset() {
@@ -205,6 +186,7 @@ final class NearbyLobby {
         asking = nil
         opponent = nil
         iAmReady = false
+        isLooking = false
         games = []
         status = .working
         phase = .lobby

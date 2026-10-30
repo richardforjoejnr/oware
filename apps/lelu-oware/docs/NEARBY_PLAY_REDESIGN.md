@@ -31,6 +31,10 @@ below, these win.
    in the wood colours as placeholders.
 7. **No saving and no Game Center:** a nearby game does not survive both apps being closed, and
    nearby wins earn no achievements or scores (already so: `PlayerEvents.gameFinished`).
+8. **Looking is a tap, and the creator always starts** (after trying step 2 on a phone). Play
+   nearby does not look for games by itself: **Look for games** under *Games nearby* starts
+   looking. There is no Who starts choice: whoever starts the game moves first (South). This
+   replaces the brief's *found automatically* and *Me · Other player · Random*.
 
 ## 1. The owner's first notes (and what was decided)
 
@@ -223,8 +227,8 @@ not in the kit; `wood-book` exists already. The owner will make carved ones for 
    ready, game cards, Ready to play; default names; new help sheet and Local Network text.
 
    **Built (2026-10-30).** `NearbyLobby` phases are `lobby / waiting / ready / refused / playing`:
-   opening Play nearby looks for games at once (`open()`); `start(…)` lists yours and stops
-   looking; someone asking, or tapping a game card, shows Ready to play. The creator's **Ready**
+   **Look for games** looks (`look()`; decision 8); `start(…)` lists yours, with you moving
+   first, and stops looking; someone asking, or tapping a game card, shows Ready to play. The creator's **Ready**
    seats the one asking (`accept`) and says ready; **Not now** declines and keeps the game listed;
    the guest's Ready sends its pace and ready. `MatchLink.ready()` replaces the automatic ready of
    step 1, so a connection alone never starts a game: the session gets the room only once the
