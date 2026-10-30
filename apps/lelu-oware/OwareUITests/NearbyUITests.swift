@@ -119,6 +119,18 @@ final class NearbyUITests: XCTestCase {
         XCTAssertEqual(app.otherElements["plaque-B"].label.hasPrefix("You"), true)
     }
 
+    /// Looking for games can be stopped, and started again.
+    @MainActor
+    func testLookingCanBeStopped() throws {
+        openNearby()
+        app.buttons["btn-look-nearby"].tap()
+        let game = app.buttons["nearby-game-Ama's game"]
+        XCTAssertTrue(game.waitForExistence(timeout: 10))
+        app.buttons["btn-stop-looking"].tap()
+        XCTAssertTrue(game.waitForNonExistence(timeout: 5), "the list goes")
+        XCTAssertTrue(app.buttons["btn-look-nearby"].waitForExistence(timeout: 5), "and Look for games is back")
+    }
+
     /// How nearby play works: three steps, and help with connecting.
     @MainActor
     func testTheHelpSaysItInThreeSteps() throws {

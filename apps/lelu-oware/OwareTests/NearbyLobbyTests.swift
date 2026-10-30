@@ -44,6 +44,18 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertNotNil(lobby.games.first?.gameID)
     }
 
+    /// Stop looking: back to the Look for games button, the list forgotten.
+    func testLookingCanBeStopped() async {
+        let (lobby, _) = lobby()
+        lobby.open()
+        lobby.look()
+        await until("Ama's game is listed") { !lobby.games.isEmpty }
+        lobby.stopLooking()
+        XCTAssertFalse(lobby.isLooking)
+        XCTAssertTrue(lobby.games.isEmpty)
+        XCTAssertEqual(lobby.phase, .lobby)
+    }
+
     /// Start nearby game: listed and waiting; when someone comes, both see Ready to play, and the
     /// game starts only once both have pressed Ready (a connection alone never starts it).
     func testStartingWaitsThenBothPressReady() async {
