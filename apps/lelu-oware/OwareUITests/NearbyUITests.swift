@@ -30,9 +30,12 @@ final class NearbyUITests: XCTestCase {
     /// The first time: "What should nearby players call you?" A name saved by the test before can
     /// outlive `--reset-state` when tests run back to back, so it is typed only when asked;
     /// `NearbyLobbyTests.testTheNameIsKept` and the Maestro flow (a cleared app) check the asking.
-    private func giveName(_ name: String) {
+    /// Waits for whichever comes first: the name prompt, or `next` (the screen after it).
+    private func giveName(_ name: String, orSee next: XCUIElement) {
         let field = app.textFields["nearby-name-field"]
-        guard field.waitForExistence(timeout: 3) else { return }
+        let end = Date().addingTimeInterval(10)
+        while !field.exists && !next.exists && Date() < end { _ = field.waitForExistence(timeout: 0.5) }
+        guard field.exists else { return }
         field.tap()
         field.typeText(name)
         app.buttons["btn-name-done"].tap()
@@ -48,7 +51,7 @@ final class NearbyUITests: XCTestCase {
     private func hostAndAccept() {
         openNearby()
         app.buttons["btn-host"].tap()
-        giveName("Kofi")
+        giveName("Kofi", orSee: app.staticTexts["nearby-waiting"])
         XCTAssertTrue(app.staticTexts["nearby-waiting"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Ama wants to play"].waitForExistence(timeout: 10))
         app.buttons["btn-accept"].tap()
@@ -100,7 +103,7 @@ final class NearbyUITests: XCTestCase {
     func testTheGuestsBoardIsTurnedRound() throws {
         openNearby()
         app.buttons["btn-join"].tap()
-        giveName("Esi")
+        giveName("Esi", orSee: app.buttons["nearby-game-Ama's game"])
         let game = app.buttons["nearby-game-Ama's game"]
         XCTAssertTrue(game.waitForExistence(timeout: 10), "the demo host's game is listed")
         game.tap()
