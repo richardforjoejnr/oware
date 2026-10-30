@@ -8,13 +8,13 @@ final class TestFeaturesTests: XCTestCase {
     func testTheSwitchesAreOnlyInTestFlightAndXcodeBuilds() {
         XCTAssertFalse(TestFeatures.isAvailable(on: .appStore))
         XCTAssertTrue(TestFeatures.isAvailable(on: .development))
-        XCTAssertTrue(TestFeatures.isAvailable(on: .testFlight))
+        XCTAssertTrue(TestFeatures.isAvailable(on: .sandbox))
     }
 
     func testAnAppStoreCopyIgnoresASwitchLeftOn() {
         XCTAssertFalse(TestFeatures.nearbyPlay(on: .appStore, switchOn: true))
-        XCTAssertTrue(TestFeatures.nearbyPlay(on: .testFlight, switchOn: true))
-        XCTAssertFalse(TestFeatures.nearbyPlay(on: .testFlight, switchOn: false))
+        XCTAssertTrue(TestFeatures.nearbyPlay(on: .sandbox, switchOn: true))
+        XCTAssertFalse(TestFeatures.nearbyPlay(on: .sandbox, switchOn: false))
     }
 
     func testTheTestSwitchShowsNearbyPlayWhileItsSwitchIsOff() {

@@ -168,6 +168,10 @@ final class HomeScreenUITests: XCTestCase {
 
     @MainActor
     func testTipJarOpensFromSettingsAndUnlocksNothing() throws {
+        // Tips are off in the shipped app until the Paid Apps Agreement is active; `--tips` turns them on.
+        app.terminate()
+        app.launchArguments += ["--tips"]
+        app.launch()
         let more = app.buttons["btn-more"]
         if !app.buttons["btn-settings"].waitForExistence(timeout: 5) { more.tap() }
         let settings = app.buttons["btn-settings"]

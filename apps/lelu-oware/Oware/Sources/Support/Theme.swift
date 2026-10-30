@@ -52,10 +52,43 @@ struct QuietButton: View {
     let title: String
     var subtitle: String? = nil
     var prominent = false
+    /// A row that opens something (Settings): the subtitle under the title and a chevron.
+    var opens = false
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
+            if opens { row } else { inline }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var row: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(Theme.body(20))
+                    .foregroundStyle(prominent ? Theme.gold : Theme.ivory)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(Theme.caption())
+                        .foregroundStyle(Theme.ivoryDim)
+                }
+            }
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Theme.ivoryDim)
+                .accessibilityHidden(true)
+        }
+        .padding(.vertical, 10)
+        .frame(minHeight: 44)
+        .contentShape(Rectangle())
+    }
+
+    private var inline: some View {
             HStack(alignment: .firstTextBaseline) {
                 Text(title)
                     .font(Theme.body(22))
@@ -69,8 +102,6 @@ struct QuietButton: View {
             }
             .padding(.vertical, 10)
             .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
