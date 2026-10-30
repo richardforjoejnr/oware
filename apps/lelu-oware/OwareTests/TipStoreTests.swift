@@ -36,16 +36,21 @@ final class TipStoreTests: XCTestCase {
         XCTAssertFalse(FeatureFlags.onlinePlay)
     }
 
-    private func storeSession() throws -> SKTestSession {
+    /// The local test store. On some simulators (the CI runner's) it gives back no products at
+    /// all, whatever the app does: those runs skip the store tests rather than fail, and
+    /// SupportMeUITests still load and buy a tip there through the scheme's StoreKit file.
+    private func storeSession() async throws -> SKTestSession {
         let session = try SKTestSession(contentsOf: Self.storeFile)
         session.disableDialogs = true
         session.failTransactionsEnabled = false
         session.clearTransactions()
+        let products = (try? await Product.products(for: Tips.productIDs)) ?? []
+        try XCTSkipIf(products.isEmpty, "the StoreKit test store gave no products on this simulator")
         return session
     }
 
     func testTheTipsLoadInOrder() async throws {
-        let session = try storeSession()
+        let session = try await storeSession()
         defer { _ = session }
         let jar = TipJar(productIDs: Tips.productIDs, defaults: TestSupport.defaults(), storageKey: "test.\(UUID())")
         await jar.load()
@@ -59,7 +64,7 @@ final class TipStoreTests: XCTestCase {
     /// finished, so StoreKit does not offer it again at the next launch. (A purchase from the sheet
     /// needs an on-screen window, so `tip(_:)` itself is covered by SupportMeUITests.)
     func testATipFromTheStoreIsCountedAndFinished() async throws {
-        let session = try storeSession()
+        let session = try await storeSession()
         let jar = TipJar(productIDs: Tips.productIDs, defaults: TestSupport.defaults(), storageKey: "test.\(UUID())")
         try await session.buyProduct(identifier: Tips.productIDs[1])
         for _ in 0..<50 where jar.tipCount == 0 { try await Task.sleep(for: .milliseconds(100)) }
@@ -74,7 +79,7 @@ final class TipStoreTests: XCTestCase {
 
     /// A purchase that fails says so plainly and leaves the jar usable.
     func testAFailedTipSaysSoPlainly() async throws {
-        let session = try storeSession()
+        let session = try await storeSession()
         let jar = TipJar(productIDs: Tips.productIDs, defaults: TestSupport.defaults(), storageKey: "test.\(UUID())")
         await jar.load()
         let small = try XCTUnwrap(jar.tips.first)
