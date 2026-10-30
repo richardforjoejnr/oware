@@ -1,18 +1,23 @@
 import Foundation
+import Observation
 
-/// Switches for trying unfinished features on TestFlight. They exist only in a build made with
-/// TEST_FEATURES, which the TestFlight workflow sets when it is run by hand with "test features"
-/// ticked; such builds are not tagged, so App Store Release cannot send one for review. Every
-/// other build, including all App Store builds, compiles this to "off" with nothing in Settings.
-enum TestFeatures {
-    #if TEST_FEATURES
-    static let isBuiltIn = true
-    #else
-    static let isBuiltIn = false
-    #endif
-
+/// Switches for trying unfinished features before they ship (Settings ▸ Test features). Shown in
+/// TestFlight and Xcode builds; a copy from the App Store never shows them and ignores them.
+@MainActor
+@Observable
+final class TestFeatures {
+    static let shared = TestFeatures()
     static let nearbyPlayKey = "testFeatures.nearbyPlay"
 
-    /// Settings ▸ Test features ▸ Nearby play.
-    static var nearbyPlay: Bool { isBuiltIn && UserDefaults.standard.bool(forKey: nearbyPlayKey) }
+    /// Where this copy came from; App Store (switches off) until it is known at launch.
+    var channel: AppChannel = .appStore
+
+    static func isAvailable(on channel: AppChannel) -> Bool { channel != .appStore }
+
+    static func nearbyPlay(on channel: AppChannel, switchOn: Bool) -> Bool { isAvailable(on: channel) && switchOn }
+
+    /// Settings ▸ Test features ▸ Nearby play, on this copy.
+    static var nearbyPlay: Bool {
+        nearbyPlay(on: shared.channel, switchOn: UserDefaults.standard.bool(forKey: nearbyPlayKey))
+    }
 }

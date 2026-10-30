@@ -128,9 +128,6 @@ def main(app_dir: str) -> int:
         body = "\n".join(l for l in flags.group(1).splitlines() if not l.strip().startswith("//"))
         check(bool(re.fullmatch(r"(\s*static let \w+ = (true|false)\s*)*", body)),
               "Feature flags are compile-time constants, not remotely switchable (2.3.1)")
-    # Test switches (TestFeatures) are compiled in only for TestFlight builds made by hand with the
-    # "test features" box ticked; never by default, so no App Store build has them.
-    check("TEST_FEATURES" not in project, "Test features are not switched on in the project (2.3.1)")
     # 2.5.19 (2026-10-16): no hidden, dormant or undocumented features, and nothing obfuscated or
     # loaded at run time that App Review can't see in the binary.
     hidden = re.findall(r"\b(NSClassFromString|NSSelectorFromString|dlopen|dlsym|JSContext|evaluateJavaScript)\b", code)

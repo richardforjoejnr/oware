@@ -145,15 +145,15 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            if TestFeatures.isBuiltIn {
-                // Only in TestFlight test builds (TestFeatures); App Store builds have none of this.
+            if TestFeatures.isAvailable(on: channel) {
+                // TestFlight and Xcode builds only; a copy from the App Store never shows this.
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Test features")
                         .font(Theme.caption())
                         .foregroundStyle(Theme.gold)
                     Toggle("Nearby play", isOn: $testNearbyPlay)
                         .accessibilityIdentifier("setting-test-nearby")
-                    Text("This TestFlight build only. Shows Play nearby under More, to try it on two phones.")
+                    Text("Not in the App Store version. Shows Play nearby under More, to try it on two phones.")
                         .font(Theme.caption(12))
                         .foregroundStyle(Theme.ivoryDim)
                         .fixedSize(horizontal: false, vertical: true)
