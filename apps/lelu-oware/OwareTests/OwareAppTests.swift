@@ -12,6 +12,16 @@ final class OwareAppTests: XCTestCase {
         XCTAssertFalse(GameCenter.shared.isAuthenticated, "unit tests never sign in to Game Center")
     }
 
+    /// Maestro passes a true/false launch argument as a bare `key true`, with no dash, so the
+    /// defaults never see it (nearby-demo.yaml found no Play nearby): read that form as well.
+    func testASwitchIsReadInEachFormTestToolsPassIt() {
+        XCTAssertTrue(LaunchOptions.isOn("--nearby-demo", defaultsKey: "nearbyDemo", in: ["app", "--nearby-demo"]))
+        XCTAssertTrue(LaunchOptions.isOn("--nearby-demo", defaultsKey: "nearbyDemo", in: ["app", "nearbyDemo", "true"]))
+        XCTAssertTrue(LaunchOptions.isOn("--nearby-demo", defaultsKey: "nearbyDemo", in: ["app", "-rules", "abapa", "nearbyDemo", "YES"]))
+        XCTAssertFalse(LaunchOptions.isOn("--nearby-demo", defaultsKey: "nearbyDemo", in: ["app", "nearbyDemo", "false"]))
+        XCTAssertFalse(LaunchOptions.isOn("--nearby-demo", defaultsKey: "nearbyDemo", in: ["app", "nearbyDemo"]))
+    }
+
     /// The tip jar lists its products smallest first; each must be a distinct id of this app.
     func testTipProductsAreDistinctAndBelongToTheApp() {
         XCTAssertEqual(Tips.productIDs.count, 3)
