@@ -43,6 +43,7 @@ final class RemoteGameTests: XCTestCase {
         await until("Ama asks to join") { hostLink.joinRequests.count == 1 }
         await hostLink.accept(hostLink.joinRequests[0].peer)
         await until("both seated") { host.remoteGame?.opponentName == "Ama" && guest.remoteGame?.opponentName == "Kofi" }
+        await until("both phones ready") { host.isStarted && guest.isStarted }
         return Pair(host: host, guest: guest, hostLink: hostLink, guestLink: guestLink, guestTransport: guestTransport)
     }
 
@@ -80,6 +81,30 @@ final class RemoteGameTests: XCTestCase {
 
         // Alone, a phone keeps its own speed.
         XCTAssertNil(TestSupport.session().sharedPace)
+    }
+
+    /// Connected is not started: until both phones have acknowledged the same opening, nobody moves.
+    func testNoMoveBeforeBothPhonesAreReady() async {
+        let host = TestSupport.session()
+        let link = MatchLink(hosting: OwareMatch(rules: .abapa), name: "Kofi", transport: LoopbackTransport(), clock: clock)
+        host.startRemote(link)
+        XCTAssertFalse(host.isStarted)
+        XCTAssertFalse(host.humanToMove, "nobody to play with yet")
+        host.play(house: 2)
+        await settle()
+        XCTAssertEqual(host.state.moveNumber, 0)
+        XCTAssertEqual(host.turnDescription, "Waiting for the other player…")
+    }
+
+    /// Leaving on purpose is not a lost connection: no "reconnecting", the computer is offered at once.
+    func testLeavingIsToldApartFromALostPhone() async {
+        let p = await pair()
+        p.host.play(house: 2)
+        await until("guest sees the move") { p.guest.state.moveNumber == 1 }
+        p.guest.leaveNearbyGame()
+        await until("the host hears Ama left") { p.host.opponentLeft }
+        XCTAssertFalse(p.host.isReconnecting)
+        XCTAssertTrue(p.host.offersComputer)
     }
 
     func testTheHostMovesAndTheGuestsBoardMatches() async {
