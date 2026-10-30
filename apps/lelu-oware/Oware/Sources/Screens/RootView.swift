@@ -29,6 +29,14 @@ struct RootView: View {
         !LaunchOptions.fastAnimations && !LaunchOptions.startGame && LaunchOptions.startScreen == nil
             ? SplashSchedule.durationForThisLaunch() : nil
 
+    /// Nearby starts afresh here, as it is opened, not when its screen appears: an appearing view
+    /// can run after the first tap (a quick Join) and undo it.
+    private func openNearby(demo: Bool) {
+        nearbyDemo = demo
+        lobby.prepare(demo: demo || LaunchOptions.nearbyDemo)
+        screen = .nearby
+    }
+
     var body: some View {
         ZStack {
             Theme.night.ignoresSafeArea()
@@ -43,7 +51,7 @@ struct RootView: View {
                          openPuzzles: { screen = .puzzles },
                          openHeritage: { screen = .heritage },
                          openJourney: { screen = .journey },
-                         openNearby: { nearbyDemo = false; screen = .nearby },
+                         openNearby: { openNearby(demo: false) },
                          openSettings: { showSettings = true })
                     .transition(.opacity)
             case .game:
@@ -75,8 +83,7 @@ struct RootView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView(tryNearby: {
                 showSettings = false
-                nearbyDemo = true
-                screen = .nearby
+                openNearby(demo: true)
             })
                 .presentationDetents([.large])
                 .presentationBackground(Theme.ember)

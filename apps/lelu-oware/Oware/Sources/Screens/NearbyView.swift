@@ -68,7 +68,6 @@ struct NearbyView: View {
         .font(Theme.body())
         .foregroundStyle(Theme.ivory)
         .tint(Theme.gold)
-        .onAppear { lobby.prepare(demo: demo) }
         .sheet(isPresented: $showHelp) {
             NearbyHelp()
                 .presentationDetents([.medium, .large])
