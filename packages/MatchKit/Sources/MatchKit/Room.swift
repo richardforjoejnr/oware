@@ -66,10 +66,10 @@ public final class Room<Rules: RoomRules> {
     }
 
     /// A ping goes out this often; a seat silent for `quietAfter` is reconnecting, and gone
-    /// after `lostAfter` (10 s: the owner found waiting longer for a lost phone too long).
+    /// after `lostAfter` (15 s: the owner found a minute too long and 10 s too short).
     public static var heartbeatInterval: Double { 2 }
     public static var quietAfter: Double { 4 }
-    public static var lostAfter: Double { 10 }
+    public static var lostAfter: Double { 15 }
 
     public let role: Role
     public let rules: Rules

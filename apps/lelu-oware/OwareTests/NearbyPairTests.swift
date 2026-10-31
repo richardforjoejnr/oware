@@ -27,10 +27,13 @@ final class NearbyPairTests: XCTestCase {
     final class AirNetwork: NearbyNetwork {
         let air: Air
         let isDemo = false
+        /// This phone made the game (only the creator's phone marks it started).
+        private var hosted = false
         init(_ air: Air) { self.air = air }
 
         func host(gameName: String, info: [String: String], status: @escaping @MainActor (NearbyStatus) -> Void) throws -> any MatchTransport {
             let transport = LoopbackTransport()
+            hosted = true
             air.hostTransport = transport
             air.name = gameName
             air.info = info
@@ -54,7 +57,7 @@ final class NearbyPairTests: XCTestCase {
             air.canRejoin ? connect(to: listing) : nil
         }
 
-        func stopFinding() { if air.hostTransport != nil { air.started = true } }
+        func stopFinding() { if hosted { air.started = true } }
         func shutDown() {}
 
         func watchAccess(_ update: @escaping @MainActor (NearbyAccess) -> Void) {
