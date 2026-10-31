@@ -63,6 +63,39 @@ struct NearbyTests {
         #expect(left)
     }
 
+    /// Once the game has started the host stays findable, marked as started so the list can leave
+    /// it out, and a guest whose connection broke can connect again to take its seat back.
+    @Test func aStartedGameCanBeConnectedToAgain() async throws {
+        let serviceType = "_matchkittest._tcp"
+        let gameName = "Rejoin \(UUID().uuidString.prefix(8))"
+        let host = try NearbyHost(serviceType: serviceType, name: gameName, info: ["rules": "abapa"])
+        defer { host.close() }
+        let browser = NearbyBrowser(serviceType: serviceType)
+        defer { browser.stop() }
+        var games = browser.games.makeAsyncIterator()
+        var found: NearbyGame?
+        while found == nil, let list = await games.next() { found = list.first { $0.name == gameName } }
+        let game = try #require(found)
+
+        var hostEvents = host.events.makeAsyncIterator()
+        let first = NearbyTransport.connect(to: game)
+        var connections = 0
+        while connections < 1, let event = await hostEvents.next() { if case .connected = event { connections += 1 } }
+
+        host.markStarted()
+        var marked: NearbyGame?
+        while marked == nil, let list = await games.next() {
+            marked = list.first { $0.name == gameName && $0.info["started"] == "1" }
+        }
+        #expect(marked?.info["rules"] == "abapa", "the rest of the listing is kept")
+
+        first.close()   // the guest's app went to the background
+        let again = NearbyTransport.connect(to: try #require(marked))
+        defer { again.close() }
+        while connections < 2, let event = await hostEvents.next() { if case .connected = event { connections += 1 } }
+        #expect(connections == 2, "the host takes the guest back")
+    }
+
     /// Bonjour's "policy denied" is the Local Network permission being off; the app then shows
     /// how to turn it on rather than an empty list.
     @Test func aDeniedPermissionIsToldApartFromOtherFailures() {

@@ -222,18 +222,23 @@ final class RemoteGameTests: XCTestCase {
         XCTAssertEqual(p.guest.rematchAsked, [])
     }
 
-    func testAPlayerGoneForAMinuteCanBeReplacedByTheComputer() async {
+    /// Ten seconds without the other phone (the owner's call, 2026-10-31) and the computer is offered.
+    func testAPlayerGoneTenSecondsCanBeReplacedByTheComputer() async {
         let p = await pair()
         p.host.play(house: 2)
         await until("guest sees the move") { p.guest.state.moveNumber == 1 }
         p.guestTransport.isQuiet = true   // the guest walks out of range
 
-        clock.advance(by: 7)
+        clock.advance(by: 5)
         await p.hostLink.tick()
         XCTAssertTrue(p.host.isReconnecting)
         XCTAssertFalse(p.host.offersComputer, "not yet: they may come back")
 
-        clock.advance(by: 54)
+        clock.advance(by: 4)
+        await p.hostLink.tick()
+        XCTAssertFalse(p.host.offersComputer, "9 s: still time")
+
+        clock.advance(by: 2)
         await p.hostLink.tick()
         XCTAssertTrue(p.host.offersComputer)
 
@@ -253,7 +258,7 @@ final class RemoteGameTests: XCTestCase {
     func testTheGuestCanFinishAgainstTheComputerToo() async {
         let p = await pair()
         p.guestTransport.isQuiet = true
-        clock.advance(by: 61)
+        clock.advance(by: 11)
         await p.guestLink.tick()
         XCTAssertTrue(p.guest.offersComputer)
         p.guest.finishAgainstComputer(difficulty: .beginner)

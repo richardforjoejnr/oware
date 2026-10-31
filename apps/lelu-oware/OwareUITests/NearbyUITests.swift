@@ -142,16 +142,60 @@ final class NearbyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["btn-trouble-connecting"].exists)
     }
 
+    /// Ama's connection drops (as when her app goes to the background): a banner at once, and it
+    /// goes when her phone connects again, with the game carrying on.
     @MainActor
-    func testABannerShowsWhileAmasPhoneIsQuiet() throws {
-        app.launchArguments += ["--demo-quiet-after=1"]
+    func testABannerShowsWhileAmaReconnects() throws {
+        app.launchArguments += ["--demo-drop-after=1", "--demo-away=3"]
         startAndPressReady()
         playAndWaitForReply()
         let banner = app.staticTexts["reconnect-banner"]
-        // Six seconds of silence makes a seat "reconnecting"; the heartbeat checks every two.
-        XCTAssertTrue(banner.waitForExistence(timeout: 15), "the game says it is waiting")
+        XCTAssertTrue(banner.waitForExistence(timeout: 10), "the game says it is waiting")
         XCTAssertEqual(banner.label, "Reconnecting to Ama…")
-        // The demo comes back after twelve seconds.
-        XCTAssertTrue(banner.waitForNonExistence(timeout: 20))
+        XCTAssertTrue(banner.waitForNonExistence(timeout: 10), "Ama comes back by herself")
+        XCTAssertFalse(app.staticTexts["nearby-gone"].exists)
+        wait(for: app.staticTexts["turn-indicator"], label: "Your turn", timeout: 15)
+        playAndWaitForReply()
+    }
+
+    /// The joining phone loses Ama's game (her phone dropped the connection): it finds the game
+    /// again by itself and carries on.
+    @MainActor
+    func testTheJoiningPhoneReconnectsByItself() throws {
+        app.launchArguments += ["--demo-drop-after=1", "--demo-away=0"]
+        openNearby()
+        app.buttons["btn-look-nearby"].tap()
+        let game = app.buttons["nearby-game-Ama's game"]
+        XCTAssertTrue(game.waitForExistence(timeout: 10))
+        game.tap()
+        let ready = app.buttons["btn-ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 5))
+        ready.tap()
+        let turn = app.staticTexts["turn-indicator"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 10))
+        wait(for: turn, label: "Your turn")   // Ama has moved, and then dropped
+        let banner = app.staticTexts["reconnect-banner"]
+        _ = banner.waitForExistence(timeout: 3)   // it may come and go before it is seen
+        XCTAssertTrue(banner.waitForNonExistence(timeout: 10), "back by itself")
+        XCTAssertFalse(app.staticTexts["nearby-gone"].exists)
+        playAndWaitForReply()
+    }
+
+    /// Gone ten seconds: the game offers to carry on against the computer, in a few words.
+    @MainActor
+    func testAPhoneGoneTenSecondsOffersTheComputer() throws {
+        app.launchArguments += ["--demo-drop-after=1", "--demo-away=60"]
+        startAndPressReady()
+        playAndWaitForReply()
+        XCTAssertTrue(app.staticTexts["reconnect-banner"].waitForExistence(timeout: 10))
+        let gone = app.staticTexts["nearby-gone"]
+        XCTAssertTrue(gone.waitForExistence(timeout: 20), "after ten seconds")
+        let finish = app.buttons["btn-finish-computer"]
+        XCTAssertTrue(finish.exists)
+        XCTAssertEqual(finish.label, "Play the computer")
+        finish.tap()
+        XCTAssertTrue(gone.waitForNonExistence(timeout: 5))
+        wait(for: app.staticTexts["turn-indicator"], label: "Your turn", timeout: 15)
+        playAndWaitForReply()
     }
 }
