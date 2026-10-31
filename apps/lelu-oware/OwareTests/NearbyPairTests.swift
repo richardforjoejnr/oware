@@ -21,6 +21,8 @@ final class NearbyPairTests: XCTestCase {
         /// Local Network permission and Wi-Fi, as the phone reports them.
         var access = NearbyAccess() { didSet { watchers.forEach { $0(access) } } }
         var watchers: [@MainActor (NearbyAccess) -> Void] = []
+        /// Times the phone was asked to look at Local Network and Wi-Fi again.
+        var rechecks = 0
     }
 
     /// One phone's view of the air.
@@ -66,6 +68,11 @@ final class NearbyPairTests: XCTestCase {
         }
 
         func stopWatchingAccess() { air.watchers = [] }
+
+        func recheckAccess() {
+            air.rechecks += 1
+            air.watchers.forEach { $0(air.access) }
+        }
     }
 
     private func until(_ what: @autoclosure () -> String, timeout: TimeInterval = 5, _ condition: () -> Bool) async {
@@ -304,6 +311,50 @@ final class NearbyPairTests: XCTestCase {
         XCTAssertNil(lobby.blocker)
         lobby.start(name: "Kofi", rules: .abapa)
         XCTAssertEqual(lobby.phase, .waiting)
+    }
+
+    /// Check again under "Wi-Fi seems off" looks again, and says so when it is still off.
+    func testCheckAgainLooksAgain() async {
+        let air = Air()
+        air.access.wifiOn = false
+        let lobby = NearbyLobby(session: TestSupport.session(), network: AirNetwork(air))
+        lobby.prepare(demo: false)
+        XCTAssertFalse(lobby.stillOff, "nothing checked again yet")
+
+        lobby.checkAgain()
+        XCTAssertEqual(air.rechecks, 1)
+        XCTAssertEqual(lobby.blocker, .wifi)
+        XCTAssertTrue(lobby.stillOff, "the card says it is still off: the tap did something")
+
+        // Wi-Fi switched on without the phone saying so (as when the app was in the background).
+        let watchers = air.watchers
+        air.watchers = []
+        air.access.wifiOn = true
+        air.watchers = watchers
+        XCTAssertEqual(lobby.blocker, .wifi, "not seen yet")
+        lobby.checkAgain()
+        XCTAssertNil(lobby.blocker)
+        XCTAssertTrue(lobby.canSearch)
+        XCTAssertFalse(lobby.stillOff)
+    }
+
+    /// Coming back to the app (from Settings or Control Center) looks again by itself, quietly.
+    func testComingBackToTheAppLooksAgain() async {
+        let air = Air()
+        air.access.wifiOn = false
+        let lobby = NearbyLobby(session: TestSupport.session(), network: AirNetwork(air))
+        lobby.prepare(demo: false)
+        lobby.recheck()
+        XCTAssertEqual(air.rechecks, 1)
+        XCTAssertFalse(lobby.stillOff, "no \"still off\" for a check the player did not ask for")
+    }
+
+    /// Wi-Fi counts as on when either a Wi-Fi network is there or the peer-to-peer Wi-Fi nearby
+    /// play uses is up (Wi-Fi on, but not joined to a network).
+    func testWiFiIsOnWithANetworkOrPeerToPeer() {
+        XCTAssertTrue(LiveNearbyNetwork.wifiOn(network: true, peerToPeer: false))
+        XCTAssertTrue(LiveNearbyNetwork.wifiOn(network: false, peerToPeer: true))
+        XCTAssertFalse(LiveNearbyNetwork.wifiOn(network: false, peerToPeer: false))
     }
 
     func testWiFiComingOnLiftsTheBlock() async {
