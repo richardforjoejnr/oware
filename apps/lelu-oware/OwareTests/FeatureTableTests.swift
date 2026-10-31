@@ -7,8 +7,8 @@ import XCTest
 final class FeatureTableTests: XCTestCase {
     func testEveryFeatureAndItsAccess() {
         XCTAssertEqual(Feature.table, [
-            // Hidden while it is built; `.free` when nearby play ships (NEARBY_PLAY.md step 6).
-            Feature.nearbyPlay: .off,
+            // On for everyone (the owner's call, 2026-10-31, NEARBY_PLAY.md step 6).
+            Feature.nearbyPlay: .free,
             // Later: .unlock(productID: OnlineProduct.id, hostPays: true, foundingIncluded: false).
             Feature.online: .off,
         ])
@@ -22,7 +22,7 @@ final class FeatureTableTests: XCTestCase {
     @MainActor
     func testTheAppGateFollowsTheTable() {
         let gate = Feature.gate(defaults: TestSupport.defaults())
-        XCTAssertFalse(gate.isShown(Feature.nearbyPlay))
+        XCTAssertTrue(gate.isShown(Feature.nearbyPlay))
         XCTAssertFalse(gate.isShown(Feature.online))
     }
 }

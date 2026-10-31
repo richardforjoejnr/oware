@@ -139,6 +139,14 @@ enum LaunchOptions {
     static var demoResignAfter: Int? { number("--demo-resign-after=", defaultsKey: "demoResignAfter") }
     /// `--demo-quiet-after=N`: Ama's phone goes quiet for twelve seconds after her Nth move.
     static var demoQuietAfter: Int? { number("--demo-quiet-after=", defaultsKey: "demoQuietAfter") }
+    /// `--nearby-local-network-off` / `--nearby-wifi-off`: Play nearby acts as if the phone said
+    /// so (NearbyAccessUITests; a simulator cannot switch either off).
+    static var nearbyLocalNetworkOff: Bool { flag("--nearby-local-network-off") }
+    static var nearbyWiFiOff: Bool { flag("--nearby-wifi-off") }
+    /// `--demo-drop-after=N`: Ama's connection drops after her Nth move (the reconnect UI tests).
+    static var demoDropAfter: Int? { number("--demo-drop-after=", defaultsKey: "demoDropAfter") }
+    /// `--demo-away=S`: and she is back after S seconds (3 by default).
+    static var demoAway: Double? { number("--demo-away=", defaultsKey: "demoAway").map(Double.init) }
     /// `--rules=abapa|namnam` / `-rules abapa`: pin the variant for a test run (not persisted).
     static var rulesOverride: RuleSet.Variant? {
         let raw = value("--rules=") ?? (enabled ? UserDefaults.standard.string(forKey: "rules") : nil)

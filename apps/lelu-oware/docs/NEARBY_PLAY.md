@@ -35,7 +35,7 @@ the carved-wood kit in `art/nearby/`.
 7. **Your name:** asked once, the first time you host or join ("What should nearby players call
    you?"). It is kept in Settings. iOS no longer gives apps the device's name.
 
-Settings ▸ **Try nearby play** starts the demo: a pretend player on the same phone (MULTIPLAYER.md §5).
+The demo (a pretend player on the same phone, MULTIPLAYER.md §5) is only for the app's own tests (`--nearby-demo`); players are not offered it.
 
 ## How it fits the code
 

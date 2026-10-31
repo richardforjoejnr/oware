@@ -66,8 +66,7 @@ struct RootView: View {
                 })
                 .transition(.opacity)
             case .nearby:
-                NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home },
-                           tryDemo: { openNearby(demo: true) })
+                NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home })
                     .transition(.opacity)
             case .heritage:
                 HeritageView(goBack: { screen = .home })
@@ -81,7 +80,6 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.45), value: screen)
-        .task { TestFeatures.shared.channel = await AppChannel.current() }
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .presentationDetents([.large])

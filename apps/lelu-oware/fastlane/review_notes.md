@@ -4,7 +4,7 @@
 
 **Purpose and audience.** Lelu Oware is Oware, the traditional Ghanaian mancala game, for iPhone and iPad, for anyone who loves the game or wants to learn it, with the feel of a carved Ghanaian board. Play the computer at four levels (Novice to Grandmaster), a friend on the same device, the Journey (a series of opponents), daily riddles, and a short lesson; two rule sets (Abapa and Nam-Nam).
 
-**Setup and main features.** No account, login or setup is needed. From the menu: play the computer, play a friend on one device, the Journey, riddles and the lesson. Settings has the rules, sound and haptics, the switch for anonymous usage statistics, and links to the privacy policy and support. Game Center is not used in this version.
+**Setup and main features.** No account, login or setup is needed. From the menu: play the computer, play a friend on one device, the Journey, riddles and the lesson. More ▸ Play nearby plays a friend on two iPhones close together, directly over Wi-Fi with no internet or account (it asks for Local Network access). Settings has the rules, sound and haptics, the switch for anonymous usage statistics, and links to the privacy policy and support. Game Center is not used in this version.
 
 **Paid content.** None. This version has no In-App Purchases: the whole game is free and nothing can be bought. (The optional tips are switched off until our Paid Apps Agreement is active; the home screen shows "Rate Lelu Oware", a link to write a review on the App Store, in their place.)
 

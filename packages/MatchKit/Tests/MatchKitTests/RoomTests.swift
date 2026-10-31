@@ -217,13 +217,15 @@ struct RoomTests {
 
     // MARK: Connection
 
+    /// A phone that has gone is "reconnecting" after 4 s of silence and gone after 10 s (the
+    /// owner's call, 2026-10-31: waiting 30 s or a minute felt too long).
     @Test func silenceMeansReconnectingThenTheSeatEnds() async throws {
         let (table, guest, link, log) = await seated()
         link.isQuiet = true   // the guest walks out of range
 
-        table.clock.advance(by: 5)
+        table.clock.advance(by: 3)
         await table.host.tick()
-        #expect(table.host.seats[1]?.isReconnecting == false, "5 s of silence is fine")
+        #expect(table.host.seats[1]?.isReconnecting == false, "3 s of silence is fine")
 
         table.clock.advance(by: 1.5)
         await table.host.tick()
@@ -233,12 +235,34 @@ struct RoomTests {
         #expect(guest.seats[0]?.isReconnecting == true, "the guest sees the host go quiet too")
         #expect(log.events.contains(.reconnecting(seat: 0)))
 
-        table.clock.advance(by: 54)   // 60.5 s in all
+        table.clock.advance(by: 5)   // 9.5 s in all
+        await table.host.tick()
+        #expect(table.host.seats[1] != nil, "still time to come back")
+
+        table.clock.advance(by: 1)   // 10.5 s
         await table.host.tick()
         #expect(table.host.seats[1] == nil)
         #expect(table.hostEvents.contains(.seatLost(seat: 1)))
         await guest.tick()
         #expect(log.events.contains(.seatLost(seat: 0)))
+    }
+
+    /// The connection breaks (the other phone's app went to the background) without going quiet
+    /// first: both ends say reconnecting at once, and the guest can take its seat back.
+    @Test func aDroppedConnectionIsReconnectingOnBothPhones() async throws {
+        let (table, guest, link, log) = await seated()
+        link.drop()
+        await eventually("host notices") { table.host.seats[1]?.isReconnecting == true }
+        await eventually("guest notices") { log.events.contains(.reconnecting(seat: 0)) }
+        #expect(guest.seats[0]?.isReconnecting == true)
+
+        let back = LoopbackTransport()
+        guest.reconnect(over: back)
+        table.hostLink.connect(back)
+        await eventually("back on the host") { table.hostEvents.contains(.back(seat: 1)) }
+        await eventually("back on the guest") { log.events.contains(.back(seat: 0)) }
+        #expect(guest.seats[0]?.isReconnecting == false)
+        #expect(table.host.seats[1]?.isReconnecting == false)
     }
 
     @Test func pingsKeepAQuietGameAlive() async throws {
@@ -276,7 +300,7 @@ struct RoomTests {
         await eventually("host notices") { table.host.seats[1]?.isReconnecting == true }
 
         try await table.host.send(.add(4))   // the host moves while the guest is away
-        table.clock.advance(by: 30)
+        table.clock.advance(by: 8)
         await table.host.tick()
         #expect(table.host.seats[1] != nil)
 
@@ -294,10 +318,25 @@ struct RoomTests {
         await eventually("play carries on") { table.host.match?.numbers == [4, 8] }
     }
 
+    /// A move sent while the new connection is still being made is kept, and sent once the host
+    /// has the guest back, not lost.
+    @Test func aMoveSentWhileReconnectingIsSentOnceBack() async throws {
+        let (table, guest, link, _) = await seated()
+        try await table.host.send(.add(1))   // the guest's turn now
+        await eventually("guest has it") { guest.match?.numbers == [1] }
+        link.drop()
+        await eventually("host notices") { table.host.seats[1]?.isReconnecting == true }
+        let back = LoopbackTransport()
+        guest.reconnect(over: back)
+        try await guest.send(.add(2))        // before the new connection is up
+        table.hostLink.connect(back)
+        await eventually("the move arrives") { table.host.match?.numbers == [1, 2] }
+    }
+
     @Test func rejoiningTooLateAsksAgain() async throws {
         let (table, guest, link, _) = await seated()
         link.close()
-        table.clock.advance(by: 61)
+        table.clock.advance(by: 11)
         await table.host.tick()
         #expect(table.host.seats[1] == nil)
 

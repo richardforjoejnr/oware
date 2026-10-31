@@ -66,10 +66,10 @@ public final class Room<Rules: RoomRules> {
     }
 
     /// A ping goes out this often; a seat silent for `quietAfter` is reconnecting, and gone
-    /// after `lostAfter`.
+    /// after `lostAfter` (10 s: the owner found waiting longer for a lost phone too long).
     public static var heartbeatInterval: Double { 2 }
-    public static var quietAfter: Double { 6 }
-    public static var lostAfter: Double { 60 }
+    public static var quietAfter: Double { 4 }
+    public static var lostAfter: Double { 10 }
 
     public let role: Role
     public let rules: Rules
@@ -95,6 +95,10 @@ public final class Room<Rules: RoomRules> {
     /// Guest: the host, and the token to take this seat back.
     private var hostPeer: PeerID?
     private var token: UUID?
+    /// Guest: moves sent while not connected to the host, sent once it has us back.
+    private var waiting: [Intent] = []
+    /// Guest: on a new connection, not yet let back in by the host.
+    private var awaitingWelcome = false
     private var stopped = false
 
     /// Opens a room with the host in seat 0.
@@ -167,7 +171,10 @@ public final class Room<Rules: RoomRules> {
             onEvent?(.snapshot(next))
             await post(.snapshot(next), to: nil)
         case .guest:
-            guard let hostPeer else { return }
+            guard let hostPeer, !awaitingWelcome else {
+                waiting.append(intent)
+                return
+            }
             await post(.intent(intent), to: hostPeer)
         }
     }
@@ -216,6 +223,7 @@ public final class Room<Rules: RoomRules> {
         transport.close()
         transport = newTransport
         hostPeer = nil
+        awaitingWelcome = true
         filter = SequenceFilter()
         listen()
     }
@@ -328,6 +336,10 @@ public final class Room<Rules: RoomRules> {
             heard(0)
             if rejoining { onEvent?(.back(seat: 0)) } else { onEvent?(.seated(seat: seat, name: name)) }
             take(snapshot)
+            awaitingWelcome = false
+            let held = waiting
+            waiting = []
+            if let hostPeer { Task { for intent in held { await post(.intent(intent), to: hostPeer) } } }
         case let .refused(refusal):
             onEvent?(.refused(refusal))
         case let .snapshot(snapshot):

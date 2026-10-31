@@ -114,6 +114,15 @@ final class MatchLink {
     private(set) var joinRequests: [JoinRequest] = []
     /// Set by the session, which turns room events into moves on the board.
     @ObservationIgnored var onEvent: (@MainActor (RoomEvent<OwareTable>) -> Void)?
+    /// Guest: a new connection to the host, after the last one broke (nil: not reachable now).
+    /// While the host is "reconnecting" this is tried every couple of seconds, until it is back
+    /// or the seat is lost.
+    @ObservationIgnored var rejoin: (@MainActor () -> (any MatchTransport)?)?
+    @ObservationIgnored private var rejoining: Task<Void, Never>?
+    /// New connections made to the host so far (for tests).
+    private(set) var rejoins = 0
+    /// Between tries to reach the host again.
+    static let rejoinInterval: Duration = .seconds(2)
 
     var isHost: Bool { room.role == .host }
     var mySide: Player? { room.mySeat.map(OwareRoomRules.player(seat:)) }
@@ -155,10 +164,35 @@ final class MatchLink {
             joinRequests.append(JoinRequest(peer: peer, name: name))
         case .seated:
             joinRequests = []
+        case .reconnecting(seat: 0) where room.role == .guest:
+            startRejoining()
+        case .back, .seatLost, .left:
+            stopRejoining()
         default:
             break
         }
         onEvent?(event)
+    }
+
+    /// The host went quiet or the connection broke: connect again, and again, until it is back.
+    private func startRejoining() {
+        guard rejoining == nil, rejoin != nil else { return }
+        rejoining = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self, self.room.seats[0]?.isReconnecting == true else { break }
+                if let transport = self.rejoin?() {
+                    self.rejoins += 1
+                    self.room.reconnect(over: transport)
+                }
+                try? await Task.sleep(for: Self.rejoinInterval)
+            }
+            self?.rejoining = nil
+        }
+    }
+
+    private func stopRejoining() {
+        rejoining?.cancel()
+        rejoining = nil
     }
 
     private var saidReady = false
@@ -192,5 +226,8 @@ final class MatchLink {
 
     func startHeartbeat() { room.startHeartbeat() }
 
-    func leave() async { await room.leave() }
+    func leave() async {
+        stopRejoining()
+        await room.leave()
+    }
 }

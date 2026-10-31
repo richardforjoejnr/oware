@@ -540,12 +540,12 @@ struct GameView: View {
                 Text(session.opponentLeft ? "\(session.opponentName) left the game" : "\(session.opponentName)'s phone has gone")
                     .font(Theme.title(26))
                     .accessibilityIdentifier("nearby-gone")
-                Text("You can finish this game against the computer, from where it stands.")
+                Text("Carry on against the computer from here.")
                     .font(Theme.caption(15))
                     .foregroundStyle(Theme.ivoryDim)
                     .multilineTextAlignment(.center)
                 VStack(spacing: 4) {
-                    QuietButton(title: "Finish against the computer", prominent: true) { session.finishAgainstComputer() }
+                    QuietButton(title: "Play the computer", prominent: true) { session.finishAgainstComputer() }
                         .accessibilityIdentifier("btn-finish-computer")
                     QuietButton(title: "Leave") { leaveGame() }
                         .accessibilityIdentifier("btn-leave-nearby")

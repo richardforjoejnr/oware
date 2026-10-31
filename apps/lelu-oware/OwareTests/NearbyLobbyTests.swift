@@ -136,6 +136,23 @@ final class NearbyLobbyTests: XCTestCase {
         XCTAssertEqual(events.last, .nearbyFinished(result: "win", rules: "abapa"))
     }
 
+    /// Ama made the game and her phone drops the connection after her first move: this phone
+    /// finds her game again by itself, and a move played once it is back reaches her.
+    func testJoiningAndAmasConnectionDropsTheGameCarriesOn() async {
+        let (lobby, session) = lobby(.init(dropAfter: 1, awayFor: 0, thinkTime: 0.01, joinDelay: 0.01))
+        lobby.onStart = {}
+        lobby.look()
+        await until("Ama's game is listed") { !lobby.games.isEmpty }
+        lobby.join(lobby.games[0], name: "Esi")
+        await until("Ama is ready") { lobby.canPressReady && lobby.opponent?.isReady == true }
+        await lobby.ready()
+        await until("Ama moves") { session.state.moveNumber == 1 }
+        await until("connected again", timeout: 6) { (lobby.link?.rejoins ?? 0) >= 1 && !session.isReconnecting }
+        await until("my turn") { session.humanToMove }
+        session.play(house: session.state.legalMoves().first!.absoluteIndex)
+        await until("Ama replies", timeout: 5) { session.state.moveNumber == 3 }
+    }
+
     /// Cancel takes the game down and goes back to Play nearby, not looking until asked.
     func testCancellingTakesTheGameDown() {
         let (lobby, session) = lobby()

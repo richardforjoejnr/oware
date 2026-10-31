@@ -49,6 +49,19 @@ public final class LoopbackTransport: MatchTransport, @unchecked Sendable {
         if had { continuation.yield(.disconnected(peer)) }
     }
 
+    /// Breaks every link, both ways, as a dropped connection does; unlike `close()` it can be
+    /// connected again.
+    public func drop() {
+        let others: [LoopbackTransport] = lock.sync {
+            defer { links.removeAll() }
+            return Array(links.values)
+        }
+        for other in others {
+            other.unlink(me)
+            continuation.yield(.disconnected(other.me))
+        }
+    }
+
     public func close() {
         let others: [LoopbackTransport] = lock.sync {
             closed = true

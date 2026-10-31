@@ -9,7 +9,6 @@ struct SettingsView: View {
     @Environment(RiddleReminder.self) private var reminder
     @Environment(PuzzleLibrary.self) private var library
     @State private var showTipJar = false
-    @AppStorage(TestFeatures.nearbyPlayKey) private var testNearbyPlay = false
     @State private var channel: AppChannel = .appStore
     @Environment(\.openURL) private var openURL
     /// Settings ▸ Try nearby play: the demo player, for anyone curious before finding a friend.
@@ -143,21 +142,6 @@ struct SettingsView: View {
                     .font(Theme.caption(12))
                     .foregroundStyle(Theme.ivoryDim)
                     .fixedSize(horizontal: false, vertical: true)
-            }
-
-            if TestFeatures.isAvailable(on: channel) {
-                // TestFlight and Xcode builds only; a copy from the App Store never shows this.
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Test features")
-                        .font(Theme.caption())
-                        .foregroundStyle(Theme.gold)
-                    Toggle("Nearby play", isOn: $testNearbyPlay)
-                        .accessibilityIdentifier("setting-test-nearby")
-                    Text("Not in the App Store version. Shows Play nearby under More, to try it on two phones.")
-                        .font(Theme.caption(12))
-                        .foregroundStyle(Theme.ivoryDim)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
             }
 
             Spacer()

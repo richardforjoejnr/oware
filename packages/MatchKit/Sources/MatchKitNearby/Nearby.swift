@@ -81,6 +81,14 @@ public class NearbyTransport: MatchTransport, @unchecked Sendable {
         (events, continuation) = AsyncStream.makeStream()
     }
 
+    /// A new connection to a game's host, found earlier (also to come back to a game in play).
+    /// Its first `connected` event is the host.
+    public static func connect(to game: NearbyGame) -> NearbyTransport {
+        let transport = NearbyTransport()
+        transport.adopt(NWConnection(to: game.endpoint, using: Nearby.parameters()))
+        return transport
+    }
+
     /// Takes a connection on: starts it, reads whole messages from it and reports it.
     func adopt(_ connection: NWConnection) {
         let link = Link(connection)
@@ -159,36 +167,95 @@ public class NearbyTransport: MatchTransport, @unchecked Sendable {
 }
 
 /// Hosts a game: advertises it nearby and takes every phone that connects. The room decides
-/// who gets a seat.
+/// who gets a seat. It stays findable for the whole game, so a guest whose connection broke can
+/// come back; `markStarted()` lets lists leave a game in play out.
 public final class NearbyHost: NearbyTransport, @unchecked Sendable {
     /// Whether the game can be found, each time that changes.
     public let status: AsyncStream<NearbyStatus>
-    private let listener: NWListener
-    private let service: NWListener.Service
+    private let statusContinuation: AsyncStream<NearbyStatus>.Continuation
+    private let serviceType: String
+    private let name: String
+    /// Touched only on `queue`.
+    private var info: [String: String]
+    private var listener: NWListener?
+    private var advertising = true
+    private var stopped = false
 
     /// `serviceType` is like `_leluoware._tcp`; `name` is what browsers list.
     public init(serviceType: String, name: String, info: [String: String] = [:]) throws {
-        listener = try NWListener(using: Nearby.parameters())
-        service = NWListener.Service(name: name, type: serviceType, domain: nil, txtRecord: NWTXTRecord(info))
-        let (status, statusContinuation) = AsyncStream.makeStream(of: NearbyStatus.self, bufferingPolicy: .bufferingNewest(1))
-        self.status = status
+        self.serviceType = serviceType
+        self.name = name
+        self.info = info
+        (status, statusContinuation) = AsyncStream.makeStream(of: NearbyStatus.self, bufferingPolicy: .bufferingNewest(1))
         super.init()
-        listener.stateUpdateHandler = { state in
-            if case .cancelled = state { return statusContinuation.finish() }
-            statusContinuation.yield(NearbyStatus(state))
+        let first = try NWListener(using: Nearby.parameters())
+        queue.sync { listen(on: first) }
+    }
+
+    /// TXT key set once the game is under way.
+    public static let startedKey = "started"
+
+    private var service: NWListener.Service {
+        NWListener.Service(name: name, type: serviceType, domain: nil, txtRecord: NWTXTRecord(info))
+    }
+
+    /// On `queue`.
+    private func listen(on listener: NWListener) {
+        self.listener = listener
+        listener.stateUpdateHandler = { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case .cancelled:
+                return
+            case .failed:
+                // iOS can stop a listener while the app is in the background: start a new one,
+                // so the guest can find the game again when this phone comes back.
+                statusContinuation.yield(NearbyStatus(state))
+                restart()
+            default:
+                statusContinuation.yield(NearbyStatus(state))
+            }
         }
-        listener.service = service
+        listener.service = advertising ? service : nil
         listener.newConnectionHandler = { [weak self] connection in self?.adopt(connection) }
         listener.start(queue: queue)
     }
 
-    /// Stops or restarts listing the game, for example once every seat is taken.
+    /// On `queue`.
+    private func restart() {
+        listener?.cancel()
+        listener = nil
+        queue.asyncAfter(deadline: .now() + 1) { [weak self] in
+            guard let self, !self.stopped, self.listener == nil,
+                  let fresh = try? NWListener(using: Nearby.parameters()) else { return }
+            self.listen(on: fresh)
+        }
+    }
+
+    /// Stops or restarts listing the game.
     public func setAdvertising(_ on: Bool) {
-        queue.async { [self] in listener.service = on ? service : nil }
+        queue.async { [self] in
+            advertising = on
+            listener?.service = on ? service : nil
+        }
+    }
+
+    /// The game is under way: still listed, for its guest to come back, but marked so that lists
+    /// leave it out.
+    public func markStarted() {
+        queue.async { [self] in
+            info[Self.startedKey] = "1"
+            if advertising { listener?.service = service }
+        }
     }
 
     public override func close() {
-        listener.cancel()
+        queue.sync {
+            stopped = true
+            listener?.cancel()
+            listener = nil
+        }
+        statusContinuation.finish()
         super.close()
     }
 }
@@ -226,11 +293,7 @@ public final class NearbyBrowser: @unchecked Sendable {
     }
 
     /// A transport to the game's host. Its first `connected` event is the host.
-    public func connect(to game: NearbyGame) -> NearbyTransport {
-        let transport = NearbyTransport()
-        transport.adopt(NWConnection(to: game.endpoint, using: Nearby.parameters()))
-        return transport
-    }
+    public func connect(to game: NearbyGame) -> NearbyTransport { NearbyTransport.connect(to: game) }
 
     public func stop() {
         browser.cancel()

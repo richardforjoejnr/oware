@@ -17,8 +17,6 @@ struct NearbyView: View {
     /// The demo player, Ama, instead of real phones.
     let demo: Bool
     let goBack: () -> Void
-    /// Try it with Ama, a pretend second phone.
-    var tryDemo: () -> Void = {}
 
     /// Nil until chosen here: the rules from Settings.
     @State private var variant: RuleSet.Variant?
@@ -64,8 +62,12 @@ struct NearbyView: View {
                             .foregroundStyle(Theme.ivoryDim)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    if lobby.status == .localNetworkDenied {
-                        localNetworkOff
+                    if lobby.phase == .lobby {
+                        switch lobby.blocker {
+                        case .localNetwork: localNetworkOff
+                        case .wifi: wifiOff
+                        case nil: EmptyView()
+                        }
                     }
                     content
                 }
@@ -79,6 +81,7 @@ struct NearbyView: View {
         .font(Theme.body())
         .foregroundStyle(Theme.ivory)
         .tint(Theme.gold)
+        .onDisappear { lobby.close() }
         .sheet(isPresented: $showHelp) {
             NearbyHelp()
                 .presentationDetents([.medium, .large])
@@ -99,13 +102,7 @@ struct NearbyView: View {
         case .lobby, .playing:
             startGame
             gamesNearby
-            VStack(alignment: .leading, spacing: 0) {
-                helpLink("How nearby play works")
-                if !demo {
-                    link("Try it with a pretend player", icon: "person.crop.circle.badge.questionmark", action: tryDemo)
-                        .accessibilityIdentifier("btn-try-nearby")
-                }
-            }
+            helpLink("How nearby play works")
         case .waiting:
             waiting
         case .ready:
@@ -172,6 +169,7 @@ struct NearbyView: View {
                 lobby.start(name: NearbyLobby.myName, rules: rules, pace: settings.effectiveSpeed)
             }
             .buttonStyle(NearbyButtonStyle(.primary))
+            .disabled(!lobby.canSearch)
             .accessibilityIdentifier("btn-start-nearby")
         }
         .padding(16)
@@ -186,6 +184,7 @@ struct NearbyView: View {
                     Label("Look for games", systemImage: "magnifyingglass")
                 }
                 .buttonStyle(NearbyButtonStyle(.secondary))
+                .disabled(!lobby.canSearch)
                 .accessibilityIdentifier("btn-look-nearby")
             } else {
                 HStack(spacing: 12) {
@@ -401,7 +400,31 @@ struct NearbyView: View {
         goBack()
     }
 
-    // MARK: Local Network
+    // MARK: Local Network and Wi-Fi
+
+    private var wifiOff: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Wi-Fi seems to be off.")
+            Text("Nearby play needs Wi-Fi switched on, on both phones. You don't need to join a network. Turn it on in Settings ▸ Wi-Fi, then come back.")
+                .font(Theme.caption(14))
+                .foregroundStyle(Theme.ivoryDim)
+            HStack(spacing: 12) {
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                }
+                .buttonStyle(NearbyButtonStyle(.small))
+                .accessibilityIdentifier("btn-open-settings")
+                Button("Try anyway") { lobby.tryAnyway() }
+                    .buttonStyle(NearbyButtonStyle(.small))
+                    .accessibilityIdentifier("btn-try-anyway")
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(14)
+        .background(Theme.ember, in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("nearby-wifi-off")
+    }
 
     private var localNetworkOff: some View {
         VStack(alignment: .leading, spacing: 10) {

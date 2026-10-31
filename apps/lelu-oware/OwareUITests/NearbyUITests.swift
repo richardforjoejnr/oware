@@ -55,8 +55,8 @@ final class NearbyUITests: XCTestCase {
     /// Plays the first house of yours with seeds in it, then waits until the turn has passed: to
     /// Ama, or (if she resigns at once) to the result. On a slow machine her two-second turn can be
     /// over before the label is read, so "Ama's turn" itself is not waited for.
-    private func playAndWaitForReply() {
-        let houses = (1...6).map { app.buttons["house-A\($0)"] }
+    private func playAndWaitForReply(row: String = "A") {
+        let houses = (1...6).map { app.buttons["house-\(row)\($0)"] }
         guard let house = houses.first(where: { $0.value as? String != "0 seeds" }) else { return XCTFail("no seeds to sow") }
         house.tap()
         let turn = app.staticTexts["turn-indicator"]
@@ -142,16 +142,65 @@ final class NearbyUITests: XCTestCase {
         XCTAssertTrue(app.buttons["btn-trouble-connecting"].exists)
     }
 
+    /// Ama's connection drops (as when her app goes to the background): a banner at once, and it
+    /// goes when her phone connects again, with the game carrying on.
     @MainActor
-    func testABannerShowsWhileAmasPhoneIsQuiet() throws {
-        app.launchArguments += ["--demo-quiet-after=1"]
+    func testABannerShowsWhileAmaReconnects() throws {
+        app.launchArguments += ["--demo-drop-after=1", "--demo-away=3"]
         startAndPressReady()
         playAndWaitForReply()
         let banner = app.staticTexts["reconnect-banner"]
-        // Six seconds of silence makes a seat "reconnecting"; the heartbeat checks every two.
-        XCTAssertTrue(banner.waitForExistence(timeout: 15), "the game says it is waiting")
+        XCTAssertTrue(banner.waitForExistence(timeout: 10), "the game says it is waiting")
         XCTAssertEqual(banner.label, "Reconnecting to Ama…")
-        // The demo comes back after twelve seconds.
-        XCTAssertTrue(banner.waitForNonExistence(timeout: 20))
+        XCTAssertTrue(banner.waitForNonExistence(timeout: 10), "Ama comes back by herself")
+        XCTAssertFalse(app.staticTexts["nearby-gone"].exists)
+        wait(for: app.staticTexts["turn-indicator"], label: "Your turn", timeout: 15)
+        playAndWaitForReply()
+    }
+
+    /// The joining phone loses Ama's game (her phone dropped the connection): it finds the game
+    /// again by itself and carries on.
+    @MainActor
+    func testTheJoiningPhoneReconnectsByItself() throws {
+        app.launchArguments += ["--demo-drop-after=1", "--demo-away=3"]
+        openNearby()
+        app.buttons["btn-look-nearby"].tap()
+        let game = app.buttons["nearby-game-Ama's game"]
+        XCTAssertTrue(game.waitForExistence(timeout: 10))
+        game.tap()
+        let ready = app.buttons["btn-ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 5))
+        ready.tap()
+        let turn = app.staticTexts["turn-indicator"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 10))
+        // Ama moves, then her connection drops for three seconds.
+        let banner = app.staticTexts["reconnect-banner"]
+        XCTAssertTrue(banner.waitForExistence(timeout: 15), "the game says it is reconnecting")
+        XCTAssertTrue(banner.waitForNonExistence(timeout: 10), "back by itself")
+        wait(for: turn, label: "Your turn")
+        XCTAssertFalse(app.staticTexts["nearby-gone"].exists)
+        playAndWaitForReply(row: "B")   // you play North when Ama made the game
+    }
+
+    /// Gone ten seconds: the game offers to carry on against the computer, in a few words.
+    @MainActor
+    func testAPhoneGoneTenSecondsOffersTheComputer() throws {
+        app.launchArguments += ["--demo-drop-after=1", "--demo-away=60"]
+        startAndPressReady()
+        playAndWaitForReply()
+        XCTAssertTrue(app.staticTexts["reconnect-banner"].waitForExistence(timeout: 10))
+        let gone = app.staticTexts["nearby-gone"]
+        XCTAssertTrue(gone.waitForExistence(timeout: 20), "after ten seconds")
+        let finish = app.buttons["btn-finish-computer"]
+        XCTAssertTrue(finish.exists)
+        XCTAssertEqual(finish.label, "Play the computer")
+        finish.tap()
+        XCTAssertTrue(gone.waitForNonExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["reconnect-banner"].exists)
+        // An ordinary game against the computer now, carried on from the same position.
+        let houses = (1...6).map { app.buttons["house-A\($0)"] }
+        let canPlay = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: houses[0])
+        _ = XCTWaiter().wait(for: [canPlay], timeout: 5)
+        XCTAssertNotEqual(app.staticTexts["turn-indicator"].label, "Your turn", "no longer the two-phone game's wording")
     }
 }
