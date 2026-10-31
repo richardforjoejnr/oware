@@ -24,7 +24,7 @@ below, these win.
    joining player's tile.
 4. **Default name: the Game Center name first**, then *Oware Player*. When both players still have
    the same default, add the side colour (*Oware Player · red*).
-5. **Wait 10 s for a lost phone** (was 30 s; the owner's call after trying it, 2026-10-31),
+5. **Wait 15 s for a lost phone** (was 30 s, then 10 s; the owner's call after trying it, 2026-10-31),
    reconnecting automatically: "Reconnecting…" after 4 s of silence or at once if the connection
    breaks, then *Play the computer* / *Leave*.
 6. **Carved icons for everything the kit lacks:** person, pin (nearby name), computer, leave and
@@ -83,7 +83,7 @@ pressed Ready.
 *Connection lost* / *Trying to reconnect to Richard…* (reconnecting indicator), **Keep waiting**,
 **Continue vs Computer**, **Leave game**. Automatic reconnect for about 30–60 s. On reconnect:
 compare game ID, move number and state hash, send the latest state if needed, resume exactly.
-The automatic window is 10 s (decision 5).
+The automatic window is 15 s (decision 5).
 
 **F. Rejoin** (no mockup; `nearby-card-rejoin` in the kit). *Richard is back* / *Round 3 · 7–5
 houses* / **Rejoin game**: restores the human-v-human game. Only while the game is still waiting
@@ -244,7 +244,7 @@ not in the kit; `wood-book` exists already. The owner will make carved ones for 
    name* field (*Shown only to players near you.*). Help is three steps plus *Having trouble
    connecting?*; the Local Network text is the brief's. Plain SwiftUI for now (tiles, seals and
    cards in the wood colours); the kit pieces come in step 4.
-3. **Connections:** reconnect over a new connection (10 s) — **built 2026-10-31**: the host stays
+3. **Connections:** reconnect over a new connection (15 s) — **built 2026-10-31**: the host stays
    listed (marked started, left out of lists) and starts a new listener if iOS stopped it; the
    joining phone connects again every 2 s while the host is reconnecting. Still to do: the
    Connection lost sheet and the Rejoin card.

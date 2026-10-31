@@ -110,8 +110,6 @@ final class NearbyLobby {
     /// Called once both are ready and the game is on the session.
     @ObservationIgnored var onStart: (() -> Void)?
     let session: GameSession
-    /// The one asking to play, while the creator decides.
-    private var asking: MatchLink.JoinRequest?
 
     /// What stops this phone looking for games or starting one, shown with how to fix it.
     enum Blocker: Equatable { case localNetwork, wifi }
@@ -134,10 +132,11 @@ final class NearbyLobby {
     var isDemo: Bool { network.isDemo }
     var isCreator: Bool { link?.isHost ?? false }
     /// Only the creator turns someone away, and only before saying Ready.
-    var canSayNotNow: Bool { isCreator && asking != nil && !iAmReady }
+    var canSayNotNow: Bool { isCreator && phase == .ready && opponent != nil && !iAmReady }
     /// Either player, in either order: the creator once someone is there, the joining player at
-    /// once (sent as soon as the creator lets them in).
-    var canPressReady: Bool { phase == .ready && !iAmReady && link != nil && (!isCreator || asking != nil) }
+    /// once (sent as soon as the creator's phone has let them in, which it does when they ask, so
+    /// each phone sees the other's Ready).
+    var canPressReady: Bool { phase == .ready && !iAmReady && link != nil && (!isCreator || opponent != nil) }
 
     init(session: GameSession, network: any NearbyNetwork) {
         self.session = session
@@ -208,26 +207,22 @@ final class NearbyLobby {
         phase = .ready
     }
 
-    /// The Ready button, on either phone first. The creator seats the one asking; a joining
-    /// player not let in yet says it once seated. The game starts when the creator's phone has both.
+    /// The Ready button, on either phone first, shown on both. A joining player not let in yet
+    /// says it once seated. The game starts when the creator's phone has both.
     func ready() async {
         guard let link, canPressReady else { return }
         iAmReady = true
-        if let asking {
-            self.asking = nil
-            await link.accept(asking.peer)
-        }
         if link.table != nil, link.room.mySeat != nil { await link.ready() }
         refresh()
     }
 
     /// The creator: not this player. The game stays listed for someone else.
     func notNow() async {
-        guard canSayNotNow, let asking, let link else { return }
-        self.asking = nil
-        await link.decline(asking.peer)
+        guard canSayNotNow, let link else { return }
         opponent = nil
+        iAmReady = false
         phase = .waiting
+        await link.sendAway()
     }
 
     /// Cancel: take your game down, or leave the one you were joining.
@@ -237,7 +232,6 @@ final class NearbyLobby {
         network.shutDown()
         if phase != .playing, let link { Task { await link.leave() } }
         link = nil
-        asking = nil
         opponent = nil
         iAmReady = false
         isLooking = false
@@ -250,13 +244,18 @@ final class NearbyLobby {
         guard let link else { return }
         switch event {
         case let .joinRequest(peer, name):
-            guard asking == nil, phase == .waiting else { return }
-            asking = MatchLink.JoinRequest(peer: peer, name: name)
+            guard opponent == nil, phase == .waiting else { return }
+            // Let them in at once: their Ready then reaches this phone whenever they press it.
+            // Not now still sends them away until the game starts.
             opponent = Opponent(name: name, isConnected: true, isReady: false)
             phase = .ready
+            Task { await link.accept(peer) }
         case .seated:
-            network.stopFinding()
-            if link.room.role == .guest { session.events.nearbyJoined(demo: isDemo) }
+            // The creator's game stays listed until it starts, in case this one is sent away.
+            if link.room.role == .guest {
+                network.stopFinding()
+                session.events.nearbyJoined(demo: isDemo)
+            }
             link.startHeartbeat()
         case let .refused(refusal):
             link.room.stop()
@@ -266,6 +265,14 @@ final class NearbyLobby {
             return
         case .left, .seatLost:
             guard phase == .ready else { break }
+            if link.isHost {
+                // The joining player went before the game: wait for someone else.
+                opponent = nil
+                iAmReady = false
+                phase = .waiting
+                Task { await link.startOver() }
+                return
+            }
             let name = opponent?.name ?? Self.otherPlayer
             Task { await link.leave() }
             self.link = nil
@@ -283,7 +290,7 @@ final class NearbyLobby {
         guard phase == .ready, let link else { return }
         if let table = link.table, link.room.mySeat != nil, opponent != nil {
             let theirs: Player = link.isHost ? .north : .south
-            opponent?.isConnected = link.isHost ? (asking != nil || link.room.seats[1] != nil) : true
+            opponent?.isConnected = link.isHost ? link.room.seats[1] != nil : true
             opponent?.isReady = table.ready.contains(theirs)
             iAmReady = iAmReady || link.iAmReady
             // Pressed before the creator let this phone in: say it now.

@@ -47,6 +47,9 @@ final class NearbyUITests: XCTestCase {
         let ama = app.descendants(matching: .any)["nearby-player-other"]
         XCTAssertTrue(ama.exists)
         XCTAssertTrue(ama.label.hasPrefix("Ama, red side"), ama.label)
+        // Ama presses Ready first: this phone shows it before its own Ready is pressed.
+        let amaReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'Ama, red side, Ready'"), object: ama)
+        XCTAssertEqual(XCTWaiter().wait(for: [amaReady], timeout: 10), .completed, "Ama's Ready shows here: \(ama.label)")
         XCTAssertTrue(app.buttons["btn-not-now"].exists, "the creator can turn her away")
         ready.tap()
         let turn = app.staticTexts["turn-indicator"]
@@ -187,15 +190,15 @@ final class NearbyUITests: XCTestCase {
         playAndWaitForReply(row: "B")   // you play North when Ama made the game
     }
 
-    /// Gone ten seconds: the game offers to carry on against the computer, in a few words.
+    /// Gone fifteen seconds: the game offers to carry on against the computer, in a few words.
     @MainActor
-    func testAPhoneGoneTenSecondsOffersTheComputer() throws {
+    func testAPhoneGoneFifteenSecondsOffersTheComputer() throws {
         app.launchArguments += ["--demo-drop-after=1", "--demo-away=60"]
         startAndPressReady()
         playAndWaitForReply()
         XCTAssertTrue(app.staticTexts["reconnect-banner"].waitForExistence(timeout: 10))
         let gone = app.staticTexts["nearby-gone"]
-        XCTAssertTrue(gone.waitForExistence(timeout: 20), "after ten seconds")
+        XCTAssertTrue(gone.waitForExistence(timeout: 25), "after fifteen seconds")
         let finish = app.buttons["btn-finish-computer"]
         XCTAssertTrue(finish.exists)
         XCTAssertEqual(finish.label, "Play the computer")
