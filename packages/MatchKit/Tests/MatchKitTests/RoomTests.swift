@@ -123,6 +123,21 @@ struct RoomTests {
         #expect(table.host.seats[1] == nil)
     }
 
+    /// Not now after letting someone in (before the game starts): they are told no, and the seat
+    /// is free for the next one to ask.
+    @Test func aSeatedGuestCanBeSentAway() async {
+        let (table, _, _, log) = await seated()
+        await table.host.dismiss(seat: 1)
+        await eventually("refusal") { log.events.contains(.refused(.declined)) }
+        #expect(table.host.seats[1] == nil)
+
+        let (next, _, _) = table.guest("Yaw")
+        await eventually("Yaw asks") { table.host.pending.values.contains("Yaw") }
+        await table.host.accept(table.host.pending.first { $0.value == "Yaw" }!.key)
+        await eventually("Yaw seated") { next.mySeat == 1 }
+        #expect(table.host.seats[1]?.name == "Yaw")
+    }
+
     @Test func aSecondGuestIsToldTheRoomIsFull() async {
         let (table, _, _, _) = await seated()
         let (late, _, log) = table.guest("Yaw")

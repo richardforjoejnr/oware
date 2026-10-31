@@ -47,6 +47,9 @@ final class NearbyUITests: XCTestCase {
         let ama = app.descendants(matching: .any)["nearby-player-other"]
         XCTAssertTrue(ama.exists)
         XCTAssertTrue(ama.label.hasPrefix("Ama, red side"), ama.label)
+        // Ama presses Ready first: this phone shows it before its own Ready is pressed.
+        let amaReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'Ama, red side, Ready'"), object: ama)
+        XCTAssertEqual(XCTWaiter().wait(for: [amaReady], timeout: 10), .completed, "Ama's Ready shows here: \(ama.label)")
         XCTAssertTrue(app.buttons["btn-not-now"].exists, "the creator can turn her away")
         ready.tap()
         let turn = app.staticTexts["turn-indicator"]
