@@ -157,6 +157,17 @@ public final class Room<Rules: RoomRules> {
         await post(.refused(.declined), to: peer)
     }
 
+    /// Host: sends away someone already seated, before the game (Not now after letting them in).
+    /// They are told no, as if declined, and the seat is free for the next one to ask.
+    public func dismiss(seat: Int) async {
+        guard role == .host, seat != 0, let peer = peerForSeat[seat] else { return }
+        seats[seat] = nil
+        tokens[seat] = nil
+        peerForSeat[seat] = nil
+        lastHeard[seat] = nil
+        await post(.refused(.declined), to: peer)
+    }
+
     // MARK: - Playing
 
     /// Host: applies the intent from seat 0 and sends everyone the result; throws if the rules

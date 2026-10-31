@@ -217,6 +217,23 @@ final class MatchLink {
         await room.decline(peer)
     }
 
+    /// Host, before the game: Not now to the joining player, already let in.
+    func sendAway() async {
+        guard isHost, room.seats[1] != nil else { return }
+        await room.dismiss(seat: 1)
+        await startOver()
+    }
+
+    /// Host, before the game: the joining player went or was sent away. Nobody is ready and only
+    /// this phone's speed is known, so the next one to join starts clean.
+    func startOver() async {
+        guard isHost, var table, !table.isStarted else { return }
+        table.ready = []
+        table.paces = table.paces.filter { $0.key == .south }
+        saidReady = false
+        await room.replaceMatch(with: table)
+    }
+
     /// Host: applied at once, or refused by the rules. Guest: sent to the host.
     func send(_ intent: OwareIntent) async {
         try? await room.send(.game(intent))
