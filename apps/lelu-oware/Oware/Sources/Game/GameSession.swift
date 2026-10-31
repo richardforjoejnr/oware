@@ -707,9 +707,25 @@ final class GameSession {
         Task { await link.leave() }
     }
 
+    /// Spoken when the other phone drops, comes back or goes: the banners appear without a sound.
+    static func connectionAnnouncement(for event: RoomEvent<OwareTable>, mySeat: Int?, opponentName: String,
+                                       gameOver: Bool) -> String? {
+        let choice = gameOver ? "" : " Play the computer, or leave."
+        switch event {
+        case let .reconnecting(seat) where seat != mySeat: return "Reconnecting to \(opponentName)."
+        case let .back(seat) where seat != mySeat: return "\(opponentName) is back."
+        case let .seatLost(seat) where seat != mySeat: return "\(opponentName)'s phone has gone." + choice
+        case let .left(seat) where seat != mySeat: return "\(opponentName) left the game." + choice
+        default: return nil
+        }
+    }
+
     private func handle(_ event: RoomEvent<OwareTable>) {
         guard let link, case .remote = mode else { return }
         let mySeat = link.room.mySeat
+        if let text = Self.connectionAnnouncement(for: event, mySeat: mySeat, opponentName: opponentName, gameOver: state.isOver) {
+            Self.announce(text)
+        }
         switch event {
         case .seated:
             if let side = link.mySide {

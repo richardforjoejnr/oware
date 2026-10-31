@@ -44,7 +44,9 @@ final class NearbyUITests: XCTestCase {
         let ready = app.buttons["btn-ready"]
         XCTAssertTrue(app.staticTexts["nearby-waiting"].waitForExistence(timeout: 5) || ready.exists, "Your game is ready")
         XCTAssertTrue(ready.waitForExistence(timeout: 10), "Ama comes: Ready to play")
-        XCTAssertTrue(app.staticTexts["Ama"].exists)
+        let ama = app.descendants(matching: .any)["nearby-player-other"]
+        XCTAssertTrue(ama.exists)
+        XCTAssertTrue(ama.label.hasPrefix("Ama, red side"), ama.label)
         XCTAssertTrue(app.buttons["btn-not-now"].exists, "the creator can turn her away")
         ready.tap()
         let turn = app.staticTexts["turn-indicator"]
@@ -140,6 +142,9 @@ final class NearbyUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Start on one phone"].exists)
         XCTAssertTrue(app.staticTexts["Join on the other"].exists)
         XCTAssertTrue(app.buttons["btn-trouble-connecting"].exists)
+        // A sheet has a visible way out, not only a swipe.
+        app.buttons["btn-help-done"].tap()
+        XCTAssertTrue(app.staticTexts["Keep both phones close"].waitForNonExistence(timeout: 5))
     }
 
     /// Ama's connection drops (as when her app goes to the background): a banner at once, and it
