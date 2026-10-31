@@ -444,7 +444,8 @@ final class LiveNearbyNetwork: NearbyNetwork {
     }
 }
 
-/// The demo: Ama, a pretend player on a pretend phone inside the app, over the same rooms and
+/// The demo: Ama, a pretend player on a pretend phone inside the app (`--nearby-demo`, for the
+/// app's own tests; players are not offered it), over the same rooms and
 /// messages as two real phones (MULTIPLAYER.md §5). For UI tests, App Review, and anyone who wants
 /// to see nearby play before finding a friend.
 @MainActor

@@ -17,8 +17,6 @@ struct NearbyView: View {
     /// The demo player, Ama, instead of real phones.
     let demo: Bool
     let goBack: () -> Void
-    /// Try it with Ama, a pretend second phone.
-    var tryDemo: () -> Void = {}
 
     /// Nil until chosen here: the rules from Settings.
     @State private var variant: RuleSet.Variant?
@@ -104,13 +102,7 @@ struct NearbyView: View {
         case .lobby, .playing:
             startGame
             gamesNearby
-            VStack(alignment: .leading, spacing: 0) {
-                helpLink("How nearby play works")
-                if !demo {
-                    link("Try it with a pretend player", icon: "person.crop.circle.badge.questionmark", action: tryDemo)
-                        .accessibilityIdentifier("btn-try-nearby")
-                }
-            }
+            helpLink("How nearby play works")
         case .waiting:
             waiting
         case .ready:

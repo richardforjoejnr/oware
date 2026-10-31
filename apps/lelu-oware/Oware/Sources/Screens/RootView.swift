@@ -66,8 +66,7 @@ struct RootView: View {
                 })
                 .transition(.opacity)
             case .nearby:
-                NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home },
-                           tryDemo: { openNearby(demo: true) })
+                NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home })
                     .transition(.opacity)
             case .heritage:
                 HeritageView(goBack: { screen = .home })
