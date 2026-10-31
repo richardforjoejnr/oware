@@ -58,6 +58,8 @@ protocol NearbyNetwork: AnyObject {
     /// Reports Local Network and Wi-Fi now and whenever they change, until `stopWatchingAccess()`.
     func watchAccess(_ update: @escaping @MainActor (NearbyAccess) -> Void)
     func stopWatchingAccess()
+    /// Looks at Local Network and Wi-Fi again now, and reports through `watchAccess`'s callback.
+    func recheckAccess()
     /// The game has started: stop looking for others, and list yours as under way (still
     /// findable, so its guest can come back).
     func stopFinding()
@@ -114,7 +116,9 @@ final class NearbyLobby {
     /// What stops this phone looking for games or starting one, shown with how to fix it.
     enum Blocker: Equatable { case localNetwork, wifi }
 
-    private(set) var access = NearbyAccess()
+    private(set) var access = NearbyAccess() { didSet { if blocker != .wifi { stillOff = false } } }
+    /// Check again found Wi-Fi still off (so the tap visibly did something).
+    private(set) var stillOff = false
     /// Try anyway was tapped under "Wi-Fi seems off".
     private(set) var triedAnyway = false
 
@@ -157,6 +161,15 @@ final class NearbyLobby {
 
     /// Under "Wi-Fi seems off": look and start anyway.
     func tryAnyway() { triedAnyway = true }
+
+    /// Under "Wi-Fi seems off": look again, and say so if it still is.
+    func checkAgain() {
+        network.recheckAccess()
+        stillOff = blocker == .wifi
+    }
+
+    /// Back in the app (from Settings or Control Center): look again, quietly.
+    func recheck() { network.recheckAccess() }
 
     /// Back to Play nearby, not looking for games until asked.
     func open() { reset() }
@@ -365,6 +378,24 @@ final class LiveNearbyNetwork: NearbyNetwork {
     private var path: NWPathMonitor?
     private var accessWatchers: [Task<Void, Never>] = []
     private var current = NearbyAccess()
+    private var report: (@MainActor (NearbyAccess) -> Void)?
+    /// The path monitor's last word: a Wi-Fi network is there.
+    private var networkWiFi = true
+
+    /// Wi-Fi is on if a Wi-Fi network is there, or the peer-to-peer Wi-Fi nearby play uses is up
+    /// (Wi-Fi on but not joined to a network, or disconnected in Control Center).
+    static func wifiOn(network: Bool, peerToPeer: Bool) -> Bool { network || peerToPeer }
+
+    /// The peer-to-peer Wi-Fi interface (awdl0) is up: it goes down when Wi-Fi is switched off.
+    static func peerToPeerUp() -> Bool {
+        var list: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&list) == 0, let first = list else { return false }
+        defer { freeifaddrs(list) }
+        let wanted = Int32(IFF_UP | IFF_RUNNING)
+        return sequence(first: first, next: { $0.pointee.ifa_next }).contains {
+            String(cString: $0.pointee.ifa_name) == "awdl0" && Int32($0.pointee.ifa_flags) & wanted == wanted
+        }
+    }
     private var browser: NearbyBrowser?
     private var watchers: [Task<Void, Never>] = []
 
@@ -414,6 +445,7 @@ final class LiveNearbyNetwork: NearbyNetwork {
     func watchAccess(_ update: @escaping @MainActor (NearbyAccess) -> Void) {
         stopWatchingAccess()
         current = NearbyAccess(localNetworkAllowed: !LaunchOptions.nearbyLocalNetworkOff, wifiOn: !LaunchOptions.nearbyWiFiOff)
+        report = update
         update(current)
         guard !LaunchOptions.nearbyLocalNetworkOff, !LaunchOptions.nearbyWiFiOff else { return }
         // Looking (for nothing in particular) is what asks for, and reports, Local Network.
@@ -433,15 +465,25 @@ final class LiveNearbyNetwork: NearbyNetwork {
         monitor.pathUpdateHandler = { continuation.yield($0.availableInterfaces.contains { $0.type == .wifi }) }
         monitor.start(queue: DispatchQueue(label: "LeluOware.wifi"))
         accessWatchers.append(Task { [weak self] in
-            for await wifiOn in paths {
+            for await network in paths {
                 guard let self else { return }
-                self.current.wifiOn = wifiOn
+                self.networkWiFi = network
+                self.current.wifiOn = Self.wifiOn(network: network, peerToPeer: Self.peerToPeerUp())
                 update(self.current)
             }
         })
     }
 
+    func recheckAccess() {
+        guard let report else { return }
+        if !LaunchOptions.nearbyWiFiOff {
+            current.wifiOn = Self.wifiOn(network: networkWiFi, peerToPeer: Self.peerToPeerUp())
+        }
+        report(current)
+    }
+
     func stopWatchingAccess() {
+        report = nil
         accessWatchers.forEach { $0.cancel() }
         accessWatchers = []
         probe?.stop()
@@ -512,6 +554,7 @@ final class DemoNetwork: NearbyNetwork {
 
     func watchAccess(_ update: @escaping @MainActor (NearbyAccess) -> Void) { update(NearbyAccess()) }
     func stopWatchingAccess() {}
+    func recheckAccess() {}
 
     func shutDown() {
         arriving?.cancel()

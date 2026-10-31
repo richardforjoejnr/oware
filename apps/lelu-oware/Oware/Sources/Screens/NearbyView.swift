@@ -14,6 +14,7 @@ struct NearbyView: View {
     @Environment(NearbyLobby.self) private var lobby
     @Environment(AppSettings.self) private var settings
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     /// The demo player, Ama, instead of real phones.
     let demo: Bool
     let goBack: () -> Void
@@ -82,6 +83,8 @@ struct NearbyView: View {
         .foregroundStyle(Theme.ivory)
         .tint(Theme.gold)
         .onDisappear { lobby.close() }
+        // Back from Settings or Control Center: Wi-Fi or Local Network may have changed.
+        .onChange(of: scenePhase) { _, phase in if phase == .active { lobby.recheck() } }
         .sheet(isPresented: $showHelp) {
             NearbyHelp()
                 .presentationDetents([.medium, .large])
@@ -423,9 +426,20 @@ struct NearbyView: View {
             Text("Nearby play needs Wi-Fi switched on, on both phones. You don't need to join a network. Turn it on in Control Center or Settings ▸ Wi-Fi, then come back.")
                 .font(Theme.caption(14))
                 .foregroundStyle(Theme.ivoryDim)
-            Button("Try anyway") { lobby.tryAnyway() }
-                .buttonStyle(NearbyButtonStyle(.small))
-                .accessibilityIdentifier("btn-try-anyway")
+            if lobby.stillOff {
+                Text("Still looks off.")
+                    .font(Theme.caption(14))
+                    .foregroundStyle(Theme.gold)
+                    .accessibilityIdentifier("nearby-wifi-still-off")
+            }
+            HStack(spacing: 12) {
+                Button("Check again") { lobby.checkAgain() }
+                    .buttonStyle(NearbyButtonStyle(.small))
+                    .accessibilityIdentifier("btn-check-wifi")
+                Button("Try anyway") { lobby.tryAnyway() }
+                    .buttonStyle(NearbyButtonStyle(.small))
+                    .accessibilityIdentifier("btn-try-anyway")
+            }
         }
         .fixedSize(horizontal: false, vertical: true)
         .padding(14)
