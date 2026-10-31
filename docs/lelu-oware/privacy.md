@@ -4,10 +4,10 @@ title: Lelu Oware — Privacy Policy
 
 # Lelu Oware — Privacy Policy
 
-_Last updated: 3 October 2026_
+_Last updated: 31 October 2026_
 
-Lelu Oware is an Oware game for iPhone and iPad: play the computer, a friend on the same device,
-the Journey, daily riddles and a short lesson.
+Lelu Oware is an Oware game for iPhone and iPad: play the computer, a friend on the same device or
+on a phone nearby, the Journey, daily riddles and a short lesson.
 
 ## The short version
 
@@ -16,6 +16,8 @@ the Journey, daily riddles and a short lesson.
   next, but only if you agree: the app asks once, after your first game, and nothing is sent
   before you say yes. You can change your answer in Settings at any time.
 - Leaderboards and achievements use Apple's Game Center, if you choose to sign in to it.
+- Play nearby connects two phones directly over your local network. The name you choose is shown
+  to the other player; nothing about the game goes to us.
 
 ## Anonymous usage statistics
 
@@ -27,6 +29,8 @@ anonymous usage stats**. Only while that switch is on does the app send a small 
 - the app was opened;
 - a game finished: the mode (computer, Journey, two players), the computer's level, the result
   (win, loss or draw) and the rules (Nam-Nam or Abapa);
+- a nearby game was started, joined or finished (the result and the rules), or the other phone
+  dropped out; never who played, their names or their devices;
 - a Journey chapter, a riddle (its kind, and whether it was the daily one) or the lesson was completed;
 - the Support sheet was opened, or a tip was given (which size).
 
@@ -54,6 +58,20 @@ and shown to other players as Apple's Game Center settings allow, under
 [Apple's privacy policy](https://www.apple.com/legal/privacy/). We do not receive your Apple ID,
 email or Game Center contacts, and we do not display your Game Center player ID. If you decline
 Game Center, the game works exactly the same without it.
+
+## Play nearby
+
+Play nearby lets two phones in the same room play one game, directly between them, with no
+internet and no account. To find each other, the phones use your **local network** (Bonjour, over
+Wi-Fi or Wi-Fi peer-to-peer), so iPhone asks once whether Lelu Oware may use it. You can change
+this at any time in **Settings ▸ Privacy & Security ▸ Local Network**; the rest of the game works
+without it.
+
+While you are on the Play nearby screen, phones near you running Lelu Oware can see your game's
+name and rules, and the other player sees the name you type (up to 24 letters). The moves and
+that name go only from one phone to the other. They are not sent to us or to any server, and we
+cannot see or keep them. Your chosen name is saved only on your device so you need not type it
+again.
 
 ## Newsletter
 

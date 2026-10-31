@@ -151,6 +151,7 @@ struct NearbyView: View {
                         .textContentType(.givenName)
                         .submitLabel(.done)
                         .onChange(of: name) { _, name in NearbyLobby.saveName(name) }
+                        .accessibilityLabel("Your name")
                         .accessibilityIdentifier("nearby-name-field")
                     Image(systemName: "pencil").foregroundStyle(Theme.ivoryDim).accessibilityHidden(true)
                 }
@@ -243,9 +244,14 @@ struct NearbyView: View {
         }
         .buttonStyle(PressedStyle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Join \(game.name), \(note)")
+        .accessibilityLabel(Self.joinLabel(name: game.name, note: note))
         .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("nearby-game-\(game.name)")
+    }
+
+    /// "Join Ama's game, Abapa · Ama starts", or just "Join Ama's game".
+    static func joinLabel(name: String, note: String) -> String {
+        note.isEmpty ? "Join \(name)" : "Join \(name), \(note)"
     }
 
     // MARK: B. Your game is ready
@@ -349,6 +355,14 @@ struct NearbyView: View {
                 .frame(width: 5)
                 .accessibilityHidden(true)
         }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(Self.tileLabel(name: name, side: side, status: status, isMe: isMe))
+        .accessibilityIdentifier(isMe ? "nearby-player-me" : "nearby-player-other")
+    }
+
+    /// The tile read as one: who, which side (said, not only shown in colour), and where they are.
+    static func tileLabel(name: String, side: Player, status: String, isMe: Bool) -> String {
+        "\(isMe ? "You, " : "")\(name), \(side == .south ? "gold" : "red") side, \(status)"
     }
 
     // MARK: Pieces
@@ -405,19 +419,13 @@ struct NearbyView: View {
     private var wifiOff: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Wi-Fi seems to be off.")
-            Text("Nearby play needs Wi-Fi switched on, on both phones. You don't need to join a network. Turn it on in Settings ▸ Wi-Fi, then come back.")
+            // No Open Settings: apps can only open their own page there, which has no Wi-Fi switch.
+            Text("Nearby play needs Wi-Fi switched on, on both phones. You don't need to join a network. Turn it on in Control Center or Settings ▸ Wi-Fi, then come back.")
                 .font(Theme.caption(14))
                 .foregroundStyle(Theme.ivoryDim)
-            HStack(spacing: 12) {
-                Button("Open Settings") {
-                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-                }
+            Button("Try anyway") { lobby.tryAnyway() }
                 .buttonStyle(NearbyButtonStyle(.small))
-                .accessibilityIdentifier("btn-open-settings")
-                Button("Try anyway") { lobby.tryAnyway() }
-                    .buttonStyle(NearbyButtonStyle(.small))
-                    .accessibilityIdentifier("btn-try-anyway")
-            }
+                .accessibilityIdentifier("btn-try-anyway")
         }
         .fixedSize(horizontal: false, vertical: true)
         .padding(14)
@@ -503,14 +511,24 @@ struct WaitingMark: View {
 
 /// How nearby play works: three steps, and what to check when the phones can't find each other.
 private struct NearbyHelp: View {
+    @Environment(\.dismiss) private var dismiss
     @State private var showTrouble = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("How nearby play works")
-                    .font(Theme.title(28))
-                    .accessibilityAddTraits(.isHeader)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("How nearby play works")
+                        .font(Theme.title(28))
+                        .accessibilityAddTraits(.isHeader)
+                    Spacer()
+                    // A visible way out (HIG, Sheets), not only the swipe down.
+                    Button("Done") { dismiss() }
+                        .font(Theme.body(17))
+                        .foregroundStyle(Theme.gold)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .accessibilityIdentifier("btn-help-done")
+                }
                 ForEach(Array(Self.steps.enumerated()), id: \.offset) { index, step in
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
                         Text("\(index + 1)")
