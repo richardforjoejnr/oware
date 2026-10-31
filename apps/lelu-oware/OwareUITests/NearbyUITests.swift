@@ -140,6 +140,9 @@ final class NearbyUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Start on one phone"].exists)
         XCTAssertTrue(app.staticTexts["Join on the other"].exists)
         XCTAssertTrue(app.buttons["btn-trouble-connecting"].exists)
+        // A sheet has a visible way out, not only a swipe.
+        app.buttons["btn-help-done"].tap()
+        XCTAssertTrue(app.staticTexts["Keep both phones close"].waitForNonExistence(timeout: 5))
     }
 
     /// Ama's connection drops (as when her app goes to the background): a banner at once, and it
