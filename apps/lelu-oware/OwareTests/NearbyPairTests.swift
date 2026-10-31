@@ -16,6 +16,9 @@ final class NearbyPairTests: XCTestCase {
         var guestTransports: [LoopbackTransport] = []
         /// False: the host's phone cannot be reached again (gone for good).
         var canRejoin = true
+        /// Local Network permission and Wi-Fi, as the phone reports them.
+        var access = NearbyAccess() { didSet { watchers.forEach { $0(access) } } }
+        var watchers: [@MainActor (NearbyAccess) -> Void] = []
     }
 
     /// One phone's view of the air.
@@ -51,6 +54,13 @@ final class NearbyPairTests: XCTestCase {
 
         func stopFinding() { if air.hostTransport != nil { air.started = true } }
         func shutDown() {}
+
+        func watchAccess(_ update: @escaping @MainActor (NearbyAccess) -> Void) {
+            air.watchers.append(update)
+            update(air.access)
+        }
+
+        func stopWatchingAccess() { air.watchers = [] }
     }
 
     private func until(_ what: @autoclosure () -> String, timeout: TimeInterval = 5, _ condition: () -> Bool) async {
@@ -201,5 +211,70 @@ final class NearbyPairTests: XCTestCase {
         await settle()
         XCTAssertFalse(p.host.session.isReconnecting)
         XCTAssertEqual(p.air.guestTransports.count, 1, "no attempt to come back")
+    }
+
+    // MARK: Before looking: Local Network and Wi-Fi
+
+    /// Local Network off for the app: nothing nearby can be found, so Start and Look for games are
+    /// greyed out under a message saying how to turn it on, until it is on.
+    func testLocalNetworkOffGreysOutStartingAndLooking() async {
+        let air = Air()
+        air.access.localNetworkAllowed = false
+        let lobby = NearbyLobby(session: TestSupport.session(), network: AirNetwork(air))
+        lobby.prepare(demo: false)
+        XCTAssertEqual(lobby.blocker, .localNetwork)
+        XCTAssertFalse(lobby.canSearch)
+        lobby.start(name: "Kofi", rules: .abapa)
+        XCTAssertEqual(lobby.phase, .lobby, "no game is started")
+        XCTAssertNil(air.hostTransport)
+        lobby.look()
+        XCTAssertFalse(lobby.isLooking)
+
+        air.access.localNetworkAllowed = true   // turned on in Settings, then back to the app
+        XCTAssertNil(lobby.blocker)
+        lobby.look()
+        XCTAssertTrue(lobby.isLooking)
+    }
+
+    /// Wi-Fi seems off. iOS cannot tell an unconnected radio from one switched off, and two phones
+    /// can still find each other with Wi-Fi off in Control Center, so Try anyway lifts it.
+    func testWiFiOffGreysOutUntilTriedAnyway() async {
+        let air = Air()
+        air.access.wifiOn = false
+        let lobby = NearbyLobby(session: TestSupport.session(), network: AirNetwork(air))
+        lobby.prepare(demo: false)
+        XCTAssertEqual(lobby.blocker, .wifi)
+        XCTAssertFalse(lobby.canSearch)
+        lobby.tryAnyway()
+        XCTAssertNil(lobby.blocker)
+        lobby.start(name: "Kofi", rules: .abapa)
+        XCTAssertEqual(lobby.phase, .waiting)
+    }
+
+    func testWiFiComingOnLiftsTheBlock() async {
+        let air = Air()
+        air.access.wifiOn = false
+        let lobby = NearbyLobby(session: TestSupport.session(), network: AirNetwork(air))
+        lobby.prepare(demo: false)
+        XCTAssertEqual(lobby.blocker, .wifi)
+        air.access.wifiOn = true
+        XCTAssertNil(lobby.blocker)
+    }
+
+    /// Local Network matters more: it is the one to fix first when both are off.
+    func testLocalNetworkIsShownBeforeWiFi() async {
+        let air = Air()
+        air.access = NearbyAccess(localNetworkAllowed: false, wifiOn: false)
+        let lobby = NearbyLobby(session: TestSupport.session(), network: AirNetwork(air))
+        lobby.prepare(demo: false)
+        XCTAssertEqual(lobby.blocker, .localNetwork)
+    }
+
+    /// The pretend player needs neither.
+    func testTheDemoIsNeverGreyedOut() async {
+        let lobby = NearbyLobby(session: TestSupport.session(), network: DemoNetwork())
+        lobby.prepare(demo: true)
+        XCTAssertNil(lobby.blocker)
+        XCTAssertTrue(lobby.canSearch)
     }
 }
