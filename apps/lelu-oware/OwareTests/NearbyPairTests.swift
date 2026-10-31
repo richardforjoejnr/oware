@@ -27,10 +27,13 @@ final class NearbyPairTests: XCTestCase {
     final class AirNetwork: NearbyNetwork {
         let air: Air
         let isDemo = false
+        /// This phone made the game (only the creator's phone marks it started).
+        private var hosted = false
         init(_ air: Air) { self.air = air }
 
         func host(gameName: String, info: [String: String], status: @escaping @MainActor (NearbyStatus) -> Void) throws -> any MatchTransport {
             let transport = LoopbackTransport()
+            hosted = true
             air.hostTransport = transport
             air.name = gameName
             air.info = info
@@ -54,7 +57,7 @@ final class NearbyPairTests: XCTestCase {
             air.canRejoin ? connect(to: listing) : nil
         }
 
-        func stopFinding() { if air.hostTransport != nil { air.started = true } }
+        func stopFinding() { if hosted { air.started = true } }
         func shutDown() {}
 
         func watchAccess(_ update: @escaping @MainActor (NearbyAccess) -> Void) {
@@ -115,6 +118,7 @@ final class NearbyPairTests: XCTestCase {
         await p.guest.ready()
         XCTAssertTrue(p.guest.iAmReady)
         XCTAssertFalse(p.guest.canPressReady, "pressed once")
+        await until("Kofi sees Ama is ready") { p.host.opponent?.isReady == true }
         await settle()
         XCTAssertEqual(p.guest.phase, .ready, "nothing starts until both are ready")
         XCTAssertEqual(p.host.phase, .ready)
@@ -135,6 +139,54 @@ final class NearbyPairTests: XCTestCase {
         XCTAssertEqual(p.host.phase, .ready, "nothing starts until both are ready")
         await p.guest.ready()
         await until("the game starts on both phones") { p.host.phase == .playing && p.guest.phase == .playing }
+    }
+
+    /// Both phones show who has pressed Ready, whoever pressed it first.
+    func testBothPhonesSeeEitherReady() async {
+        let p = await phones()
+        XCTAssertEqual(p.host.opponent?.isReady, false)
+        XCTAssertEqual(p.guest.opponent?.isReady, false)
+        await p.guest.ready()
+        await until("Kofi sees Ama ready") { p.host.opponent?.isReady == true }
+        XCTAssertEqual(p.guest.opponent?.isReady, false, "Kofi has not pressed it")
+        await p.host.ready()
+        await until("the game starts") { p.host.phase == .playing && p.guest.phase == .playing }
+    }
+
+    /// Not now after Ama said Ready: she is told no, and the next player to join starts clean,
+    /// not already ready.
+    func testNotNowAfterTheGuestIsReadyStartsTheNextOneClean() async {
+        let p = await phones()
+        await p.guest.ready()
+        await until("Kofi sees Ama ready") { p.host.opponent?.isReady == true }
+        XCTAssertTrue(p.host.canSayNotNow)
+        await p.host.notNow()
+        XCTAssertEqual(p.host.phase, .waiting)
+        await until("Ama is told no") { if case .refused = p.guest.phase { true } else { false } }
+        XCTAssertFalse(p.air.started, "Kofi's game is still offered")
+
+        let yaw = NearbyLobby(session: TestSupport.session(), network: AirNetwork(p.air))
+        yaw.onStart = {}
+        yaw.look()
+        await until("Yaw sees the game") { yaw.games.count == 1 }
+        yaw.join(yaw.games[0], name: "Yaw")
+        await until("Kofi sees Yaw") { p.host.phase == .ready && p.host.opponent?.name == "Yaw" }
+        await settle()
+        XCTAssertEqual(p.host.opponent?.isReady, false, "Yaw has not pressed Ready")
+        await p.host.ready()
+        await settle()
+        XCTAssertEqual(p.host.phase, .ready, "nothing starts until Yaw is ready too")
+        await yaw.ready()
+        await until("the game starts") { p.host.phase == .playing && yaw.phase == .playing }
+    }
+
+    /// The joining player cancels on the Ready screen: the creator is back to waiting, game listed.
+    func testTheJoiningPlayerCancellingLeavesTheGameOpen() async {
+        let p = await phones()
+        p.guest.cancel()
+        await until("Kofi waits again") { p.host.phase == .waiting }
+        XCTAssertNil(p.host.opponent)
+        XCTAssertFalse(p.air.started)
     }
 
     func testNeitherPressingReadyStartsNothing() async {

@@ -66,10 +66,10 @@ public final class Room<Rules: RoomRules> {
     }
 
     /// A ping goes out this often; a seat silent for `quietAfter` is reconnecting, and gone
-    /// after `lostAfter` (10 s: the owner found waiting longer for a lost phone too long).
+    /// after `lostAfter` (15 s: the owner found a minute too long and 10 s too short).
     public static var heartbeatInterval: Double { 2 }
     public static var quietAfter: Double { 4 }
-    public static var lostAfter: Double { 10 }
+    public static var lostAfter: Double { 15 }
 
     public let role: Role
     public let rules: Rules
@@ -154,6 +154,17 @@ public final class Room<Rules: RoomRules> {
 
     public func decline(_ peer: PeerID) async {
         guard role == .host, pending.removeValue(forKey: peer) != nil else { return }
+        await post(.refused(.declined), to: peer)
+    }
+
+    /// Host: sends away someone already seated, before the game (Not now after letting them in).
+    /// They are told no, as if declined, and the seat is free for the next one to ask.
+    public func dismiss(seat: Int) async {
+        guard role == .host, seat != 0, let peer = peerForSeat[seat] else { return }
+        seats[seat] = nil
+        tokens[seat] = nil
+        peerForSeat[seat] = nil
+        lastHeard[seat] = nil
         await post(.refused(.declined), to: peer)
     }
 

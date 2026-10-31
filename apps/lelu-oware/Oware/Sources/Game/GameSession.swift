@@ -62,7 +62,7 @@ final class GameSession {
     private(set) var link: MatchLink?
     /// Nothing heard from the other phone for a few seconds.
     private(set) var isReconnecting = false
-    /// The other phone has been gone 10 s: the player may finish against the computer.
+    /// The other phone has been gone 15 s: the player may finish against the computer.
     private(set) var offersComputer = false
     /// The other phone has left or been lost: no rematch.
     private(set) var opponentGone = false
