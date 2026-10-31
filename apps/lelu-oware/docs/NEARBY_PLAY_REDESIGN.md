@@ -24,8 +24,9 @@ below, these win.
    joining player's tile.
 4. **Default name: the Game Center name first**, then *Oware Player*. When both players still have
    the same default, add the side colour (*Oware Player · red*).
-5. **Wait 30 s for a lost phone** reconnecting automatically, then offer Continue vs Computer;
-   Keep waiting stays available after that.
+5. **Wait 10 s for a lost phone** (was 30 s; the owner's call after trying it, 2026-10-31),
+   reconnecting automatically: "Reconnecting…" after 4 s of silence or at once if the connection
+   breaks, then *Play the computer* / *Leave*.
 6. **Carved icons for everything the kit lacks:** person, pin (nearby name), computer, leave and
    no-Wi-Fi (connection lost), in the kit's style. To be made by the owner; until then, SF Symbols
    in the wood colours as placeholders.
@@ -35,6 +36,11 @@ below, these win.
    nearby does not look for games by itself: **Look for games** under *Games nearby* starts
    looking. There is no Who starts choice: whoever starts the game moves first (South). This
    replaces the brief's *found automatically* and *Me · Other player · Random*.
+9. **On for everyone, Ready in either order** (2026-10-31, after trying it on two phones). Either
+   player may press Ready first; the game starts when both have. Nearby play is on
+   (`nearbyPlay: .free`), with no test switch in Settings. Play nearby checks Local Network and
+   Wi-Fi when it opens: with either off it says how to fix it and greys out Start and Look for
+   games (Wi-Fi only seems off, so it offers *Try anyway*).
 
 ## 1. The owner's first notes (and what was decided)
 
@@ -77,7 +83,7 @@ pressed Ready.
 *Connection lost* / *Trying to reconnect to Richard…* (reconnecting indicator), **Keep waiting**,
 **Continue vs Computer**, **Leave game**. Automatic reconnect for about 30–60 s. On reconnect:
 compare game ID, move number and state hash, send the latest state if needed, resume exactly.
-The automatic window is 30 s (decision 5).
+The automatic window is 10 s (decision 5).
 
 **F. Rejoin** (no mockup; `nearby-card-rejoin` in the kit). *Richard is back* / *Round 3 · 7–5
 houses* / **Rejoin game**: restores the human-v-human game. Only while the game is still waiting
@@ -238,10 +244,12 @@ not in the kit; `wood-book` exists already. The owner will make carved ones for 
    name* field (*Shown only to players near you.*). Help is three steps plus *Having trouble
    connecting?*; the Local Network text is the brief's. Plain SwiftUI for now (tiles, seals and
    cards in the wood colours); the kit pieces come in step 4.
-3. **Connections:** Connection lost sheet, reconnect over a new connection (30 s), Rejoin card,
-   deliberate leave.
+3. **Connections:** reconnect over a new connection (10 s) — **built 2026-10-31**: the host stays
+   listed (marked started, left out of lists) and starts a new listener if iOS stopped it; the
+   joining phone connects again every 2 s while the host is reconnecting. Still to do: the
+   Connection lost sheet and the Rejoin card.
 4. **Look:** install the kit pieces, the components (NearbyPlayIcon, NearbyGameCard,
    PlayerConnectionTile, RuleChip, StartChip, ReadySeal, SearchingIndicator,
    ReconnectingIndicator, ConnectionLostSheet, RejoinCard), the in-game header.
 
-Then step 6 of NEARBY_PLAY.md (turn it on).
+Step 6 of NEARBY_PLAY.md (turn it on) was done on 2026-10-31, before steps 3 and 4 were finished.

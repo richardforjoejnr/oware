@@ -81,7 +81,6 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.45), value: screen)
-        .task { TestFeatures.shared.channel = await AppChannel.current() }
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .presentationDetents([.large])

@@ -1,4 +1,5 @@
 import MatchKit
+import MatchKitNearby
 import OwareEngine
 import XCTest
 @testable import Oware
@@ -8,6 +9,7 @@ import XCTest
 @MainActor
 final class NearbyPairTests: XCTestCase {
     /// The air between the two phones: the one game listed, and every connection to it.
+    @MainActor
     final class Air {
         var hostTransport: LoopbackTransport?
         var name = ""
@@ -169,7 +171,7 @@ final class NearbyPairTests: XCTestCase {
         p.air.guestTransports[0].drop()
         await until("Ama is back on Kofi's phone") { !host.isReconnecting && p.air.guestTransports.count == 2 }
         await until("Kofi is back on Ama's phone") { !guest.isReconnecting }
-        XCTAssertEqual(guest.state, host.state)
+        await until("the same position on both") { guest.state == host.state }
         XCTAssertFalse(host.offersComputer)
         XCTAssertFalse(guest.offersComputer)
 
@@ -190,17 +192,18 @@ final class NearbyPairTests: XCTestCase {
         await until("Ama sees Kofi's move") { guest.state.moveNumber == 1 }
     }
 
-    /// Moves made while one phone was away are there when it comes back.
-    func testMovesMadeWhileAwayArriveOnReturn() async {
+    /// A move made before the creator's phone noticed Ama had gone (her phone went quiet first)
+    /// is on her board when she comes back.
+    func testAMoveMissedWhileAwayArrivesOnReturn() async {
         let p = await playing()
-        p.air.canRejoin = false
-        p.air.guestTransports[0].drop()
-        await until("Kofi sees Ama go") { p.host.session.isReconnecting }
-        p.host.session.play(house: 2)
+        let guestLink = p.air.guestTransports[0]
+        guestLink.isQuiet = true                 // out of range: nothing gets through yet
+        p.host.session.play(house: 2)            // not reconnecting yet, so this is allowed
+        await settle()
         XCTAssertEqual(p.guest.session.state.moveNumber, 0, "Ama missed it")
-        p.air.canRejoin = true
+        guestLink.drop()                         // then the connection breaks
         await until("Ama comes back with the move", timeout: 8) { p.guest.session.state.moveNumber == 1 }
-        XCTAssertEqual(p.guest.session.state, p.host.session.state)
+        await until("the same position on both") { p.guest.session.state == p.host.session.state }
     }
 
     /// Leaving the game ends it for the other phone at once: no reconnecting.

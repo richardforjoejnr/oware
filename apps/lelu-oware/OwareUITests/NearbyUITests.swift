@@ -55,8 +55,8 @@ final class NearbyUITests: XCTestCase {
     /// Plays the first house of yours with seeds in it, then waits until the turn has passed: to
     /// Ama, or (if she resigns at once) to the result. On a slow machine her two-second turn can be
     /// over before the label is read, so "Ama's turn" itself is not waited for.
-    private func playAndWaitForReply() {
-        let houses = (1...6).map { app.buttons["house-A\($0)"] }
+    private func playAndWaitForReply(row: String = "A") {
+        let houses = (1...6).map { app.buttons["house-\(row)\($0)"] }
         guard let house = houses.first(where: { $0.value as? String != "0 seeds" }) else { return XCTFail("no seeds to sow") }
         house.tap()
         let turn = app.staticTexts["turn-indicator"]
@@ -179,7 +179,7 @@ final class NearbyUITests: XCTestCase {
         XCTAssertTrue(banner.waitForNonExistence(timeout: 10), "back by itself")
         wait(for: turn, label: "Your turn")
         XCTAssertFalse(app.staticTexts["nearby-gone"].exists)
-        playAndWaitForReply()
+        playAndWaitForReply(row: "B")   // you play North when Ama made the game
     }
 
     /// Gone ten seconds: the game offers to carry on against the computer, in a few words.

@@ -8,23 +8,15 @@ enum Feature {
     static let online = "online"
 
     static let table: [String: Access] = [
-        // Hidden while it is built; `.free` when nearby play ships (docs/NEARBY_PLAY.md step 6).
-        nearbyPlay: .off,
+        // On for everyone (the owner's call, 2026-10-31; docs/NEARBY_PLAY.md step 6).
+        nearbyPlay: .free,
         // Later: .unlock(productID: OnlineProduct.id, hostPays: true, foundingIncluded: false).
         online: .off,
     ]
 
-    /// Play nearby on Home: when its switch is on, with `--nearby` in a Debug build, or with the
-    /// Settings switch in a TestFlight test build (`TestFeatures`), for trying it before it ships.
+    /// Play nearby on Home: when its switch is on, or with `--nearby` in a Debug build.
     @MainActor
-    static var showsNearbyPlay: Bool {
-        showsNearbyPlay(gate: gate(), launchOption: LaunchOptions.nearbyPlay, testSwitch: TestFeatures.nearbyPlay)
-    }
-
-    @MainActor
-    static func showsNearbyPlay(gate: FeatureGate, launchOption: Bool, testSwitch: Bool) -> Bool {
-        gate.isShown(nearbyPlay) || launchOption || testSwitch
-    }
+    static var showsNearbyPlay: Bool { gate().isShown(nearbyPlay) || LaunchOptions.nearbyPlay }
 
     /// The app's gate, with a purchase record for every feature that is sold.
     @MainActor
