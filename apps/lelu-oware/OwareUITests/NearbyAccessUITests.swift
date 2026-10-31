@@ -36,7 +36,7 @@ final class NearbyAccessUITests: XCTestCase {
         XCTAssertFalse(app.buttons["btn-start-nearby"].isEnabled)
         XCTAssertFalse(app.buttons["btn-look-nearby"].isEnabled)
         XCTAssertFalse(app.buttons["btn-try-anyway"].exists, "Local Network has to be turned on")
-        XCTAssertTrue(app.buttons["btn-try-nearby"].isEnabled, "the pretend player still works")
+        XCTAssertFalse(app.buttons["btn-try-nearby"].exists, "no pretend player on offer")
     }
 
     @MainActor
@@ -52,6 +52,15 @@ final class NearbyAccessUITests: XCTestCase {
         XCTAssertTrue(app.buttons["btn-start-nearby"].isEnabled)
         XCTAssertTrue(app.buttons["btn-look-nearby"].isEnabled)
         XCTAssertFalse(app.buttons["btn-try-anyway"].exists)
+    }
+
+    /// The pretend player (Ama) is only for the app's own tests: Play nearby does not offer it.
+    @MainActor
+    func testThereIsNoPretendPlayerToTry() throws {
+        openNearby([])
+        XCTAssertTrue(app.buttons["btn-nearby-help"].exists)
+        XCTAssertFalse(app.buttons["btn-try-nearby"].exists)
+        XCTAssertFalse(app.buttons["Try it with a pretend player"].exists)
     }
 
     @MainActor
