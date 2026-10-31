@@ -50,6 +50,12 @@ final class NearbyAccessUITests: XCTestCase {
         // that would land somewhere unhelpful, just where to find the switch.
         XCTAssertFalse(app.buttons["btn-open-settings"].exists)
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Control Center'")).firstMatch.exists)
+        // Check again looks again, and says so when Wi-Fi is still off.
+        let check = app.buttons["btn-check-wifi"]
+        XCTAssertTrue(check.exists)
+        check.tap()
+        XCTAssertTrue(app.staticTexts["nearby-wifi-still-off"].waitForExistence(timeout: 5), "the tap visibly did something")
+        XCTAssertFalse(app.buttons["btn-start-nearby"].isEnabled, "still off")
         let anyway = app.buttons["btn-try-anyway"]
         XCTAssertTrue(anyway.exists)
         anyway.tap()
