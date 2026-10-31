@@ -255,6 +255,23 @@ final class RemoteGameTests: XCTestCase {
                        "recorded as an ordinary game against the computer")
     }
 
+    /// While the other phone is reconnecting, the board takes no move: it would be lost.
+    func testNoMoveWhileReconnecting() async {
+        let p = await pair()
+        p.guestTransport.isQuiet = true
+        clock.advance(by: 5)
+        await p.hostLink.tick()
+        XCTAssertTrue(p.host.isReconnecting)
+        XCTAssertFalse(p.host.humanToMove)
+        p.host.play(house: 2)
+        await settle()
+        XCTAssertEqual(p.host.state.moveNumber, 0)
+        p.guestTransport.isQuiet = false
+        await p.guestLink.tick()
+        await until("back") { !p.host.isReconnecting }
+        XCTAssertTrue(p.host.humanToMove)
+    }
+
     func testTheGuestCanFinishAgainstTheComputerToo() async {
         let p = await pair()
         p.guestTransport.isQuiet = true

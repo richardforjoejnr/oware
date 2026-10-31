@@ -318,6 +318,21 @@ struct RoomTests {
         await eventually("play carries on") { table.host.match?.numbers == [4, 8] }
     }
 
+    /// A move sent while the new connection is still being made is kept, and sent once the host
+    /// has the guest back, not lost.
+    @Test func aMoveSentWhileReconnectingIsSentOnceBack() async throws {
+        let (table, guest, link, _) = await seated()
+        try await table.host.send(.add(1))   // the guest's turn now
+        await eventually("guest has it") { guest.match?.numbers == [1] }
+        link.drop()
+        await eventually("host notices") { table.host.seats[1]?.isReconnecting == true }
+        let back = LoopbackTransport()
+        guest.reconnect(over: back)
+        try await guest.send(.add(2))        // before the new connection is up
+        table.hostLink.connect(back)
+        await eventually("the move arrives") { table.host.match?.numbers == [1, 2] }
+    }
+
     @Test func rejoiningTooLateAsksAgain() async throws {
         let (table, guest, link, _) = await seated()
         link.close()

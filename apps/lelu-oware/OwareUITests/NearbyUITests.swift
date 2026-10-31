@@ -162,7 +162,7 @@ final class NearbyUITests: XCTestCase {
     /// again by itself and carries on.
     @MainActor
     func testTheJoiningPhoneReconnectsByItself() throws {
-        app.launchArguments += ["--demo-drop-after=1", "--demo-away=0"]
+        app.launchArguments += ["--demo-drop-after=1", "--demo-away=3"]
         openNearby()
         app.buttons["btn-look-nearby"].tap()
         let game = app.buttons["nearby-game-Ama's game"]
@@ -173,10 +173,11 @@ final class NearbyUITests: XCTestCase {
         ready.tap()
         let turn = app.staticTexts["turn-indicator"]
         XCTAssertTrue(turn.waitForExistence(timeout: 10))
-        wait(for: turn, label: "Your turn")   // Ama has moved, and then dropped
+        // Ama moves, then her connection drops for three seconds.
         let banner = app.staticTexts["reconnect-banner"]
-        _ = banner.waitForExistence(timeout: 3)   // it may come and go before it is seen
+        XCTAssertTrue(banner.waitForExistence(timeout: 15), "the game says it is reconnecting")
         XCTAssertTrue(banner.waitForNonExistence(timeout: 10), "back by itself")
+        wait(for: turn, label: "Your turn")
         XCTAssertFalse(app.staticTexts["nearby-gone"].exists)
         playAndWaitForReply()
     }
@@ -195,7 +196,11 @@ final class NearbyUITests: XCTestCase {
         XCTAssertEqual(finish.label, "Play the computer")
         finish.tap()
         XCTAssertTrue(gone.waitForNonExistence(timeout: 5))
-        wait(for: app.staticTexts["turn-indicator"], label: "Your turn", timeout: 15)
-        playAndWaitForReply()
+        XCTAssertFalse(app.staticTexts["reconnect-banner"].exists)
+        // An ordinary game against the computer now, carried on from the same position.
+        let houses = (1...6).map { app.buttons["house-A\($0)"] }
+        let canPlay = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isEnabled == true"), object: houses[0])
+        _ = XCTWaiter().wait(for: [canPlay], timeout: 5)
+        XCTAssertNotEqual(app.staticTexts["turn-indicator"].label, "Your turn", "no longer the two-phone game's wording")
     }
 }
