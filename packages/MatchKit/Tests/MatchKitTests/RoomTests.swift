@@ -126,10 +126,11 @@ struct RoomTests {
     /// Not now after letting someone in (before the game starts): they are told no, and the seat
     /// is free for the next one to ask.
     @Test func aSeatedGuestCanBeSentAway() async {
-        let (table, _, _, log) = await seated()
+        let (table, guest, _, log) = await seated()   // kept: a dropped room stops listening
         await table.host.dismiss(seat: 1)
         await eventually("refusal") { log.events.contains(.refused(.declined)) }
         #expect(table.host.seats[1] == nil)
+        #expect(guest.mySeat == 1, "the guest's own room is closed by its app, not here")
 
         let (next, _, _) = table.guest("Yaw")
         await eventually("Yaw asks") { table.host.pending.values.contains("Yaw") }
@@ -232,8 +233,8 @@ struct RoomTests {
 
     // MARK: Connection
 
-    /// A phone that has gone is "reconnecting" after 4 s of silence and gone after 10 s (the
-    /// owner's call, 2026-10-31: waiting 30 s or a minute felt too long).
+    /// A phone that has gone is "reconnecting" after 4 s of silence and gone after 15 s (the
+    /// owner's call, 2026-10-31: 30 s or a minute felt too long, 10 s too short).
     @Test func silenceMeansReconnectingThenTheSeatEnds() async throws {
         let (table, guest, link, log) = await seated()
         link.isQuiet = true   // the guest walks out of range
@@ -250,11 +251,11 @@ struct RoomTests {
         #expect(guest.seats[0]?.isReconnecting == true, "the guest sees the host go quiet too")
         #expect(log.events.contains(.reconnecting(seat: 0)))
 
-        table.clock.advance(by: 5)   // 9.5 s in all
+        table.clock.advance(by: 10)   // 14.5 s in all
         await table.host.tick()
         #expect(table.host.seats[1] != nil, "still time to come back")
 
-        table.clock.advance(by: 1)   // 10.5 s
+        table.clock.advance(by: 1)   // 15.5 s
         await table.host.tick()
         #expect(table.host.seats[1] == nil)
         #expect(table.hostEvents.contains(.seatLost(seat: 1)))
@@ -315,7 +316,7 @@ struct RoomTests {
         await eventually("host notices") { table.host.seats[1]?.isReconnecting == true }
 
         try await table.host.send(.add(4))   // the host moves while the guest is away
-        table.clock.advance(by: 8)
+        table.clock.advance(by: 13)
         await table.host.tick()
         #expect(table.host.seats[1] != nil)
 
@@ -351,7 +352,7 @@ struct RoomTests {
     @Test func rejoiningTooLateAsksAgain() async throws {
         let (table, guest, link, _) = await seated()
         link.close()
-        table.clock.advance(by: 11)
+        table.clock.advance(by: 16)
         await table.host.tick()
         #expect(table.host.seats[1] == nil)
 

@@ -190,15 +190,15 @@ final class NearbyUITests: XCTestCase {
         playAndWaitForReply(row: "B")   // you play North when Ama made the game
     }
 
-    /// Gone ten seconds: the game offers to carry on against the computer, in a few words.
+    /// Gone fifteen seconds: the game offers to carry on against the computer, in a few words.
     @MainActor
-    func testAPhoneGoneTenSecondsOffersTheComputer() throws {
+    func testAPhoneGoneFifteenSecondsOffersTheComputer() throws {
         app.launchArguments += ["--demo-drop-after=1", "--demo-away=60"]
         startAndPressReady()
         playAndWaitForReply()
         XCTAssertTrue(app.staticTexts["reconnect-banner"].waitForExistence(timeout: 10))
         let gone = app.staticTexts["nearby-gone"]
-        XCTAssertTrue(gone.waitForExistence(timeout: 20), "after ten seconds")
+        XCTAssertTrue(gone.waitForExistence(timeout: 25), "after fifteen seconds")
         let finish = app.buttons["btn-finish-computer"]
         XCTAssertTrue(finish.exists)
         XCTAssertEqual(finish.label, "Play the computer")
