@@ -46,6 +46,10 @@ final class NearbyAccessUITests: XCTestCase {
                       || app.staticTexts["nearby-wifi-off"].exists)
         XCTAssertFalse(app.buttons["btn-start-nearby"].isEnabled)
         XCTAssertFalse(app.buttons["btn-look-nearby"].isEnabled)
+        // Apps can only open their own page in Settings, which has no Wi-Fi switch: no button
+        // that would land somewhere unhelpful, just where to find the switch.
+        XCTAssertFalse(app.buttons["btn-open-settings"].exists)
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Control Center'")).firstMatch.exists)
         let anyway = app.buttons["btn-try-anyway"]
         XCTAssertTrue(anyway.exists)
         anyway.tap()
@@ -61,6 +65,13 @@ final class NearbyAccessUITests: XCTestCase {
         XCTAssertTrue(app.buttons["btn-nearby-help"].exists)
         XCTAssertFalse(app.buttons["btn-try-nearby"].exists)
         XCTAssertFalse(app.buttons["Try it with a pretend player"].exists)
+    }
+
+    /// VoiceOver reads the name field as "Your name", not just whatever is typed in it.
+    @MainActor
+    func testTheNameFieldIsLabelled() throws {
+        openNearby(["--nearby-demo"])
+        XCTAssertEqual(app.textFields["nearby-name-field"].label, "Your name")
     }
 
     @MainActor

@@ -103,6 +103,12 @@ def main(app_dir: str) -> int:
         check("TelemetryDeck" in privacy, "Privacy policy names the analytics service")
     if "game-center" in project:
         check("Game Center" in privacy, "Privacy policy covers Game Center")
+    # 5.1.1(i): what nearby play sends, and to whom (the other phone, not us).
+    if "NSLocalNetworkUsageDescription" in project:
+        check(bool(re.search(r"nearby", privacy, re.I)) and bool(re.search(r"local network", privacy, re.I)),
+              "Privacy policy covers nearby play and Local Network")
+    if re.search(r'"nearby\.', code):
+        check(bool(re.search(r"nearby game", privacy, re.I)), "Privacy policy lists the nearby play usage events")
 
     # 6. App Review guidelines that can be read from the code (see docs/APP_REVIEW.md for the rest).
     # 5.1.1(i): the privacy policy is linked inside the app, not only on the store page.
@@ -117,6 +123,8 @@ def main(app_dir: str) -> int:
     else:
         check(bool(re.search(r"collects no data|does not collect|no data", privacy, re.I)), "Privacy policy says no data is collected")
         check(not re.search(r"URLSession|NWConnection|TelemetryDeck", code), "No network code, as the policy says")
+    # 2.5.1: public APIs only. Apps may open their own page in Settings, never a system pane.
+    check(not re.search(r'"(App-Prefs|prefs):', code), "No private Settings URLs (2.5.1)")
     # 5.1.1(ii): usage data needs consent, even when anonymous: analytics must default to off.
     if "TelemetryDeck" in project:
         check(not re.search(r'"shareUsageStats"\)\s*as\?\s*Bool\s*\?\?\s*true', code), "Usage stats are off until the player agrees (5.1.1(ii))")
