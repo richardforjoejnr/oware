@@ -44,6 +44,17 @@ export async function openMore() {
   const settings = byId("btn-settings");
   if (!(await settings.isExisting())) {
     await byId("btn-more").click();
-    await settings.waitForDisplayed();
+    // The More rows can run below the fold on a phone (Settings is the last), so wait for it to exist.
+    await settings.waitForExist();
   }
+}
+
+/** Tap a control that may be below the fold: scroll down to it first. */
+export async function tapBelow(id: string) {
+  const el = byId(id);
+  await el.waitForExist();
+  for (let i = 0; i < 4 && !(await el.isDisplayed()); i++) {
+    await browser.execute("mobile: swipe", { direction: "up" });
+  }
+  await el.click();
 }
