@@ -1,4 +1,4 @@
-import { byId, openMore, tapHouse, waitForTurn } from "../helpers/board";
+import { byId, openMore, tapBelow, tapHouse, waitForTurn } from "../helpers/board";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -17,7 +17,7 @@ const dir = path.resolve(__dirname, "../screenshots");
     await browser.saveScreenshot(path.join(dir, "home.png"));
 
     await openMore();
-    await byId("btn-pass-play").click();
+    await tapBelow("btn-pass-play");
     await byId("house-A1").waitForDisplayed();
     await tapHouse("A3");
     await waitForTurn("B to move");
@@ -27,37 +27,41 @@ const dir = path.resolve(__dirname, "../screenshots");
     await waitForTurn("B to move");
     await browser.saveScreenshot(path.join(dir, "board.png"));
 
-    await byId("btn-home").click();
-    await openMore();
-    await byId("btn-puzzles").click();
+    await tapBelow("btn-home");
+    await openMore(); // with a game to continue, Riddles is under More
+    await tapBelow("btn-puzzles");
     await byId("puzzles-title").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "puzzles.png"));
-    await byId("btn-daily").click();
+    await tapBelow("btn-daily");
     await byId("puzzle-goal").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "puzzle.png"));
 
-    await byId("btn-home").click();
+    await tapBelow("btn-home");
     await byId("btn-learn").waitForDisplayed();
-    await byId("btn-learn").click();
+    await tapBelow("btn-learn");
     await byId("btn-next-step").waitForDisplayed();
-    await byId("btn-next-step").click();
+    await tapBelow("btn-next-step");
     await tapHouse("A3");
     await byId("tutorial-after").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "tutorial.png"));
 
-    await byId("btn-home").click();
+    await tapBelow("btn-home");
     await openMore();
-    await byId("btn-heritage").click();
+    await tapBelow("btn-heritage");
     await byId("rules-title").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "rules.png"));
-    await byId("tab-heritage").click();
+    await tapBelow("tab-heritage");
     await byId("heritage-title").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "heritage.png"));
 
-    await byId("btn-back").click();
+    await tapBelow("btn-back");
     await byId("btn-journey").waitForDisplayed();
-    await byId("btn-journey").click();
+    await tapBelow("btn-journey");
     await byId("journey-title").waitForDisplayed();
     await browser.saveScreenshot(path.join(dir, "journey.png"));
+
+    await tapBelow("btn-back");
+    await openMore();
+    await browser.saveScreenshot(path.join(dir, "more.png"));
   });
 });
