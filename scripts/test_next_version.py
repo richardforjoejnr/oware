@@ -127,12 +127,12 @@ class PerAppTests(unittest.TestCase):
             run("init", "-q", "-b", "main")
             run("config", "user.email", "t@example.com"); run("config", "user.name", "T")
             run("commit", "-q", "--allow-empty", "-m", "first")
-            for tag in ["v1.2.0", "v1.10.0", "ludo-v1.0.0", "build/ludo-1.0.0-202610051920", "vnext"]:
+            for tag in ["oware-v1.2.0", "oware-v1.10.0", "ludo-v1.0.0", "build/ludo-1.0.0-202610051920", "oware-vnext", "v9.0.0"]:
                 run("tag", tag)
             here = os.getcwd()
             os.chdir(repo)
             try:
-                self.assertEqual(last_release(RELEASE_TAGS["lelu-oware"]), "v1.10.0", "newest by version, not by text")
+                self.assertEqual(last_release(RELEASE_TAGS["lelu-oware"]), "oware-v1.10.0", "newest by version, not by text")
                 self.assertEqual(last_release(RELEASE_TAGS["lelu-ludo"]), "ludo-v1.0.0")
                 self.assertIsNone(last_release("other-v"))
             finally:
@@ -152,7 +152,7 @@ class PerAppTests(unittest.TestCase):
             run("init", "-q", "-b", "main")
             run("config", "user.email", "t@example.com"); run("config", "user.name", "T")
             run("commit", "-q", "--allow-empty", "-m", "first")
-            for tag in ["build/1.0.0-202610102016", "build/1.0.9", "build/1.0.10",
+            for tag in ["build/1.0.0-202610102016", "build/1.0.8", "build/oware-1.0.9", "build/oware-1.0.10",
                         "build/ludo-1.0.0-202610051920", "build/ludo-1.1.0-202610251429", "build/ludo-oops"]:
                 run("tag", tag)
             here = os.getcwd()
@@ -160,7 +160,9 @@ class PerAppTests(unittest.TestCase):
             try:
                 self.assertEqual(last_build(BUILD_TAGS["lelu-oware"]), "1.0.10", "Ludo's tags never count for Oware")
                 self.assertEqual(last_build(BUILD_TAGS["lelu-ludo"]), "1.1.0")
-                self.assertIsNone(last_build("build/other-"))
+                self.assertIsNone(last_build(("build/other-",)))
+                subprocess.run(["git", "tag", "-d", "build/oware-1.0.9", "build/oware-1.0.10"], check=True, capture_output=True)
+                self.assertEqual(last_build(BUILD_TAGS["lelu-oware"]), "1.0.8", "builds from before the app name was in the tag")
             finally:
                 os.chdir(here)
 

@@ -6,7 +6,7 @@
     python3 scripts/next_version.py --store-notes   # "What's New" on the App Store (players only)
     python3 scripts/next_version.py --last-release  # the app's last release tag, empty if none
 
-Releases are git tags, one line per app (the App Store workflows create them): vX.Y.Z for Lelu
+Releases are git tags, one line per app (the App Store workflows create them): oware-vX.Y.Z for Lelu
 Oware, ludo-vX.Y.Z for Lelu Ludo (RELEASE_TAGS). Since the app's last tag:
   - any "feat!:" / "fix!:" title or "BREAKING CHANGE" → next major (2.0.0)
   - otherwise any "feat:"                           → next minor (1.3.0)
@@ -15,7 +15,7 @@ Oware, ludo-vX.Y.Z for Lelu Ludo (RELEASE_TAGS). Since the app's last tag:
 With no release yet the answer is 1.0.0. `--build` (used for TestFlight) moves past the last
 released version whenever anything was merged since it: Apple refuses new builds for a version that
 is already out. Every TestFlight build also gets a version of its own: if the answer was already
-built (a build/<version> tag, BUILD_TAGS), it moves on to the next patch past the newest build, so
+built (a build/<app>-<version> tag, BUILD_TAGS), it moves on to the next patch past the newest build, so
 1.1.0, then 1.1.1, 1.1.2 until the release. With nothing merged since the release tag it prints the
 released version itself, and the TestFlight workflow then skips ("nothing to build").
 
@@ -69,20 +69,21 @@ def git(*args: str) -> str:
     return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout
 
 
-# Each app's release tags: <prefix>X.Y.Z. Lelu Oware's came first, so it keeps the plain "v".
-RELEASE_TAGS = {"lelu-oware": "v", "lelu-ludo": "ludo-v"}
-# Each app's TestFlight build tags: <prefix>X.Y.Z (older ones end in -<build number>).
-BUILD_TAGS = {"lelu-oware": "build/", "lelu-ludo": "build/ludo-"}
+# Each app's release tags: <prefix>X.Y.Z.
+RELEASE_TAGS = {"lelu-oware": "oware-v", "lelu-ludo": "ludo-v"}
+# Each app's TestFlight build tags: <prefix>X.Y.Z (older ones end in -<build number>). Lelu Oware's
+# builds up to 1.0.8 are tagged build/X.Y.Z, with no app name, and still count.
+BUILD_TAGS = {"lelu-oware": ("build/oware-", "build/"), "lelu-ludo": ("build/ludo-",)}
 
 
 def _key(version: str) -> tuple[int, ...]:
     return tuple(int(x) for x in version.split("."))
 
 
-def last_build(prefix: str = "build/") -> str | None:
+def last_build(prefixes: tuple[str, ...] = BUILD_TAGS["lelu-oware"]) -> str | None:
     """The newest version built for TestFlight, from the app's build tags."""
-    pattern = re.compile(re.escape(prefix) + r"(\d+\.\d+\.\d+)(?:-\d+)?")
-    versions = [m.group(1) for t in git("tag", "--list", f"{prefix}*").split() if (m := pattern.fullmatch(t))]
+    pattern = re.compile("(?:" + "|".join(map(re.escape, prefixes)) + r")(\d+\.\d+\.\d+)(?:-\d+)?")
+    versions = [m.group(1) for t in git("tag", "--list", "build/*").split() if (m := pattern.fullmatch(t))]
     return max(versions, key=_key) if versions else None
 
 
@@ -95,7 +96,7 @@ def next_build(candidate: str, built: str | None) -> str:
     return f"{major}.{minor}.{patch + 1}"
 
 
-def last_release(prefix: str = "v") -> str | None:
+def last_release(prefix: str = "oware-v") -> str | None:
     tags = git("tag", "--list", f"{prefix}*", "--sort=-v:refname").split()
     tags = [t for t in tags if re.fullmatch(re.escape(prefix) + r"\d+\.\d+\.\d+", t)]
     return tags[0] if tags else None
@@ -203,7 +204,7 @@ def store_notes(changes: list[tuple[str, str]], limit: int = 3800) -> str:
 
 def main() -> None:
     app = current_app(sys.argv, os.getcwd())
-    prefix = RELEASE_TAGS[app] if app else "v"
+    prefix = RELEASE_TAGS[app or "lelu-oware"]
     tag = last_release(prefix)
     changes = titles_since(tag, APP_PATHS[app] if app else None)
     if "--last-release" in sys.argv:
@@ -216,7 +217,7 @@ def main() -> None:
         released = tag[len(prefix):] if tag else None
         version = bump(released, changes, for_build="--build" in sys.argv)
         if "--build" in sys.argv and version != released:
-            version = next_build(version, last_build(BUILD_TAGS[app] if app else "build/"))
+            version = next_build(version, last_build(BUILD_TAGS[app or "lelu-oware"]))
         print(version)
 
 

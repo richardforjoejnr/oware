@@ -1,12 +1,12 @@
 name: App Store Release (Lelu Oware)
 
 # Ships a build you have already tested on TestFlight. Nothing is rebuilt.
-#   Actions ▸ App Store Release (Lelu Oware) ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸ build/X.Y.Z ▸ Run.
-# Every TestFlight upload is tagged build/<version>, its build number in the tag's message (see
+#   Actions ▸ App Store Release (Lelu Oware) ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸ build/oware-X.Y.Z ▸ Run.
+# Every TestFlight upload is tagged build/oware-<version>, its build number in the tag's message (see
 # testflight.yml). This run:
 #   1. sends that build to App Review with "What's New" written from the PR titles,
 #   2. has Apple release it to everyone as soon as it is approved,
-#   3. tags vX.Y.Z, publishes the GitHub Release "Lelu Oware X.Y.Z" and refreshes the What's new page.
+#   3. tags oware-vX.Y.Z, publishes the GitHub Release "Lelu Oware X.Y.Z" and refreshes the What's new page.
 # One version can be in review at a time. If Apple rejects it, merge the fix and run this again on
 # the newer build tag; App Store Connect's version number is updated to match.
 # The App Store text, screenshots, privacy answers and age rating stay as set in App Store Connect.
@@ -43,13 +43,13 @@ jobs:
         env:
           REF: ${{ github.ref }}
         run: |
-          # build/X.Y.Z, or the older build/X.Y.Z-<build number>.
-          if [[ ! "$REF" =~ ^refs/tags/build/([0-9]+\.[0-9]+\.[0-9]+)(-([0-9]+))?$ ]]; then
-            echo "::error::Run this from a build tag (Use workflow from ▸ Tags ▸ build/X.Y.Z), not $REF. Each TestFlight upload makes one."
+          # build/oware-X.Y.Z; older builds are build/X.Y.Z or build/X.Y.Z-<build number>.
+          if [[ ! "$REF" =~ ^refs/tags/build/(oware-)?([0-9]+\.[0-9]+\.[0-9]+)(-([0-9]+))?$ ]]; then
+            echo "::error::Run this from a build tag (Use workflow from ▸ Tags ▸ build/oware-X.Y.Z), not $REF. Each TestFlight upload makes one."
             exit 1
           fi
-          echo "APP_VERSION=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
-          echo "BUILD_NUMBER=${BASH_REMATCH[3]}" >> "$GITHUB_ENV"
+          echo "APP_VERSION=${BASH_REMATCH[2]}" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=${BASH_REMATCH[4]}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - name: The build number, from the tag's message if not in its name
@@ -65,8 +65,8 @@ jobs:
           echo "Releasing version $APP_VERSION, build $BUILD_NUMBER"
       - name: Not already released
         run: |
-          if git rev-parse -q --verify "refs/tags/v$APP_VERSION" >/dev/null; then
-            echo "::error::v$APP_VERSION is already released. Pick a newer build tag."
+          if git rev-parse -q --verify "refs/tags/oware-v$APP_VERSION" >/dev/null; then
+            echo "::error::Lelu Oware $APP_VERSION (oware-v$APP_VERSION) is already released. Pick a newer build tag."
             exit 1
           fi
       - uses: ruby/setup-ruby@v1
@@ -80,9 +80,9 @@ jobs:
           WHATS_NEW: ${{ inputs.whats_new }}
         run: |
           # What's New on the App Store: none for the very first version (Apple has no field for it).
-          if [ -n "$WHATS_NEW" ] && [ -n "$(git tag --list 'v*')" ]; then
+          if [ -n "$WHATS_NEW" ] && [ -n "$(python3 ../../scripts/next_version.py --last-release)" ]; then
             { echo "RELEASE_NOTES<<EOF_NOTES"; echo "$WHATS_NEW"; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
-          elif [ -n "$(git tag --list 'v*')" ]; then
+          elif [ -n "$(python3 ../../scripts/next_version.py --last-release)" ]; then
             { echo "RELEASE_NOTES<<EOF_NOTES"; python3 ../../scripts/next_version.py --store-notes; echo "EOF_NOTES"; } >> "$GITHUB_ENV"
           fi
           python3 ../../scripts/next_version.py --notes > "$RUNNER_TEMP/notes.md"
@@ -98,7 +98,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "v$APP_VERSION" --target "$GITHUB_SHA" --title "Lelu Oware $APP_VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          gh release create "oware-v$APP_VERSION" --target "$GITHUB_SHA" --title "Lelu Oware $APP_VERSION" --notes-file "$RUNNER_TEMP/notes.md"
           # Refresh the public What's new page: a release created with GITHUB_TOKEN fires no `release` event.
           gh workflow run pages.yml --ref main -R "$GITHUB_REPOSITORY"
           echo "Submitted $APP_VERSION ($BUILD_NUMBER) for review; it goes live when Apple approves it." >> "$GITHUB_STEP_SUMMARY"

@@ -5,7 +5,8 @@ name: Record an App Store release
 # builds for a version that is already out).
 #   Actions ▸ Record an App Store release ▸ Run workflow ▸ "Use workflow from" ▸ Tags ▸ the approved
 #   build's tag ▸ Run. (The build number is on the version's page in App Store Connect.)
-# build/X.Y.Z (Lelu Oware) is recorded as vX.Y.Z, build/ludo-X.Y.Z (Lelu Ludo) as ludo-vX.Y.Z,
+# build/oware-X.Y.Z (Lelu Oware; older builds are build/X.Y.Z) is recorded as oware-vX.Y.Z,
+# build/ludo-X.Y.Z (Lelu Ludo) as ludo-vX.Y.Z,
 # each with its GitHub Release ("Lelu Oware X.Y.Z" / "Lelu Ludo X.Y.Z"). Nothing is sent to Apple.
 on:
   workflow_dispatch:
@@ -25,16 +26,16 @@ jobs:
         env:
           REF: ${{ github.ref }}
         run: |
-          # build/[ludo-]X.Y.Z, or the older build/[ludo-]X.Y.Z-<build number>.
-          if [[ "$REF" =~ ^refs/tags/build/ludo-([0-9]+\.[0-9]+\.[0-9]+)(-[0-9]+)?$ ]]; then
-            { echo "APP_DIR=apps/lelu-ludo"; echo "APP_NAME=Lelu Ludo"; echo "TAG=ludo-v${BASH_REMATCH[1]}"; } >> "$GITHUB_ENV"
-          elif [[ "$REF" =~ ^refs/tags/build/([0-9]+\.[0-9]+\.[0-9]+)(-[0-9]+)?$ ]]; then
-            { echo "APP_DIR=apps/lelu-oware"; echo "APP_NAME=Lelu Oware"; echo "TAG=v${BASH_REMATCH[1]}"; } >> "$GITHUB_ENV"
+          # build/<app>-X.Y.Z, or the older build/[ludo-]X.Y.Z-<build number>.
+          if [[ "$REF" =~ ^refs/tags/build/ludo-()([0-9]+\.[0-9]+\.[0-9]+)(-[0-9]+)?$ ]]; then
+            { echo "APP_DIR=apps/lelu-ludo"; echo "APP_NAME=Lelu Ludo"; echo "TAG=ludo-v${BASH_REMATCH[2]}"; } >> "$GITHUB_ENV"
+          elif [[ "$REF" =~ ^refs/tags/build/(oware-)?([0-9]+\.[0-9]+\.[0-9]+)(-[0-9]+)?$ ]]; then
+            { echo "APP_DIR=apps/lelu-oware"; echo "APP_NAME=Lelu Oware"; echo "TAG=oware-v${BASH_REMATCH[2]}"; } >> "$GITHUB_ENV"
           else
             echo "::error::Run this from a build tag (Use workflow from ▸ Tags ▸ build/…), not $REF."
             exit 1
           fi
-          echo "APP_VERSION=${BASH_REMATCH[1]}" >> "$GITHUB_ENV"
+          echo "APP_VERSION=${BASH_REMATCH[2]}" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - name: Not already recorded

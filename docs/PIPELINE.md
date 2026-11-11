@@ -5,10 +5,10 @@ feature branch ──PR──▶ CI (engine tests + unsigned simulator build/tes
         │
       merge to main ──▶ TestFlight workflow, only when the merge changes the app
         │                 (signed Release build → TestFlight, build # = UTC date and time,
-        │                  tagged build/<version>)        
+        │                  tagged build/oware-<version>)  
         │
   run App Store Release from a build tag ──▶ that same build → App Review → live when approved;
-                                             tags vX.Y.Z and publishes the GitHub Release
+                                             tags oware-vX.Y.Z and publishes the GitHub Release
 ```
 
 Workflows live in `.github/workflows/`; build logic lives in each app's `fastlane/Fastfile`
@@ -20,12 +20,12 @@ lanes run locally and in CI.
 | `ci.yml` | every PR, every push to `main` | No | Green tick on the PR; test results as artifacts |
 | `e2e.yml` | every PR, every push to `main` | No | Maestro and Appium (TypeScript) UI flows on a simulator; JUnit reports as artifacts |
 | `pr-title.yml` | PR opened / edited / updated | No | Fails unless the PR title is a Conventional Commit (it decides the version) |
-| `testflight.yml` | push to `main` that changes the app (paths below), or manual | Yes | New build in TestFlight with a version of its own, tagged `build/<version>` |
+| `testflight.yml` | push to `main` that changes the app (paths below), or manual | Yes | New build in TestFlight with a version of its own, tagged `build/oware-<version>` |
 | `testflight-ludo.yml` | push to `main` that changes Lelu Ludo, or manual | Yes (the same ones) | New Lelu Ludo build in TestFlight, tagged `build/ludo-<version>` (see "Lelu Ludo" below) |
 | `reusable-app-readiness.yml` | called by `ci.yml`, `ludo-ci.yml` and `testflight-ludo.yml` | No | The App Store readiness check (`scripts/release_readiness.py <app>`) for one app: privacy manifest, icon, launch screen, release flags, in-app privacy link, public pages |
-| `release-oware.yml` | manual, from a `build/…` tag | Yes | That build submitted for App Review with "What's New", released automatically once approved; tags `vX.Y.Z` and publishes the GitHub Release |
+| `release-oware.yml` | manual, from a `build/…` tag | Yes | That build submitted for App Review with "What's New", released automatically once approved; tags `oware-vX.Y.Z` and publishes the GitHub Release |
 | `release-ludo.yml` | manual, from a `build/ludo-…` tag | Yes | The same for Lelu Ludo; tags `ludo-vX.Y.Z` and publishes the GitHub Release "Lelu Ludo X.Y.Z" |
-| `record-release.yml` | manual, from a `build/…` or `build/ludo-…` tag | No | For a version submitted by hand in App Store Connect: once approved, tags it `vX.Y.Z` / `ludo-vX.Y.Z` with its GitHub Release, so the next TestFlight build counts from it. Nothing is sent to Apple |
+| `record-release.yml` | manual, from a `build/oware-…` or `build/ludo-…` tag | No | For a version submitted by hand in App Store Connect: once approved, tags it `oware-vX.Y.Z` / `ludo-vX.Y.Z` with its GitHub Release, so the next TestFlight build counts from it. Nothing is sent to Apple |
 | `pages.yml` ("Site") | docs or site change on `main`, a release, CI / E2E finishing on `main`, or manual | AWS keys | Website on AWS (S3 + CloudFront): privacy, support, What's new, test reports |
 
 The signed workflows are skipped until the repository variable `SIGNING_READY` is `true`, so
@@ -144,7 +144,7 @@ One-time steps:
 5. Merge a change to Lelu Ludo, or run **TestFlight (Lelu Ludo)** by hand from the Actions tab.
 
 **Version and tags.** Nobody edits the version. Lelu Ludo's releases are tagged `ludo-vX.Y.Z`
-(`vX.Y.Z` stays Lelu Oware's), and each TestFlight build's version is worked out by
+(Lelu Oware's are `oware-vX.Y.Z`), and each TestFlight build's version is worked out by
 `scripts/next_version.py` from the Conventional Commit titles of the PRs that changed Lelu Ludo
 (`apps/lelu-ludo`, `packages/LudoEngine`) since the last `ludo-v` tag: `feat` → next minor, `fix`/`perf`
 → next patch, `!` → next major; `docs`/`ci`/`test`/`chore` alone build the next patch for TestFlight but
@@ -189,8 +189,8 @@ placeholder text or a missing contact email on the public privacy and support pa
 
 ## Releasing to the App Store
 
-Every TestFlight upload has a version of its own and is tagged `build/<version>` (e.g. `build/1.0.1`,
-the build number in the tag's message; older uploads are tagged `build/1.0.0-202610102016`) on the
+Every TestFlight upload has a version of its own and is tagged `build/oware-<version>` (e.g. `build/oware-1.1.0`,
+the build number in the tag's message; uploads up to 1.0.8 are tagged `build/1.0.8` or `build/1.0.0-202610102016`) on the
 commit it was built from. The newest version is the newest build. To ship one: Actions ▸ **App Store Release (Lelu Oware)** ▸ **Run workflow** ▸
 **Use workflow from** ▸ **Tags** ▸ pick the build ▸ **Run workflow**. It:
 
@@ -198,16 +198,16 @@ commit it was built from. The newest version is the newest build. To ship one: A
    `feat:` / `fix:` / `perf:` PR titles since the last release (`next_version.py --store-notes`;
    left out for the very first version, which has no "What's New"),
 2. lets Apple release it to everyone as soon as it is approved (no phased rollout),
-3. tags `vX.Y.Z`, publishes the GitHub Release "Lelu Oware X.Y.Z" and refreshes the What's new page.
+3. tags `oware-vX.Y.Z`, publishes the GitHub Release "Lelu Oware X.Y.Z" and refreshes the What's new page.
 
 The App Store text, screenshots, privacy answers and age rating stay as set in App Store Connect.
 The `production` environment can require your approval before it runs.
 
 - **One version in review at a time.** Wait for Apple's answer before running it again.
 - **Rejected?** Merge the fix; its TestFlight build is tagged with the next version (the rejected
-  one already has its `v` tag). Run the workflow on that tag: App Store Connect's version number is
+  one already has its `oware-v` tag). Run the workflow on that tag: App Store Connect's version number is
   updated to match. Delete the GitHub Release of the rejected version if you want a tidy history.
-- **Released a version by hand** in App Store Connect? Publish a GitHub Release tagged `vX.Y.Z`,
+- **Released a version by hand** in App Store Connect? Publish a GitHub Release tagged `oware-vX.Y.Z`,
   named "Lelu Oware X.Y.Z", on the commit of that build, so later builds move on to the next version.
   (Publishing a release by hand uploads nothing.)
 
@@ -229,16 +229,15 @@ Automatic, from **Conventional Commit PR titles** (checked on every PR by the "P
 - **Per app:** each app's version and notes count only the PRs that changed its own files (its
   folder and the packages it uses; `APP_PATHS` in `scripts/next_version.py`, chosen from the folder
   the workflow runs it in, or `--app=<slug>`). A Lelu Ludo feature never bumps Lelu Oware's version or
-  appears in its "What's New". `vX.Y.Z` tags are Lelu Oware's releases; Lelu Ludo will get its own
-  tag prefix when it reaches the App Store (its stage 5).
-- **Release** = a git tag `vX.Y.Z`. `scripts/next_version.py` reads the PR titles merged since the last
+  appears in its "What's New". `oware-vX.Y.Z` tags are Lelu Oware's releases, `ludo-vX.Y.Z` Lelu Ludo's.
+- **Release** = a git tag `oware-vX.Y.Z`. `scripts/next_version.py` reads the PR titles merged since the last
   tag and prints the next version (1.0.0 before the first release); `--notes` prints release notes.
 - **Titles from before the convention** (PRs up to #35) are read leniently: `Docs: …` counts as
   docs, `Fix: …` as a fix, and any other title (`Accessibility: …`, `Milestone 2: …`) is a player-facing
   change listed in full under "Also". The first release's notes therefore list the whole history;
   shorten them in the GitHub Release (and TestFlight's "What to Test") if you want a tidier page.
   Alternatively, before the first release, tag a baseline on the commit to start counting from
-  (`git tag v0.9.0 <sha> && git push origin v0.9.0`): later notes then only list PRs after it, but
+  (`git tag oware-v0.9.0 <sha> && git push origin oware-v0.9.0`): later notes then only list PRs after it, but
   the next version is computed from that tag (TestFlight betas become 0.9.x / 0.10.0 until the first
   release), so give the first App Store run an explicit version such as 1.0.0.
 - **TestFlight** runs on a merge to `main` that touches `apps/lelu-oware/Oware/**` (app code and
@@ -248,8 +247,8 @@ Automatic, from **Conventional Commit PR titles** (checked on every PR by the "P
   notes list the player-facing PRs since the last release. A beta always moves past the released
   version, even if only a `chore:` touched the app. A manual run with nothing merged since the last
   tag skips the upload (there is no new version to build). In the app, Settings shows "Version 1.3.0 (build) · Beta".
-- **App Store** (App Store Release (Lelu Oware), run from a `build/X.Y.Z` tag): submits that build, then tags
-  `vX.Y.Z`, publishes a GitHub Release named "Lelu Oware X.Y.Z" with the notes, and starts the Pages
+- **App Store** (App Store Release (Lelu Oware), run from a `build/oware-X.Y.Z` tag): submits that build, then tags
+  `oware-vX.Y.Z`, publishes a GitHub Release named "Lelu Oware X.Y.Z" with the notes, and starts the Pages
   workflow (a release created by a workflow fires no `release` event). The next TestFlight builds then
   move on to the version after. Settings shows no "Beta" in App Store builds. (A GitHub Release
   published by hand must be named exactly "Lelu Oware X.Y.Z": the What's new page,
@@ -269,7 +268,7 @@ then in the Organizer that opens: **Distribute App ▸ App Store Connect ▸ Upl
 1. `git checkout -b feature/thing` → edit → `make engine-test` / `make test`.
 2. Push, open a PR. CI must be green.
 3. Merge → if the PR changed the app, a TestFlight build appears in ~15 minutes, tagged
-   `build/<version>` → test on your phone.
+   `build/oware-<version>` → test on your phone.
 4. When a build is good: Actions ▸ App Store Release (Lelu Oware) ▸ Run workflow from its tag (see "Releasing to
    the App Store"). Apple reviews it and it goes live when approved.
 

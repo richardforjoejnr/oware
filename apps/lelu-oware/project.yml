@@ -18,7 +18,7 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     # Version for local and Xcode builds only. Uploads set it automatically: TestFlight and `make archive`
     # use the next version worked out from PR titles since the last release (scripts/next_version.py);
-    # the App Store workflow uses that or the tag, then tags the release vX.Y.Z.
+    # the App Store workflow uses that or the tag, then tags the release oware-vX.Y.Z.
     MARKETING_VERSION: "1.0.0"
     # Build number for local runs only. Every upload (CI, or `make archive` on a Mac) stamps the UTC
     # date and time instead, e.g. 202609271730, so builds are unique and always increasing. StoreKit
