@@ -8,8 +8,10 @@ enum Feature {
     static let online = "online"
 
     static let table: [String: Access] = [
-        // On for everyone (the owner's call, 2026-10-31; docs/NEARBY_PLAY.md step 6).
-        nearbyPlay: .free,
+        // Off for now (the owner's call, 2026-11-11): not in the App Store build until it has had
+        // more testing on real phones. Back on: `.free` here and in FeatureTableTests, NearbyOffUITests
+        // and fastlane/review_notes.md.
+        nearbyPlay: .off,
         // Later: .unlock(productID: OnlineProduct.id, hostPays: true, foundingIncluded: false).
         online: .off,
     ]
