@@ -169,10 +169,23 @@ jobs:
           OWARE_SIM_NAME: ${{ steps.sim.outputs.name }}
           OWARE_SIM_UDID: ${{ steps.boot.outputs.udid }}
         run: npm run test:ci
+      - name: Show why WebDriverAgent or Appium failed
+        if: failure()
+        working-directory: apps/lelu-oware/e2e
+        # wdio only prints Appium's warnings; the reason xcodebuild gave is in the Appium log.
+        run: |
+          xcrun simctl list devices booted || true
+          log=logs/wdio-appium.log
+          [ -f "$log" ] || { echo "No Appium log at $log"; ls -la logs || true; exit 0; }
+          grep -nE "error:|Testing failed|BUILD FAILED|\*\* |xcodebuild exited|Failed to|cannot|not supported|Unable to" "$log" | cut -c1-600 | head -150 || true
+          echo "---- last 150 lines ----"
+          tail -n 150 "$log" | cut -c1-600
       - name: Upload report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: appium-ts-report
-          path: apps/lelu-oware/e2e/junit-*.xml
+          path: |
+            apps/lelu-oware/e2e/junit-*.xml
+            apps/lelu-oware/e2e/logs/**
           if-no-files-found: ignore

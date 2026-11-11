@@ -55,7 +55,11 @@ export const config: WebdriverIO.Config = {
     "spec",
     ["junit", { outputDir: __dirname, outputFileFormat: (o: { cid: string }) => `junit-${o.cid}.xml` }],
   ],
-  services: [["appium", { args: { relaxedSecurity: true } }]],
+  // On CI the full Appium log (with xcodebuild's own output for WebDriverAgent, see showXcodeLog)
+  // goes to e2e/logs/wdio-appium.log; the workflow prints its errors and uploads it when a run fails.
+  services: [
+    ["appium", { args: { relaxedSecurity: true }, ...(process.env.CI ? { logPath: path.resolve(__dirname, "logs") } : {}) }],
+  ],
   capabilities: [
     {
       platformName: "iOS",
