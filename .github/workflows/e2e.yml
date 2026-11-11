@@ -143,10 +143,32 @@ jobs:
         id: boot
         env:
           SIM_NAME: ${{ steps.sim.outputs.name }}
+        # The runner image carries newer iOS runtimes than the pinned Xcode's SDK, with the same
+        # device names in each. Appium builds WebDriverAgent for the simulator's iOS version, and
+        # Xcode refuses a deployment target above its SDK ("set to 27.2, but the range ... is 15.0
+        # to 27.0.x"). So boot the device on the newest runtime that is not newer than the SDK.
         run: |
-          xcrun simctl boot "$SIM_NAME" || true
-          xcrun simctl bootstatus "$SIM_NAME" -b
-          udid=$(xcrun simctl list devices booted -j | python3 -c 'import json,os,sys; d=json.load(sys.stdin)["devices"]; print(next(dev["udid"] for devs in d.values() for dev in devs if dev["name"]==os.environ["SIM_NAME"] and dev["state"]=="Booted"))')
+          sdk=$(xcrun --sdk iphonesimulator --show-sdk-version)
+          udid=$(xcrun simctl list devices available -j | SDK="$sdk" python3 -c '
+          import json, os, re, sys
+          sdk = tuple(int(x) for x in os.environ["SDK"].split(".")[:2])
+          found = []
+          for runtime, devs in json.load(sys.stdin)["devices"].items():
+              m = re.search(r"SimRuntime\.iOS-(\d+)-(\d+)", runtime)
+              if not m:
+                  continue
+              version = (int(m.group(1)), int(m.group(2)))
+              if version > sdk:
+                  continue
+              found += [(version, d["udid"]) for d in devs if d["name"] == os.environ["SIM_NAME"]]
+          if not found:
+              sys.exit("No %s simulator on iOS %s or older" % (os.environ["SIM_NAME"], os.environ["SDK"]))
+          version, udid = max(found)
+          print("Using iOS %d.%d (SDK %s)" % (version + (os.environ["SDK"],)), file=sys.stderr)
+          print(udid)')
+          xcrun simctl shutdown all || true
+          xcrun simctl boot "$udid" || true
+          xcrun simctl bootstatus "$udid" -b
           echo "Booted $SIM_NAME ($udid)"
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
       - name: Warm up Xcode tool caches
