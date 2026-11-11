@@ -1,10 +1,10 @@
 import XCTest
 
-/// Nearby play is switched off for players for now (2026-11-11): not under More with no launch
-/// option, and no test switch in Settings. Tests and Debug builds open it with `--nearby`.
-final class NearbyOffUITests: XCTestCase {
+/// Nearby play is on for everyone (2026-10-31): under More with no launch option, and no test
+/// switch left in Settings.
+final class NearbyOnUITests: XCTestCase {
     @MainActor
-    func testPlayNearbyIsNotUnderMoreAndSettingsHasNoTestSwitch() throws {
+    func testPlayNearbyIsUnderMoreAndSettingsHasNoTestSwitch() throws {
         continueAfterFailure = false
         let app = XCUIApplication()
         app.launchArguments = ["--reset-state", "--fast-animations"]
@@ -13,8 +13,7 @@ final class NearbyOffUITests: XCTestCase {
         XCTAssertTrue(more.waitForExistence(timeout: 15))
         if !more.isHittable { app.swipeUp() }
         more.tap()
-        XCTAssertTrue(app.buttons["btn-pass-play"].waitForExistence(timeout: 10), "the More rows are open")
-        XCTAssertFalse(app.buttons["btn-nearby"].exists, "Play nearby is not on offer")
+        XCTAssertTrue(app.buttons["btn-nearby"].waitForExistence(timeout: 10), "Play nearby is under More")
         let settings = app.buttons["btn-settings"]
         if !settings.isHittable { app.swipeUp() }
         settings.tap()

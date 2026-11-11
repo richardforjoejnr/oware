@@ -184,9 +184,6 @@ again (`aGuestBackFromAQuietSpellCatchesUp`). `NearbyHost` and `NearbyBrowser` r
 `NearbyStatus.localNetworkDenied`, and the Nearby screen then says how to turn Local Network on.
 
 ### Step 6: `feat(oware): turn on nearby play`
-**Off again since 2026-11-11** (the owner's call, before the first App Store update): `nearbyPlay: .off`,
-so players do not see Play nearby; tests and Debug builds open it with `--nearby` / `-nearbyPlay YES`.
-Turning it back on is the list below again, plus the Play nearby sentence in `fastlane/review_notes.md`.
 - `nearbyPlay: .free`;
 - the privacy page and the App Review note;
 - What's New text.

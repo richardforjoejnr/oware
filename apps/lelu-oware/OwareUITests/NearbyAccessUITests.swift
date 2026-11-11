@@ -12,8 +12,7 @@ final class NearbyAccessUITests: XCTestCase {
     }
 
     private func openNearby(_ extra: [String]) {
-        // `--nearby`: Play nearby is switched off for players for now (Feature.table).
-        app.launchArguments = ["--reset-state", "--fast-animations", "--rules=abapa", "--nearby"] + extra
+        app.launchArguments = ["--reset-state", "--fast-animations", "--rules=abapa"] + extra
         app.launch()
         let more = app.buttons["btn-more"]
         let nearby = app.buttons["btn-nearby"]
