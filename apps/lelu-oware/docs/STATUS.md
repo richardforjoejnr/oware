@@ -2,7 +2,7 @@
 
 > **For a new Claude Code session:** read this file first, then `docs/GAME_PLAN.md` (this folder) and
 > `../../docs/PIPELINE.md` (repo root). Start from "Now" below. Paths in this file are relative to
-> `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-09-27.
+> `apps/lelu-oware/` unless they start with `../../`. Last updated: 2026-11-15.
 
 ## Now (2026-09-27)
 
@@ -16,6 +16,36 @@
   Program next week; then TestFlight and submission). Services reference: [SERVICES.md](SERVICES.md).
 - **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
   `packages/*/.swiftpm` after `swift test`; run `make project` after pulling.
+
+## Online play (2026-11-15, hidden: `Feature.online` is `.off`)
+
+Two phones anywhere, through a small relay on AWS. Plan: `../../docs/ONLINE_PLAY.md` (PR #113).
+Built so far, in the plan's stages:
+- **Stage 1** (PR #114): room protocol **version 2** in plain JSON, pinned by `../../shared/vectors/room-v2`
+  (a phone refuses every version but its own, so new and old apps cannot play nearby together);
+  the relay's wire format in `../../shared/vectors/relay-v1`; `RoomTiming`.
+- **Stage 2** (AWS repo, `apps/lelu-play`, its PR #29): the relay. Its tests read a copy of `relay-v1`.
+- **Stages 4–5, enough to try it** (PR #115): `MatchKitOnline` (`OnlineTransport`, `LocalRelay`); Play
+  online is the nearby lobby and screen with `kind == .online` and `OnlineNetwork`. **Invite a friend**
+  shares `leluoware.com/lelu-oware/join?c=CODE` (the query form, not the plan's `/join/CODE`; the app
+  opens both, and `leluoware://join?c=CODE`). The waiting screen shows the code and a QR code; the code
+  box takes a pasted message. The joining phone sows its own move at once, on nearby play too.
+
+Try it (Debug builds only; the switches are kept from one launch to the next):
+`-onlinePlay YES -relayURL <ws:// or wss:// address>`, or `--online-demo` for Ama with no network.
+Locally the relay is `npm run dev` in the AWS repo's `apps/lelu-play` (`ws://localhost:8787`).
+
+For the owner:
+- **Associated Domains** for the App ID (developer portal), so a tapped link opens the app. Then add
+  `com.apple.developer.associated-domains: [applinks:leluoware.com]` to `entitlements` in `project.yml`
+  and to the allowed list in `../../scripts/release_readiness.py`, and refresh the signing profiles.
+  Until then no build carries it; the join page's button and pasting the message still work.
+- Deploy the relay's `dev` stage for a lasting address (the PR preview goes when its PR closes).
+
+Still to build before it is turned on: the relay's limits, alarms, off switch and `play.leluoware.com`
+(stage 3); a game that survives the app closing (saved game, Rejoin card, the seat kept past 90 s);
+the install ID in the Keychain; the paid path's tests; the privacy page, App Privacy label and review
+notes (stage 6).
 
 ## App Review rejection of 1.0.0 (30 Oct 2026, branch `fix/oware-app-review-iap`)
 
