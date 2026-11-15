@@ -167,7 +167,7 @@ struct RoomTests {
         #expect(table.host.pending.isEmpty, "the host is not asked about a phone it cannot talk to")
     }
 
-    @Test func anOlderGuestRefusesANewerHost() async {
+    @Test func anOlderAppIsToldToUpdate() async {
         let clock = ManualClock()
         let hostLink = LoopbackTransport()
         let host = TallyRoom(hosting: Tally(), name: "Kofi", rules: TallyRules(), transport: hostLink, clock: clock,
@@ -177,10 +177,31 @@ struct RoomTests {
         let guest = TallyRoom(joiningAs: "Ama", rules: TallyRules(), transport: link, clock: clock)
         guest.onEvent = { log.events.append($0) }
         hostLink.connect(link)
-        await eventually("join request") { !host.pending.isEmpty }
-        await host.accept(host.pending.keys.first!)
         await eventually("refusal") { log.events.contains(.refused(.needsUpdate(hostVersion: MatchKit.protocolVersion + 1))) }
         #expect(guest.mySeat == nil && guest.match == nil)
+        #expect(host.pending.isEmpty, "the host is not asked about a phone it cannot talk to")
+    }
+
+    /// Phones with the first nearby play speak version 1, in another JSON form. Its hello is not
+    /// read as a join request; it is answered so that the old phone asks its player to update.
+    @Test func aPhoneOnVersionOneIsAnsweredNotIgnored() async throws {
+        let clock = ManualClock()
+        let hostLink = LoopbackTransport(), oldPhone = LoopbackTransport()
+        let host = TallyRoom(hosting: Tally(), name: "Kofi", rules: TallyRules(), transport: hostLink, clock: clock)
+        hostLink.connect(oldPhone)
+        try await oldPhone.send(Data(#"{"protocolVersion":1,"sequence":1,"body":{"hello":{"name":"Ama"}}}"#.utf8), to: nil)
+        var answer: Data?
+        let reading = Task {
+            for await event in oldPhone.events {
+                if case let .received(data, _) = event { answer = data; break }
+            }
+        }
+        await eventually("an answer") { answer != nil }
+        reading.cancel()
+        let header = try JSONDecoder().decode(EnvelopeHeader.self, from: try #require(answer))
+        #expect(header.protocolVersion == 2, "an old phone reads this number and nothing else")
+        #expect(host.pending.isEmpty)
+        host.stop()
     }
 
     // MARK: Play

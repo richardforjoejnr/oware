@@ -1,0 +1,28 @@
+{
+  "body": {
+    "snapshot": {
+      "isOutOfStep": true,
+      "match": {
+        "game": 2,
+        "houses": [],
+        "matchID": "6F1E2D3C-4B5A-4978-8A69-5B4C3D2E1F00",
+        "rules": {
+          "grandSlam": "forfeitCapture",
+          "maxRounds": 20,
+          "mustFeed": true,
+          "repetitionLimit": 3,
+          "variant": "namNam",
+          "winningSeeds": 25
+        },
+        "starter": 1,
+        "version": 2
+      },
+      "paces": {},
+      "ready": [],
+      "rematchAsked": []
+    },
+    "type": "snapshot"
+  },
+  "protocolVersion": 2,
+  "sequence": 15
+}

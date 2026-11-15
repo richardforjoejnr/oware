@@ -1,0 +1,11 @@
+{
+  "body": {
+    "intent": {
+      "stateHash": "2de35c20d63699b4",
+      "type": "ready"
+    },
+    "type": "intent"
+  },
+  "protocolVersion": 2,
+  "sequence": 8
+}

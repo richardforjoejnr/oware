@@ -1,0 +1,8 @@
+{
+  "body": {
+    "name": "Kofi",
+    "type": "hello"
+  },
+  "protocolVersion": 2,
+  "sequence": 1
+}

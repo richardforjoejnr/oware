@@ -4,15 +4,15 @@ import XCTest
 @testable import Oware
 
 /// What two phones playing Oware send each other, as it is on the wire: every example in
-/// `shared/vectors/room-v1` is read by this app and written back the same. An Android app will
-/// read and write the same files, and phones with an older Lelu Oware already speak this, so a
-/// test failing here means a new room protocol version is needed, not a new example.
+/// `shared/vectors/room-v2` is read by this app and written back the same. An Android app will
+/// read and write the same files, so a test failing here means a new room protocol version is
+/// needed, not a new example.
 final class RoomVectorTests: XCTestCase {
     private typealias Message = RoomMessage<OwareTable, TableIntent>
 
     private static let folder = URL(fileURLWithPath: #filePath)   // …/apps/lelu-oware/OwareTests/RoomVectorTests.swift
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .appendingPathComponent("shared/vectors/room-v1", isDirectory: true)
+        .appendingPathComponent("shared/vectors/room-v2", isDirectory: true)
 
     private func data(_ name: String) throws -> Data {
         try Data(contentsOf: Self.folder.appendingPathComponent(name + ".json"))
@@ -35,26 +35,8 @@ final class RoomVectorTests: XCTestCase {
         }
     }
 
-    /// JSON as Foundation objects, with the parts whose order is free put in one order: sets of
-    /// players (`ready`, `rematchAsked`) and `paces`, which is written as player, pace, player, pace.
-    private func tidy(_ json: Any, key: String? = nil) -> Any {
-        if let object = json as? [String: Any] {
-            return object.reduce(into: [String: Any]()) { $0[$1.key] = tidy($1.value, key: $1.key) }
-        }
-        guard let list = json as? [Any] else { return json }
-        switch key {
-        case "ready", "rematchAsked":
-            return (list as? [Int])?.sorted() ?? list
-        case "paces":
-            let pairs = stride(from: 0, to: list.count - 1, by: 2).map { [list[$0], list[$0 + 1]] }
-            return pairs.sorted { ($0[0] as? Int ?? 0) < ($1[0] as? Int ?? 0) }
-        default:
-            return list.map { tidy($0) }
-        }
-    }
-
     private func json(_ data: Data) throws -> NSObject {
-        try XCTUnwrap(tidy(JSONSerialization.jsonObject(with: data)) as? NSObject)
+        try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? NSObject)
     }
 
     func testEveryExampleIsReadAndWrittenBackTheSame() throws {

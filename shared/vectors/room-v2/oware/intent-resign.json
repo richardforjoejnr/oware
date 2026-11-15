@@ -1,0 +1,10 @@
+{
+  "body": {
+    "intent": {
+      "type": "resign"
+    },
+    "type": "intent"
+  },
+  "protocolVersion": 2,
+  "sequence": 10
+}

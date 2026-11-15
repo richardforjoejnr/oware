@@ -2,25 +2,24 @@ import Foundation
 import Testing
 @testable import MatchKit
 
-/// The room protocol, version 1, as it is on the wire: every example in `shared/vectors/room-v1`
-/// is read, and written back exactly as it was. Phones with the app already speak this, and an
-/// Android app will too, so a change here is a new protocol version, never an accident.
-@Suite("Room messages match shared/vectors/room-v1")
+/// The room protocol, version 2, as it is on the wire: every example in `shared/vectors/room-v2`
+/// is read, and written back exactly as it was. The Android app reads and writes the same files,
+/// so a change here is a new protocol version, never an accident.
+@Suite("Room messages match shared/vectors/room-v2")
 struct RoomVectorTests {
     typealias Message = RoomMessage<JSONValue, JSONValue>
-    static let files = Vectors.files(in: "room-v1")
+    static let files = Vectors.files(in: "room-v2")
 
     @Test func everyKindOfMessageHasAnExample() throws {
         var kinds: Set<String> = []
         for file in Self.files {
-            guard case let .object(top) = try JSONValue(json: file.data), case let .object(body)? = top["body"] else {
+            guard case let .object(top) = try JSONValue(json: file.data), case let .object(body)? = top["body"],
+                  case let .string(type)? = body["type"] else {
                 Issue.record("\(file.name) is not an envelope")
                 continue
             }
-            kinds.formUnion(body.keys)
-            if case let .object(refused)? = body["refused"], case let .object(reason)? = refused["_0"] {
-                kinds.formUnion(reason.keys.map { "refused." + $0 })
-            }
+            kinds.insert(type)
+            if case let .string(reason)? = body["reason"] { kinds.insert("refused." + reason) }
         }
         #expect(kinds == ["hello", "welcome", "refused", "refused.roomFull", "refused.declined", "refused.needsUpdate",
                           "intent", "snapshot", "ping", "bye"])
@@ -29,10 +28,10 @@ struct RoomVectorTests {
     @Test(arguments: files)
     func isReadAndWrittenBackTheSame(_ file: Vectors.File) throws {
         let envelope = try JSONDecoder().decode(Envelope<Message>.self, from: file.data)
-        #expect(envelope.protocolVersion == 1)
+        #expect(envelope.protocolVersion == 2)
         #expect(try JSONValue(writing: envelope) == JSONValue(json: file.data))
         // The version is read on its own first, before the body.
-        #expect(try JSONDecoder().decode(EnvelopeHeader.self, from: file.data).protocolVersion == 1)
+        #expect(try JSONDecoder().decode(EnvelopeHeader.self, from: file.data).protocolVersion == 2)
     }
 
     @Test func helloAndWelcomeCarryWhatTheExamplesSay() throws {
@@ -50,7 +49,7 @@ struct RoomVectorTests {
         #expect(seat == 1)
         #expect(seatToken == token)
         #expect(names == [0: "Ama", 1: "Kofi"])
-        guard case .refused(.needsUpdate(hostVersion: 1)) = try message("refused-needs-update.json") else {
+        guard case .refused(.needsUpdate(hostVersion: 2)) = try message("refused-needs-update.json") else {
             Issue.record("refused")
             return
         }

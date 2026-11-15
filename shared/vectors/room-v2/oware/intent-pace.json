@@ -1,0 +1,11 @@
+{
+  "body": {
+    "intent": {
+      "pace": 0.6,
+      "type": "pace"
+    },
+    "type": "intent"
+  },
+  "protocolVersion": 2,
+  "sequence": 7
+}

@@ -15,7 +15,7 @@ Each message is one JSON object with a `type`. Swift: `RelayRequest` and `RelayE
 | `ping` | |
 
 - `v` is this format's version, sent with the first message on a connection.
-- `game` is `oware` or `ludo`; `protocol` is the room protocol version ([room-v1](../room-v1/README.md));
+- `game` is `oware` or `ludo`; `protocol` is the room protocol version (now 2: [room-v2](../room-v2/README.md));
   `format` is the game's match format version. A phone that joins a room made with other numbers
   gets `refused needsUpdate`.
 - `install` is a random ID kept on the phone. The relay keeps only a hash of it.
@@ -27,7 +27,7 @@ Each message is one JSON object with a `type`. Swift: `RelayRequest` and `RelayE
 - `token` takes the seat back with `rejoin`. Whoever holds it is that seat, so it is kept secret
   (Keychain) and the relay keeps only a hash.
 - `data` is one room message as JSON text, passed on untouched and never read or logged by the
-  relay. Without `to` it goes to everyone else in the room.
+  relay (the text in these examples is from room protocol version 1; the relay does not care). Without `to` it goes to everyone else in the room.
 - `refused` reasons: `notFound`, `full`, `paused`, `needsUpdate`, `needsUnlock`, `tooMany`,
   `invalid`. A phone treats a reason or a `type` it does not know as something to pass over, so
   the relay can say new things without breaking old apps.
