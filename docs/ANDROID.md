@@ -571,7 +571,7 @@ Decided by the owner on 2026-11-15:
 | Which game first | Lelu Oware, then Lelu Ludo. |
 | Android phone to test on | None yet. Emulator for steps 1–5; one is needed before step 7. |
 | Nearby play on Android | Not needed. Play with a friend comes through online play when that is ready. Step 9 is dropped. |
-| Package name | `com.richardforjoe.oware`. It cannot be changed after the first upload. |
+| Package name | `com.richardforjoe.oware` for Lelu Oware and `com.richardforjoe.leluludo` for Lelu Ludo, the same as the iOS bundle ids. Neither can be changed after the first upload. |
 | Google Play account | Personal. It is all a solo developer needs; the price is the 12-tester, 14-day closed test before going public (§6). |
 | Title typeface | **Source Serif 4** (Adobe, SIL Open Font License), bundled as one variable font file. Chosen because, like New York, it is a warm transitional serif with optical sizes, so large titles and small labels each get the right cut, and it has the semibold and bold weights the titles use. The licence allows shipping it inside an app; its text goes in the app's acknowledgements. Body text stays in the system sans. |
 | Leaderboards on Android | None for now. Game Center is off on iOS too. |
@@ -581,7 +581,6 @@ Still open:
 
 1. **Which Android phones do the friends have** (make and rough age)? It decides the minimum
    version and what to test on.
-2. **Package name for Lelu Ludo:** follow the same pattern as its bundle id?
 
 ## 10. Checked and not checked
 
