@@ -244,17 +244,22 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(OnlineConfig.relay(from: "").host, "play.leluoware.com")
     }
 
-    /// Debug builds keep `-onlinePlay YES -relayURL …` from one launch, so Play online is still
-    /// there when the app is opened from its icon or from a link.
-    func testOnlineSwitchesGivenAtLaunchAreKept() {
+    /// `-onlinePlay YES` at launch turns on the switch in Settings, the same one the player has:
+    /// so turning it off in Settings takes Play online off Home (the owner found it stayed).
+    func testTheLaunchSwitchTurnsOnTheSettingsSwitchWhichCanTurnItOffAgain() {
         let defaults = TestSupport.defaults()
+        defaults.set(true, forKey: "onlinePlay")   // what an earlier build left behind
         LaunchOptions.keepOnlineSwitches(["Oware", "-onlinePlay", "YES", "-relayURL", "ws://localhost:8787"], defaults: defaults)
-        XCTAssertTrue(defaults.bool(forKey: "onlinePlay"))
+        XCTAssertNil(defaults.object(forKey: "onlinePlay"), "the old switch that Settings could not reach is gone")
         XCTAssertEqual(defaults.string(forKey: "relayURL"), "ws://localhost:8787")
+        let settings = AppSettings(defaults: defaults, testMode: true)
+        XCTAssertTrue(settings.onlinePlayOn)
+        XCTAssertTrue(settings.showsOnlinePlay)
+
+        settings.onlinePlayOn = false
+        XCTAssertFalse(settings.showsOnlinePlay, "off in Settings is off on Home")
         LaunchOptions.keepOnlineSwitches(["Oware"], defaults: defaults)
-        XCTAssertTrue(defaults.bool(forKey: "onlinePlay"), "a launch without them changes nothing")
-        LaunchOptions.keepOnlineSwitches(["Oware", "-onlinePlay", "NO"], defaults: defaults)
-        XCTAssertFalse(defaults.bool(forKey: "onlinePlay"))
+        XCTAssertFalse(AppSettings(defaults: defaults, testMode: true).showsOnlinePlay, "and stays off on the next launch")
     }
 
     // MARK: Not getting in

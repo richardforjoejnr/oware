@@ -139,9 +139,9 @@ enum LaunchOptions {
     static var nearbyPlay: Bool { flag("--nearby", defaultsKey: "nearbyPlay") || nearbyDemo }
     /// `--nearby-demo` / `-nearbyDemo YES`: Play nearby finds only the demo player, Ama (UI tests).
     static var nearbyDemo: Bool { flag("--nearby-demo", defaultsKey: "nearbyDemo") }
-    /// `--online` / `-onlinePlay YES`: show Play online while its switch is off (trying it on two
-    /// phones before it ships).
-    static var onlinePlay: Bool { flag("--online", defaultsKey: "onlinePlay") || onlineDemo }
+    /// `--online`: show Play online for this launch whatever Settings says (tests). To try it on
+    /// a phone, `-onlinePlay YES` turns on Settings ▸ Play online instead (`keepOnlineSwitches`).
+    static var onlinePlay: Bool { flag("--online") || onlineDemo }
     /// `--online-demo` / `-onlineDemo YES`: Play online runs against a relay inside the app, and
     /// the demo player, Ama, joins your game (UI tests).
     static var onlineDemo: Bool { flag("--online-demo", defaultsKey: "onlineDemo") }
@@ -151,14 +151,16 @@ enum LaunchOptions {
         guard enabled else { return nil }
         return (value("--relay=") ?? UserDefaults.standard.string(forKey: "relayURL")).flatMap(URL.init(string:))
     }
-    /// Debug builds: `-onlinePlay YES -relayURL …` given once at launch (from Xcode or devicectl)
-    /// are kept, so Play online is still there when the app is next opened from its icon or from
-    /// an invitation link. `-onlinePlay NO` switches it off again.
+    /// Debug builds: `-onlinePlay YES -relayURL …` given at launch (from Xcode or devicectl).
+    /// `-onlinePlay YES` turns on Settings ▸ Play online, the same switch the player has, so it can
+    /// be turned off again there; `-relayURL` is kept until another is given.
     static func keepOnlineSwitches(_ arguments: [String] = CommandLine.arguments, defaults: UserDefaults = .standard) {
         guard enabled else { return }
+        // An earlier build kept the launch switch itself, which Settings could not turn off.
+        defaults.removeObject(forKey: "onlinePlay")
         for (key, value) in zip(arguments, arguments.dropFirst()) {
             switch key {
-            case "-onlinePlay": defaults.set(["yes", "true", "1"].contains(value.lowercased()), forKey: "onlinePlay")
+            case "-onlinePlay": defaults.set(["yes", "true", "1"].contains(value.lowercased()), forKey: AppSettings.onlineSwitchKey)
             case "-relayURL": defaults.set(value, forKey: "relayURL")
             default: break
             }

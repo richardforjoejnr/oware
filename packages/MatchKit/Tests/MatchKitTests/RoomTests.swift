@@ -159,6 +159,17 @@ struct RoomTests {
         #expect(table.host.pending.isEmpty)
     }
 
+    /// A game under way takes nobody new, even into a seat someone left.
+    @Test func theHostCanTurnSomeoneAwayAsFull() async {
+        let table = Table()
+        let (guest, _, log) = table.guest("Yaw")
+        await eventually("request") { !table.host.pending.isEmpty }
+        await table.host.turnAway(table.host.pending.keys.first!)
+        await eventually("told it is full") { log.events.contains(.refused(.roomFull)) }
+        #expect(table.host.pending.isEmpty)
+        #expect(guest.mySeat == nil)
+    }
+
     @Test func aNewerAppIsToldToWaitForTheOtherToUpdate() async {
         let table = Table()
         let (guest, _, log) = table.guest("Ama", protocolVersion: MatchKit.protocolVersion + 1)

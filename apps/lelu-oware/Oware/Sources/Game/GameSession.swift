@@ -86,6 +86,9 @@ final class GameSession {
     /// Guest: the match as the host last sent it.
     private var hostMatch: OwareMatch?
     private var unanswered: Task<Void, Never>?
+    /// Guest: the link to the host broke while a move sown here was unanswered. If the host turns
+    /// out not to have it, it is sent again.
+    private var askAgain = false
     /// Guest: how long a move sown here waits for the host's answer before it is taken back.
     var unansweredMoveWait: Duration = .seconds(8)
     private var syncTask: Task<Void, Never>?
@@ -695,6 +698,7 @@ final class GameSession {
         sharedPace = nil
         offersComputer = false
         isReconnecting = false
+        isStarted = false
         rematchAsked = []
         aiSeed = UInt64.random(in: .min ... .max)
         history = []
@@ -749,7 +753,7 @@ final class GameSession {
         switch event {
         case .seated:
             if let side = link.mySide {
-                mode = .remote(RemoteGame(mySide: side, opponentName: link.opponentName ?? ""))
+                mode = .remote(RemoteGame(mySide: side, opponentName: link.opponentName ?? "", via: remoteGame?.via ?? .nearby))
             }
         case let .snapshot(table):
             rematchAsked = table.rematchAsked
@@ -760,8 +764,11 @@ final class GameSession {
             sync()
         case let .reconnecting(seat):
             if seat != mySeat { isReconnecting = true }
+            if aheadMatch != nil { askAgain = true }
         case let .back(seat):
             if seat != mySeat { isReconnecting = false }
+            // Back with the host, whose match may be just as it was: no snapshot follows then.
+            sendAgainIfLost()
         case let .seatLost(seat):
             guard seat != mySeat else { return }
             isReconnecting = false
@@ -775,8 +782,11 @@ final class GameSession {
             offersComputer = !state.isOver
         case let .refused(reason):
             refusal = reason
-        case .joinRequest:
-            break
+        case let .joinRequest(peer, _):
+            // Once the game is under way nobody new is let in, including a player who left and
+            // came back to the old invitation. They are told, not left waiting. (Before it starts,
+            // whoever holds the link answers: the lobby, or a test.)
+            if isStarted { Task { await link.room.turnAway(peer) } }
         }
     }
 
@@ -786,14 +796,29 @@ final class GameSession {
         hostMatch = match
         if let ahead = aheadMatch {
             let sameGame = match.matchID == ahead.matchID && match.resignedBy == nil
-            if sameGame, match.houses.count < ahead.houses.count, ahead.houses.starts(with: match.houses) { return }
+            if sameGame, match.houses.count < ahead.houses.count, ahead.houses.starts(with: match.houses) {
+                sendAgainIfLost()
+                return
+            }
             settleAhead()
         }
         latestMatch = match
     }
 
+    /// The host is back and still has the game before this phone's move: the move was lost with
+    /// the connection. Send it again; the board already shows it. If the host had it after all,
+    /// the second asking is refused by the rules and changes nothing.
+    private func sendAgainIfLost() {
+        guard askAgain, let link, let ahead = aheadMatch, let house = ahead.houses.last,
+              let hostMatch, hostMatch.matchID == ahead.matchID, hostMatch.houses.count == ahead.houses.count - 1 else { return }
+        askAgain = false
+        waitForAnswer(to: ahead)
+        Task { await link.send(.play(house: house)) }
+    }
+
     private func settleAhead() {
         aheadMatch = nil
+        askAgain = false
         unanswered?.cancel()
         unanswered = nil
     }

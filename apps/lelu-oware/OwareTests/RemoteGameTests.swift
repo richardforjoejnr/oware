@@ -201,6 +201,29 @@ final class RemoteGameTests: XCTestCase {
         XCTAssertEqual(p.guest.state, p.host.state)
     }
 
+    /// The connection broke as the move was sent, and came back. The host never had the move, so
+    /// it is sent again by itself: the player does not have to notice and tap twice.
+    func testAMoveLostWithTheConnectionIsSentAgainWhenItReturns() async {
+        let p = await pair()
+        p.host.play(house: 2)
+        await until("guest's turn") { p.guest.humanToMove }
+        p.guestTransport.isQuiet = true
+        p.guest.play(house: 8)
+        await until("sown on the guest's board") { p.guest.state.moveNumber == 2 }
+        clock.advance(by: 5)
+        await p.guestLink.tick()
+        await p.hostLink.tick()
+        XCTAssertTrue(p.guest.isReconnecting)
+
+        p.guestTransport.isQuiet = false
+        await p.guestLink.tick()
+        await p.hostLink.tick()
+        await until("the host gets the move after all") { p.host.state.moveNumber == 2 }
+        await settle()
+        XCTAssertEqual(p.guest.state, p.host.state)
+        XCTAssertEqual(p.guest.state.moveNumber, 2, "sown once, never taken back")
+    }
+
     func testNorthCanStart() async {
         let p = await pair(starter: .north)
         XCTAssertFalse(p.host.humanToMove)

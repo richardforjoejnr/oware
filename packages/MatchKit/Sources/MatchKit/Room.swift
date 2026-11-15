@@ -255,6 +255,13 @@ public final class Room<Rules: RoomRules> {
         await post(.refused(.declined), to: peer)
     }
 
+    /// Host: no more players, whatever seats are free (the game is under way). Whoever asked is
+    /// told the room is full.
+    public func turnAway(_ peer: PeerID) async {
+        guard role == .host, pending.removeValue(forKey: peer) != nil else { return }
+        await post(.refused(.roomFull), to: peer)
+    }
+
     /// Host: sends away someone already seated, before the game (Not now after letting them in).
     /// They are told no, as if declined, and the seat is free for the next one to ask.
     public func dismiss(seat: Int) async {

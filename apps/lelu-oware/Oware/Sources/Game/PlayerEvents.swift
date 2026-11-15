@@ -39,7 +39,7 @@ final class PlayerEvents {
         case let .remote(game):
             // No Game Center for nearby games yet (NEARBY_PLAY.md, still to decide).
             let result = outcome.winner == nil ? "draw" : (outcome.winner == game.mySide ? "win" : "loss")
-            track(.nearbyFinished(result: result, rules: rules))
+            track(game.via == .online ? .onlineFinished(result: result, rules: rules) : .nearbyFinished(result: result, rules: rules))
             return
         }
         let result: String
