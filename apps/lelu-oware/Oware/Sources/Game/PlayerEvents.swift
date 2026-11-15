@@ -90,6 +90,8 @@ final class PlayerEvents {
 
     func nearbyHosted(demo: Bool) { track(.nearbyHosted(demo: demo)) }
     func nearbyJoined(demo: Bool) { track(.nearbyJoined(demo: demo)) }
+    func onlineStarted(demo: Bool) { track(.onlineStarted(demo: demo)) }
+    func onlineJoined(demo: Bool) { track(.onlineJoined(demo: demo)) }
     func nearbyDropped(finishedAgainstComputer: Bool) { track(.nearbyDropped(finishedAgainstComputer: finishedAgainstComputer)) }
 
     func tipPurchased(productID: String?) {

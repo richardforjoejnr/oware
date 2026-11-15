@@ -11,6 +11,7 @@ struct OwareApp: App {
     @State private var tipJar: TipJar
     @State private var reminder = RiddleReminder()
     @State private var lobby: NearbyLobby
+    @State private var online: OnlinePlay
 
     init() {
         LaunchClock.appStarted()
@@ -27,6 +28,7 @@ struct OwareApp: App {
                 keys.forEach(UserDefaults.standard.removeObject(forKey:))
             }
         }
+        LaunchOptions.keepOnlineSwitches()
         // The session records results itself, so a game that ends off-screen still counts.
         let progress = JourneyProgress()
         let session = GameSession()
@@ -35,6 +37,7 @@ struct OwareApp: App {
         _progress = State(initialValue: progress)
         let network: any NearbyNetwork = LaunchOptions.nearbyDemo ? DemoNetwork() : LiveNearbyNetwork()
         _lobby = State(initialValue: NearbyLobby(session: session, network: network))
+        _online = State(initialValue: OnlinePlay(session: session))
         // Every tip is counted, including ones the App Store delivers later (Ask to Buy).
         // `--tips-unavailable` (Debug only): the App Store returns nothing, to test the Try again path.
         let noTips: TipJar.ProductLoader = { _ in [] }
@@ -59,6 +62,7 @@ struct OwareApp: App {
                 .environment(tipJar)
                 .environment(reminder)
                 .environment(lobby)
+                .environment(online)
                 .preferredColorScheme(.dark)
         }
     }
@@ -135,6 +139,31 @@ enum LaunchOptions {
     static var nearbyPlay: Bool { flag("--nearby", defaultsKey: "nearbyPlay") || nearbyDemo }
     /// `--nearby-demo` / `-nearbyDemo YES`: Play nearby finds only the demo player, Ama (UI tests).
     static var nearbyDemo: Bool { flag("--nearby-demo", defaultsKey: "nearbyDemo") }
+    /// `--online` / `-onlinePlay YES`: show Play online while its switch is off (trying it on two
+    /// phones before it ships).
+    static var onlinePlay: Bool { flag("--online", defaultsKey: "onlinePlay") || onlineDemo }
+    /// `--online-demo` / `-onlineDemo YES`: Play online runs against a relay inside the app, and
+    /// the demo player, Ama, joins your game (UI tests).
+    static var onlineDemo: Bool { flag("--online-demo", defaultsKey: "onlineDemo") }
+    /// `--relay=ws://localhost:8787` / `-relayURL …`: the relay to use instead of the real one
+    /// (`npm run dev` in the AWS repo's apps/lelu-play, or a `dev` stage).
+    static var relayURL: URL? {
+        guard enabled else { return nil }
+        return (value("--relay=") ?? UserDefaults.standard.string(forKey: "relayURL")).flatMap(URL.init(string:))
+    }
+    /// Debug builds: `-onlinePlay YES -relayURL …` given once at launch (from Xcode or devicectl)
+    /// are kept, so Play online is still there when the app is next opened from its icon or from
+    /// an invitation link. `-onlinePlay NO` switches it off again.
+    static func keepOnlineSwitches(_ arguments: [String] = CommandLine.arguments, defaults: UserDefaults = .standard) {
+        guard enabled else { return }
+        for (key, value) in zip(arguments, arguments.dropFirst()) {
+            switch key {
+            case "-onlinePlay": defaults.set(["yes", "true", "1"].contains(value.lowercased()), forKey: "onlinePlay")
+            case "-relayURL": defaults.set(value, forKey: "relayURL")
+            default: break
+            }
+        }
+    }
     /// `--demo-resign-after=N`: Ama resigns her first game once she has made N moves.
     static var demoResignAfter: Int? { number("--demo-resign-after=", defaultsKey: "demoResignAfter") }
     /// `--demo-quiet-after=N`: Ama's phone goes quiet for twelve seconds after her Nth move.

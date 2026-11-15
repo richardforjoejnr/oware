@@ -16,6 +16,7 @@ struct HomeView: View {
     let openHeritage: () -> Void
     let openJourney: () -> Void
     var openNearby: () -> Void = {}
+    var openOnline: () -> Void = {}
     let openSettings: () -> Void
 
     @AppStorage("preferredDifficulty") private var preferredDifficulty: Int = Difficulty.beginner.rawValue
@@ -300,6 +301,10 @@ struct HomeView: View {
             if Feature.showsNearbyPlay {
                 WoodPlank(title: "Play nearby", subtitle: "two phones, one game", glyph: "people", height: 56) { openNearby() }
                     .accessibilityIdentifier("btn-nearby")
+            }
+            if settings.showsOnlinePlay {
+                WoodPlank(title: "Play online", subtitle: "a friend, anywhere", glyph: "people", height: 56) { openOnline() }
+                    .accessibilityIdentifier("btn-online")
             }
             if session.hasResumableGame {
                 WoodPlank(title: "Riddles", subtitle: library.dailySolved ? "today's solved · \(library.solvedIDs.count) of \(library.puzzles.count)" : "a new one every day", glyph: "knot", height: 56) { openPuzzles() }

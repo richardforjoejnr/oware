@@ -249,11 +249,34 @@ public struct RoomCode: Hashable, Sendable, CustomStringConvertible {
         text = tidy
     }
 
-    /// From a join link: `https://leluoware.com/<app>/join/<code>`.
+    /// From an invitation link: `https://leluoware.com/<app>/join?c=<code>` (what the apps share),
+    /// the app's own `<scheme>://join?c=<code>`, or the code as the last part of the path
+    /// (`…/join/<code>`).
     public init?(link: URL) {
         let parts = link.pathComponents.filter { $0 != "/" }
+        let isJoin = parts.last == "join" || link.host == "join" && parts.isEmpty
+        if isJoin, let typed = URLComponents(url: link, resolvingAgainstBaseURL: false)?
+            .queryItems?.first(where: { $0.name == "c" })?.value, let code = RoomCode(typed) {
+            self = code
+            return
+        }
         guard parts.count >= 2, parts[parts.count - 2] == "join", let code = RoomCode(parts[parts.count - 1]) else { return nil }
         self = code
+    }
+
+    /// What a player typed or pasted: a code, or a whole invitation link (or a message with one in it).
+    public init?(pasted text: String) {
+        if let code = RoomCode(text) {
+            self = code
+            return
+        }
+        for word in text.split(whereSeparator: \.isWhitespace) {
+            if let url = URL(string: String(word)), url.scheme != nil, let code = RoomCode(link: url) {
+                self = code
+                return
+            }
+        }
+        return nil
     }
 
     public var description: String { text }

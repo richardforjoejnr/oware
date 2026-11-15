@@ -8,6 +8,7 @@ enum Screen: Hashable {
     case heritage
     case journey
     case nearby
+    case online
 }
 
 struct RootView: View {
@@ -17,6 +18,7 @@ struct RootView: View {
     @Environment(PuzzleLibrary.self) private var library
     @Environment(RiddleReminder.self) private var reminder
     @Environment(NearbyLobby.self) private var lobby
+    @Environment(OnlinePlay.self) private var online
     @Environment(\.scenePhase) private var scenePhase
     /// Nearby with the demo player (Settings ▸ Try nearby play) rather than real phones.
     @State private var nearbyDemo = false
@@ -37,6 +39,15 @@ struct RootView: View {
         screen = .nearby
     }
 
+    /// Straight to Ready to play in the game the link is for. Ignored while Play online is hidden.
+    private func openInvitation(_ url: URL) {
+        guard settings.showsOnlinePlay else { return }
+        guard online.open(link: url, name: NearbyLobby.myName, pace: settings.effectiveSpeed) else { return }
+        showSettings = false
+        showSplash = false
+        screen = .online
+    }
+
     var body: some View {
         ZStack {
             Theme.night.ignoresSafeArea()
@@ -52,6 +63,10 @@ struct RootView: View {
                          openHeritage: { screen = .heritage },
                          openJourney: { screen = .journey },
                          openNearby: { openNearby(demo: false) },
+                         openOnline: {
+                             online.lobby.prepare(demo: false)
+                             screen = .online
+                         },
                          openSettings: { showSettings = true })
                     .transition(.opacity)
             case .game:
@@ -67,6 +82,11 @@ struct RootView: View {
                 .transition(.opacity)
             case .nearby:
                 NearbyView(demo: nearbyDemo || LaunchOptions.nearbyDemo, goBack: { screen = .home })
+                    .transition(.opacity)
+            case .online:
+                // The same screen and lobby as nearby play, with a code in place of games nearby.
+                NearbyView(demo: online.lobby.isDemo, goBack: { screen = .home })
+                    .environment(online.lobby)
                     .transition(.opacity)
             case .heritage:
                 HeritageView(goBack: { screen = .home })
@@ -95,8 +115,17 @@ struct RootView: View {
             guard phase == .active else { return }
             Task { await reminder.reschedule(solvedToday: library.dailySolved, streak: library.currentStreak()) }
         }
+        // An invitation to an online game: tapped in a message (a universal link), or the join
+        // page's "Open in Lelu Oware" button (leluoware://join?c=…).
+        .onOpenURL { openInvitation($0) }
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if let url = activity.webpageURL { openInvitation(url) }
+        }
+        // A TestFlight build learns what it is from the App Store, then offers Settings ▸ Play online.
+        .task { settings.offersOnlineSwitch = AppSettings.offersOnlineSwitch(in: await AppChannel.current()) }
         .onAppear {
             lobby.onStart = { screen = .game }
+            online.lobby.onStart = { screen = .game }
             library.variant = settings.rules.variant
             switch LaunchOptions.startScreen {
             case "journey": screen = .journey

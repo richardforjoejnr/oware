@@ -8,6 +8,8 @@ public struct PeerID: Hashable, Sendable, Codable, CustomStringConvertible {
 }
 
 public enum TransportEvent: Sendable {
+    /// A peer is reachable. Sent again for the same peer when the link to it is new (after a
+    /// reconnect): messages in between may have been lost, so the room catches up.
     case connected(PeerID)
     case disconnected(PeerID)
     case received(Data, from: PeerID)

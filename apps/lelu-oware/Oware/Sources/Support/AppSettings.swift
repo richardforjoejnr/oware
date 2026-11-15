@@ -35,6 +35,21 @@ final class AppSettings {
     var showHouseLabels: Bool {
         didSet { defaults.set(showHouseLabels, forKey: "showHouseLabels") }
     }
+    /// Settings ▸ Play online: adds Play online to Home while the feature's own switch
+    /// (`Feature.online`) is still off. Only in builds that offer it (`offersOnlineSwitch`).
+    var onlinePlayOn: Bool {
+        didSet { defaults.set(onlinePlayOn, forKey: "onlinePlaySwitch") }
+    }
+    /// This build has the Play online switch in Settings: builds from Xcode at once, TestFlight
+    /// builds once the App Store has said which kind of build this is. Never an App Store build.
+    var offersOnlineSwitch = AppSettings.offersOnlineSwitch(in: .buildTime)
+    /// Play online is on Home: the feature is on for everyone, or switched on here.
+    var showsOnlinePlay: Bool { Feature.showsOnlinePlay || (offersOnlineSwitch && onlinePlayOn) }
+
+    /// TestFlight builds cannot be told from App Review's (`AppChannel.sandbox`), so App Review
+    /// sees the switch too.
+    static func offersOnlineSwitch(in channel: AppChannel) -> Bool { channel != .appStore }
+
     /// Whether the board labels its houses: the setting, or always in lessons and riddles.
     /// A house label (its name, or its count) shows when switched on, or when the screen needs it.
     func labelsHouses(required: Bool) -> Bool { showHouseLabels || required }
@@ -107,6 +122,7 @@ final class AppSettings {
         hapticsEnabled = defaults.object(forKey: "hapticsEnabled") as? Bool ?? true
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
         showHouseLabels = defaults.object(forKey: "showHouseLabels") as? Bool ?? false
+        onlinePlayOn = defaults.bool(forKey: "onlinePlaySwitch")
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id

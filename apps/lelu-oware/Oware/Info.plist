@@ -20,6 +20,17 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.richardforjoe.oware</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>leluoware</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
@@ -32,6 +43,8 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Lelu Oware uses your local network to find another nearby player and play directly between your phones.</string>
+	<key>RelayURL</key>
+	<string>$(RELAY_URL)</string>
 	<key>TelemetryDeckAppID</key>
 	<string>$(TELEMETRYDECK_APP_ID)</string>
 	<key>UIApplicationSceneManifest</key>

@@ -47,6 +47,8 @@ function handler(event) {
   var req = event.request;
   var uri = req.uri;
   var last = uri.substring(uri.lastIndexOf('/') + 1);
+  // Apple fetches /.well-known/apple-app-site-association as it is: a file with no extension.
+  if (uri.indexOf('/.well-known/') === 0) { return req; }
   if (uri.endsWith('/')) { req.uri = uri + 'index.html'; }
   else if (last.indexOf('.') === -1) { req.uri = uri + '/index.html'; }
   return req;
@@ -101,6 +103,17 @@ function handler(event) {
       distribution,
       distributionPaths: ['/*'],
       memoryLimit: 1024,   // test reports carry screenshots
+      exclude: ['.well-known/*'],
+    });
+    // The file that lets an invitation link open the app has no extension, so S3 cannot guess
+    // what it is. Apple asks for JSON.
+    new s3deploy.BucketDeployment(this, 'WellKnownDeployment', {
+      sources: [s3deploy.Source.asset(siteDir)],
+      destinationBucket: bucket,
+      exclude: ['*'],
+      include: ['.well-known/*'],
+      contentType: 'application/json',
+      prune: false,
     });
 
     const url = `https://${domainName ?? distribution.distributionDomainName}`;

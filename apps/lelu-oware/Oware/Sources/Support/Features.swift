@@ -18,6 +18,10 @@ enum Feature {
     @MainActor
     static var showsNearbyPlay: Bool { gate().isShown(nearbyPlay) || LaunchOptions.nearbyPlay }
 
+    /// Play online on Home: when its switch is on, or with `--online` in a Debug build.
+    @MainActor
+    static var showsOnlinePlay: Bool { gate().isShown(online) || LaunchOptions.onlinePlay }
+
     /// The app's gate, with a purchase record for every feature that is sold.
     @MainActor
     static func gate(defaults: UserDefaults = .standard) -> FeatureGate {

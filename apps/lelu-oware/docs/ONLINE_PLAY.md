@@ -3,7 +3,7 @@
 Two people in different places, one game, over the internet. A friend joins with a 6-letter code or
 a link. The whole plan, shared with Lelu Ludo, is [ONLINE_PLAY.md](../../../docs/ONLINE_PLAY.md):
 the relay on AWS, cost, privacy and the order of work. This file is what is specific to Oware.
-Planned 2026-11-15; nothing is built.
+Planned 2026-11-15. What is built so far, and how to try it, is in [STATUS.md](STATUS.md) ▸ Online play.
 
 **Oware goes first**, because nearby play already built everything above the transport.
 
@@ -27,7 +27,7 @@ messages is enough between friends.
 |---|---|
 | Home | **Play online**, shown when `FeatureGate.isShown(Feature.online)` |
 | `Game/OnlineLobby.swift` | The nearby lobby's phases with a code in place of *Games nearby*: **Start game** (rules, name) → the code and **Share**; **Enter code**; then Ready to play. The shared part of `NearbyLobby` is pulled out, not copied |
-| Links | `https://leluoware.com/lelu-oware/join/<code>` opens the app at Ready to play (Associated Domains); without the app, a page with the code and the App Store button |
+| Links | `https://leluoware.com/lelu-oware/join?c=<code>` opens the app at Ready to play (Associated Domains); without the app, a page with the code and the App Store button |
 | Wording | *Reconnecting to Ama…* waits longer than nearby (proposed 25 s, then 90 s); no "stay close" or Wi-Fi help; "Online play is resting" when the service is paused |
 | `Support/Features.swift` | `online` stays `.off` until the last stage; `-onlinePlay YES` shows it in Debug builds |
 | Tests | `--online-demo` (Ama over `LoopbackTransport`), `OnlineUITests`, `online-demo.yaml` for Maestro |

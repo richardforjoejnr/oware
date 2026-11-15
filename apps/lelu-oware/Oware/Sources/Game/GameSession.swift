@@ -81,6 +81,13 @@ final class GameSession {
     /// The match as the board shows it, and the latest from the host.
     private var shownMatch: OwareMatch?
     private var latestMatch: OwareMatch?
+    /// Guest: the match with this phone's own move, sown here before the host has answered.
+    private var aheadMatch: OwareMatch?
+    /// Guest: the match as the host last sent it.
+    private var hostMatch: OwareMatch?
+    private var unanswered: Task<Void, Never>?
+    /// Guest: how long a move sown here waits for the host's answer before it is taken back.
+    var unansweredMoveWait: Duration = .seconds(8)
     private var syncTask: Task<Void, Never>?
 
     var remoteGame: RemoteGame? { mode.remoteGame }
@@ -310,7 +317,16 @@ final class GameSession {
         let move = Move(player: state.sideToMove, absoluteHouse: house)
         guard state.isLegal(move) else { return }
         if let link, case .remote = mode {
-            // The host's phone decides; the move is shown when its snapshot comes back.
+            // The host's phone decides. On the host that is at once. On the joining phone the
+            // answer takes a moment (longer online), so the move is sown here now and the host's
+            // snapshot confirms it; the engine on this phone has already found it legal.
+            if !link.isHost, aheadMatch == nil, var ahead = shownMatch, ahead == latestMatch {
+                ahead.houses.append(house)
+                aheadMatch = ahead
+                latestMatch = ahead
+                sync()
+                waitForAnswer(to: ahead)
+            }
             Task { await link.send(.play(house: house)) }
             return
         }
@@ -634,13 +650,15 @@ final class GameSession {
 
     /// Shows the game on the other end of `link`: the host's phone decides every move, and its
     /// snapshots are played on this board like the computer's moves.
-    func startRemote(_ link: MatchLink) {
+    func startRemote(_ link: MatchLink, via: RemoteGame.Via = .nearby) {
         leaveRemote()
         interrupt()
         self.link = link
-        mode = .remote(RemoteGame(mySide: link.mySide ?? (link.isHost ? .south : .north), opponentName: link.opponentName ?? ""))
+        mode = .remote(RemoteGame(mySide: link.mySide ?? (link.isHost ? .south : .north), opponentName: link.opponentName ?? "", via: via))
+        settleAhead()
         shownMatch = link.table?.match
         latestMatch = shownMatch
+        hostMatch = shownMatch
         state = (try? shownMatch?.state()) ?? .initial
         history = []
         resultRecorded = false
@@ -699,8 +717,10 @@ final class GameSession {
         sharedPace = nil
         syncTask?.cancel()
         syncTask = nil
+        settleAhead()
         shownMatch = nil
         latestMatch = nil
+        hostMatch = nil
         guard let link else { return }
         self.link = nil
         link.onEvent = nil
@@ -736,7 +756,7 @@ final class GameSession {
             sharedPace = table.sharedPace
             isStarted = table.isStarted
             isOutOfStep = table.isOutOfStep
-            latestMatch = table.match
+            take(table.match)
             sync()
         case let .reconnecting(seat):
             if seat != mySeat { isReconnecting = true }
@@ -757,6 +777,40 @@ final class GameSession {
             refusal = reason
         case .joinRequest:
             break
+        }
+    }
+
+    /// The host's match becomes the one to show, unless this phone is a move ahead of it: then
+    /// the host's copy is the game before that move, on its way to being answered.
+    private func take(_ match: OwareMatch) {
+        hostMatch = match
+        if let ahead = aheadMatch {
+            let sameGame = match.matchID == ahead.matchID && match.resignedBy == nil
+            if sameGame, match.houses.count < ahead.houses.count, ahead.houses.starts(with: match.houses) { return }
+            settleAhead()
+        }
+        latestMatch = match
+    }
+
+    private func settleAhead() {
+        aheadMatch = nil
+        unanswered?.cancel()
+        unanswered = nil
+    }
+
+    /// The host never answered the move sown here (it was lost on the way): back to the game as
+    /// the host has it.
+    private func waitForAnswer(to ahead: OwareMatch) {
+        unanswered?.cancel()
+        let wait = unansweredMoveWait
+        unanswered = Task { [weak self] in
+            try? await Task.sleep(for: wait)
+            guard let self, !Task.isCancelled, self.aheadMatch == ahead else { return }
+            self.aheadMatch = nil
+            self.unanswered = nil
+            guard let hostMatch = self.hostMatch else { return }
+            self.latestMatch = hostMatch
+            self.sync()
         }
     }
 

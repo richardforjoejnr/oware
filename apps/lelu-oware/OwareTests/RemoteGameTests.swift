@@ -152,6 +152,55 @@ final class RemoteGameTests: XCTestCase {
         XCTAssertEqual(p.guest.state, p.host.state)
     }
 
+    /// The joining phone sows its own move the moment it is tapped. Online the host's answer takes
+    /// a moment to come back; waiting for it made that phone feel slow (the owner, on two iPhones).
+    func testTheGuestsOwnMoveIsSownAtOnceNotWhenTheHostAnswers() async {
+        let p = await pair()
+        p.host.play(house: 2)
+        await until("guest's turn") { p.guest.humanToMove }
+        p.guestTransport.isQuiet = true   // nothing reaches the host, and nothing comes back
+        p.guest.play(house: 8)
+        await until("sown on the guest's own board") { p.guest.state.moveNumber == 2 }
+        XCTAssertFalse(p.guest.humanToMove, "one move, then the other player's turn")
+        XCTAssertEqual(p.host.state.moveNumber, 1, "the host has not heard yet")
+    }
+
+    func testTheHostsAnswerToAMoveAlreadySownChangesNothing() async {
+        let p = await pair()
+        p.host.play(house: 2)
+        await until("guest's turn") { p.guest.humanToMove }
+        p.guest.play(house: 8)
+        await until("host sees the move") { p.host.state.moveNumber == 2 }
+        await settle()
+        XCTAssertEqual(p.guest.state, p.host.state)
+        XCTAssertEqual(p.guest.state.moveNumber, 2, "sown once, not again when the host's copy arrives")
+        p.host.play(house: 3)
+        await until("and play goes on") { p.guest.state.moveNumber == 3 }
+        XCTAssertEqual(p.guest.state, p.host.state)
+    }
+
+    /// The move never reached the host (the connection died as it was sent): the board goes back
+    /// to the game as the host has it, and the player can move again.
+    func testAMoveTheHostNeverGotIsTakenBack() async {
+        let p = await pair()
+        p.guest.unansweredMoveWait = .milliseconds(150)
+        p.host.play(house: 2)
+        await until("guest's turn") { p.guest.humanToMove }
+        let before = p.guest.state
+        p.guestTransport.isQuiet = true
+        p.guest.play(house: 8)
+        await until("sown") { p.guest.state.moveNumber == 2 }
+        await until("taken back") { p.guest.state.moveNumber == 1 }
+        XCTAssertEqual(p.guest.state, before)
+        XCTAssertTrue(p.guest.humanToMove)
+
+        p.guestTransport.isQuiet = false
+        p.guest.play(house: 8)
+        await until("this time the host gets it") { p.host.state.moveNumber == 2 }
+        await settle()
+        XCTAssertEqual(p.guest.state, p.host.state)
+    }
+
     func testNorthCanStart() async {
         let p = await pair(starter: .north)
         XCTAssertFalse(p.host.humanToMove)
