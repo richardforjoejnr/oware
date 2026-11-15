@@ -171,10 +171,11 @@ What exists:
   the product is created (and added back to `Tips.storekit`) only in the version that ships online play.
 - `OnlinePolicy` / `OnlineAccess`: who may host and who may join.
 
-Still to build when online ships:
-1. Matchmaking and turns with Game Center turn-based matches (`GKTurnBasedMatch`), sending
-   `OnlineMatch.encoded()` as the match data.
-2. The screens: an Online tile, the purchase sheet, invites.
+Still to build when online ships (**replaced 2026-11-15** by the plan in
+[ONLINE_PLAY.md](../../../docs/ONLINE_PLAY.md): a small relay on AWS in place of Game Center
+turn-based matches, which cannot include Android):
+1. An online transport for MatchKit and the relay it talks to; friends join by code or link.
+2. The screens: a Play online tile, the code and Share, the purchase sheet when it is paid.
 3. The product in App Store Connect, and `FeatureFlags.onlinePlay = true`.
 4. Privacy policy and label updates for online play.
 5. Decide `OnlinePolicy.foundingPlayersIncluded`, and set `OnlineProduct.lastFreeBuild` if early
