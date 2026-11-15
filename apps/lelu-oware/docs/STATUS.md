@@ -46,6 +46,14 @@ Still to build before it is turned on: the relay's limits, alarms, off switch an
 (stage 3); a game that survives the app closing (saved game, Rejoin card, the seat kept past 90 s);
 the install ID in the Keychain; the paid path's tests; the privacy page, App Privacy label and review
 notes (stage 6).
+## Android (planned 2026-11-15)
+
+A native Android app (Kotlin, Jetpack Compose), Lelu Oware first. The rules are ported to Kotlin
+and both engines must pass one set of JSON test vectors; the iOS app does not change. Plan, costs
+and questions for the owner: [docs/ANDROID.md](../../../docs/ANDROID.md); what is specific to
+Oware: [ANDROID.md](ANDROID.md). Nothing is built. Step 1 (rules vectors) is next once the owner
+has answered the questions.
+
 
 ## App Review rejection of 1.0.0 (30 Oct 2026, branch `fix/oware-app-review-iap`)
 

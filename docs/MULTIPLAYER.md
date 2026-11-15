@@ -11,8 +11,12 @@ are [Lelu Oware](../apps/lelu-oware/docs/NEARBY_PLAY.md) and
 | Order | Lelu Oware first, then Lelu Ludo (2–4 phones) |
 | Price | Nearby play is **free**. Every feature still goes through a switch, so any of them can be made paid later. |
 | Empty seats (Ludo) | Played by the computer |
-| Later | Online play (Game Center), paid, host pays (`apps/lelu-oware/docs/SERVICES.md` §8) |
+| Later | Online play, paid, host pays. Planned 2026-11-15 on AWS, not Game Center, so Android can join: [ONLINE_PLAY.md](ONLINE_PLAY.md). Where this file says `GameCenterTransport`, read `OnlineTransport`. |
 | Way of working | Tests first: each step's tests are written, and fail, before its code |
+
+Android (planned 2026-11-15): Apple's phone-to-phone Wi-Fi does not reach Android phones, so a
+pair that includes one needs the same Wi-Fi network or a hotspot, or online play. See
+[ANDROID.md](ANDROID.md) §3.2.
 
 ## 1. Why Network framework, not Bluetooth or Multipeer
 
