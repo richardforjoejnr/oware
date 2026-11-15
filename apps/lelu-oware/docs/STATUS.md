@@ -17,6 +17,14 @@
 - **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
   `packages/*/.swiftpm` after `swift test`; run `make project` after pulling.
 
+## Android (planned 2026-11-15)
+
+A native Android app (Kotlin, Jetpack Compose), Lelu Oware first. The rules are ported to Kotlin
+and both engines must pass one set of JSON test vectors; the iOS app does not change. Plan, costs
+and questions for the owner: [docs/ANDROID.md](../../../docs/ANDROID.md); what is specific to
+Oware: [ANDROID.md](ANDROID.md). Nothing is built. Step 1 (rules vectors) is next once the owner
+has answered the questions.
+
 ## App Review rejection of 1.0.0 (30 Oct 2026, branch `fix/oware-app-review-iap`)
 
 Build 202610102016 was rejected on an iPad Air (iPadOS 27.2) for 2.1(b) tips failed to load, 2.1(b)

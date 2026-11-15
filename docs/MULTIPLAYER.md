@@ -14,6 +14,10 @@ are [Lelu Oware](../apps/lelu-oware/docs/NEARBY_PLAY.md) and
 | Later | Online play (Game Center), paid, host pays (`apps/lelu-oware/docs/SERVICES.md` §8) |
 | Way of working | Tests first: each step's tests are written, and fail, before its code |
 
+Android (planned 2026-11-15): Apple's phone-to-phone Wi-Fi does not reach Android phones, so a
+pair that includes one needs the same Wi-Fi network or a hotspot, or online play. See
+[ANDROID.md](ANDROID.md) §3.2.
+
 ## 1. Why Network framework, not Bluetooth or Multipeer
 
 - **Multipeer Connectivity** is deprecated: `MCSession` is marked deprecated in iOS 27, and Apple's
