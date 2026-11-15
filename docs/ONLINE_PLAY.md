@@ -600,6 +600,15 @@ Decided by the owner on 2026-11-15:
 | Ludo: who rolls for a computer seat | The server, like every other roll. |
 | Game Center | Not wanted, for online play, leaderboards or achievements. |
 
+Decided while building (2026-11-15):
+
+| Question | Decision |
+|---|---|
+| Tidy the room messages before online play depends on them? | **Yes: room protocol version 2**, plain JSON, in `shared/vectors/room-v2`. A phone refuses every version but its own, so a phone on the first nearby play and one on this cannot play nearby together; each is told which to update. |
+| The invitation link | `https://leluoware.com/lelu-oware/join?c=<code>`: the code as a query, so the join page is one static page. The app also opens `/join/<code>` and its own `leluoware://join?c=<code>`. Where this plan writes `/join/K7M2QD`, read the query form. |
+| How a friend is invited | **Invite a friend** makes the game and opens the share sheet in one tap. The waiting screen shows the code and a QR code of the link. The code box takes a pasted link or message. |
+| The joining phone's own move | Sown the moment it is tapped; the host's snapshot confirms it, and a move the host never got is taken back after 8 s. |
+
 Still open. Each has a proposal, and the work goes ahead on the proposal unless the owner says
 otherwise:
 
@@ -613,6 +622,9 @@ otherwise:
    stage 8.
 5. **If the creator never comes back,** the guest can only finish against the computer until
    stage 8. Is that acceptable for the first version, or should the referee come before Ludo?
+6. **Does a friend who arrives by the link still press Ready, and can the creator still say Not
+   now?** Built: yes to both. Proposed: for a link the creator sent, the game starts when the
+   creator taps Start.
 
 ## 13. Not verified
 
