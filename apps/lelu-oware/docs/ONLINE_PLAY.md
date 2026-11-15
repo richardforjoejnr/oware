@@ -42,5 +42,6 @@ messages is enough between friends.
 - [ ] One phone leaves for good: the other is offered the computer, and the room closes.
 - [ ] A wrong code, a used code, a full room, an old app version with a new one: a clear message each.
 - [ ] A game longer than two hours carries on (the connection is renewed without the player seeing).
+- [ ] Close the app mid-game on one phone, open it a few minutes later: Home shows the Rejoin card and the game carries on. Then the same with both phones closed.
 - [ ] VoiceOver: the code is read letter by letter; connection changes are announced.
 - [ ] UK to Ghana, once.

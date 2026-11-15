@@ -27,12 +27,12 @@ in place of "games nearby".
 | Earlier decision | Where | This plan |
 |---|---|---|
 | Online play means one new transport; rules, match format, host logic and game screen stay | MULTIPLAYER.md §2 | **Kept.** This is the whole design. |
-| Online is behind `FeatureGate`; one-time unlock; the host pays; invited friends play free | SERVICES.md §1, `Feature.table` | **Kept**, with one proposal: start as `.free` while it is new, then switch to `.unlock(hostPays: true, …)` (open question 1). Tips cannot be sold yet either (Paid Apps Agreement), so paid online could not ship today anyway. |
+| Online is behind `FeatureGate`; one-time unlock; the host pays; invited friends play free | SERVICES.md §1, `Feature.table` | **Kept. Decided 2026-11-15: free at first, built so that switching to paid is one line** (§5, *Free now, paid later*): start as `.free`, then `.unlock(hostPays: true, …)`. Tips cannot be sold yet either (Paid Apps Agreement), so paid online could not ship today anyway. |
 | No accounts; Game Center is the only sign-in and optional | SERVICES.md §1 | **Kept.** No sign-in for friends-only play (§6). |
 | No adverts; worldwide audience | SERVICES.md §1 | **Kept.** |
 | Online goes through **Game Center** (`GameCenterTransport`, `GKTurnBasedMatch`) | MULTIPLAYER.md, NEARBY_PLAY.md, SERVICES.md §8 | **Changed: AWS instead. This plan replaces SERVICES.md §8's "still to build" list.** Game Center is free but Apple-only, and an Android version is planned (PR #112). It also needs every player signed in to Game Center, which is off in the app today (`FeatureFlags.gameCenter = false`). |
 | Messages at most 64 KB (Game Center's limit) | MULTIPLAYER.md §2 | **Tightened to 32 KB** for online: API Gateway bills in 32 KB steps and closes a connection on a larger frame. An Oware match is under 1 KB; a long Ludo match needs watching (§4). |
-| A game does not survive both apps being closed; no undo, no hints | NEARBY_PLAY_REDESIGN.md decision 7 | **Kept for the first version.** Games that last days ("your turn" notifications) are a later stage (§11, stage 9). |
+| A game does not survive both apps being closed; no undo, no hints | NEARBY_PLAY_REDESIGN.md decision 7 | **Changed for online (owner, 2026-11-15): an online game survives the app being closed**, because players are on phone networks that cut out. Each phone saves the game and can rejoin for 24 hours (§5, *A game that survives the app closing*). Nearby play keeps decision 7. No undo and no hints, as before. "Your turn" notifications are still a later stage (§11, stage 9). |
 | Once the computer takes over, the game stays against the computer | NEARBY_PLAY_REDESIGN.md decision 2 | **Kept.** |
 
 ## 3. Friends only first
@@ -91,7 +91,7 @@ What Ludo adds, and where each is handled:
 | Ludo needs | Answer |
 |---|---|
 | Dice nobody can fake | The **server rolls** (§7). A numbered roll goes to every phone; the match must use the rolls in order. |
-| Empty seats played by the computer | Run on the creator's phone, as in the nearby plan. They move to the server with the referee (stage 8). |
+| Empty seats played by the computer | The moves are chosen on the creator's phone, as in the nearby plan, but **the server rolls for computer seats too** (owner, 2026-11-15): every roll in an online game is a numbered server roll. The computer's moves go to the server with the referee (stage 8). |
 | Someone leaves mid-game | The computer takes the seat after the waiting time; they can take it back (Ludo nearby plan). |
 | The creator leaves | First version: as nearby, each guest can finish against computers. Fixed properly by the referee (stage 8), where no phone is in charge. |
 | Bigger messages | A match is the full list of rolls and moves, so it grows. Keep it under 32 KB (test in `LudoMatchTests`); if a long game gets close, send only the new actions. |
@@ -134,11 +134,11 @@ inside `data`. Around it, the relay speaks a small JSON format, version 1:
 
 | Phone → relay | Relay → phone |
 |---|---|
-| `create {game, protocol, seats, install}` | `room {code, peer, token, peers}` |
+| `create {game, protocol, seats, install, proof?}` | `room {code, peer, token, peers}` |
 | `join {code, install}` | `peer {peer, state: joined / left / dropped}` |
 | `rejoin {code, token}` | `data {from, data}` |
 | `data {to?, data}` | `rolled {n, value}` (Ludo) |
-| `roll` (Ludo) | `refused {reason: notFound / full / paused / needsUpdate / tooMany}` |
+| `roll` (Ludo) | `refused {reason: notFound / full / paused / needsUpdate / needsUnlock / tooMany}` |
 | `leave` | `pong` |
 | `ping` | |
 
@@ -196,7 +196,7 @@ version 2, before anything else depends on it. This is stage 1.
   the phone rejoins and gets the snapshot. No background mode is asked for.
 - **Timings.** Nearby play pings every 2 s, shows "Reconnecting…" after 4 s and gives up after 15 s.
   Mobile data is slower to come back and every ping costs a little, so online needs its own
-  numbers: proposed ping every 10 s, "Reconnecting…" after 25 s, give up after 90 s (open question 4).
+  numbers: proposed ping every 10 s, "Reconnecting…" after 25 s, the sheet after 90 s (§12).
   `Room`'s three timings become a value passed in, so each transport sets its own.
 - **Knowing your own link is down.** WebSocket ping frames are free on API Gateway and are answered
   by the gateway, so the phone can check its own link every few seconds without cost.
@@ -204,6 +204,60 @@ version 2, before anything else depends on it. This is stage 1.
   version. A phone that joins with other numbers gets `refused(needsUpdate)` and the existing
   "Update Lelu Oware on both phones" message. The relay's own format has a version too; the relay
   serves the last two.
+
+### A game that survives the app closing
+
+Decided by the owner on 2026-11-15: players are on phone networks, a link can be gone for minutes,
+and iOS may close the app meanwhile. The game must still be there.
+
+This does not need the referee (stage 8). One phone stays in charge, and both phones remember:
+
+- **Each phone saves the online game to disk** after every snapshot: the room code, its seat
+  token (in the Keychain), its seat, and the match so far. The save is removed when the game ends
+  or the player leaves.
+- **On launch, a saved game shows a Rejoin card on Home** (*Your game with Kofi* · **Rejoin** ·
+  *Leave game*), the card nearby play's redesign already draws. Rejoin connects, sends
+  `rejoin(code, token)` and carries on from the saved match. The join link does the same.
+- **The relay keeps a playing room for 24 hours after its last message** (it was 2 hours). Seat
+  tokens live as long as the room. Nothing more is stored: still no moves and no names on the
+  server (§9).
+- **Who can carry on:**
+
+  | Who closed the app | What happens |
+  |---|---|
+  | The guest | The creator sees *Reconnecting to Kofi…*, then the sheet (*Keep waiting / Play the computer / Leave*). Keep waiting holds the seat; when Kofi rejoins he gets the snapshot and play goes on. |
+  | The creator | The guest sees the same sheet. When the creator's phone returns it loads its saved match, rejoins as seat 0 and is in charge again. |
+  | Both | Whoever returns first waits in the room. The game goes on when the creator is back, since the creator's phone applies the moves. Both saved matches are compared by hash on rejoin; if they differ the longer one that replays cleanly wins. |
+  | The creator never returns | The guest can finish against the computer, as in nearby play. This is the one gap, and the referee (stage 8) closes it: then no phone is in charge. |
+
+- **"Give up after 90 s" no longer ends anything.** It is when the sheet appears. The game is
+  only over when someone chooses *Play the computer* or *Leave*, or the room expires.
+- **No notifications yet.** A player who closed the app is not told it is their turn; they see the
+  Rejoin card next time they open it. Stage 9 adds the notification.
+
+Cost: a room item kept for a day is a few hundred bytes; nothing measurable. Work: about 2–3 days
+across stages 4 and 5, with tests that kill and relaunch the app mid-game.
+
+### Free now, paid later
+
+Decided by the owner on 2026-11-15: online play is free at first and must be easy to switch to
+paid. So the paid path is built and tested now and left switched off:
+
+- **In the app** the switch is one line: `Feature.online` from `.free` to
+  `.unlock(hostPays: true, …)` in `Feature.table`. Stage 5 builds *Start game* against
+  `FeatureGate`, with unit and UI tests run in both settings, so the paywall, the host-pays rule
+  (a guest with a code never pays) and founding players are proven before they are needed.
+- **On the relay**, `create` has an optional `proof` field from version 1: the signed StoreKit
+  transaction for the unlock. A stage setting `requireProof` (an SSM parameter, like the off
+  switch) is `false` to start. When it is turned on, a `create` without a valid proof gets
+  `refused(needsUnlock)`. Old app versions keep working until then, and no protocol change is
+  needed on the day. `join` never needs a proof.
+- **What the switch still takes:** the product approved in App Store Connect (which needs the Paid
+  Apps Agreement), and an app update carrying the one-line change. Apple reviews an in-app purchase
+  with a build, so this cannot be a purely remote switch. Founding players (everyone who installed
+  before the switch) keep it free, as SERVICES.md already says.
+- Android later: Play Billing has its own product and its own proof; the `proof` field carries a
+  `store` name so the relay knows which to check.
 
 ### In the apps
 
@@ -423,7 +477,7 @@ One table. Every item has `expiresAt`, and DynamoDB deletes it after that.
 
 | Item | Holds | Removed |
 |---|---|---|
-| Room `ROOM#<code>` | game, versions, state (waiting / playing / closed), seats, last activity, hash of the creator's install ID | Waiting: 30 min. Playing: 2 h after the last message. Closed: 10 min |
+| Room `ROOM#<code>` | game, versions, state (waiting / playing / closed), seats, last activity, hash of the creator's install ID | Waiting: 30 min. Playing: **24 h** after the last message, so a game survives the app closing (§5). Closed: 10 min |
 | Seat `ROOM#<code>` / `SEAT#<n>` | hash of the seat token, connection id, last heard | With the room |
 | Connection `CONN#<id>` | room and seat | On disconnect; at most 2 h 10 min |
 | Dice (Ludo) `ROOM#<code>` / `ROLL#<n>` | the roll | With the room |
@@ -462,7 +516,7 @@ the hourly alarm pauses the service long before that.
   or address; no names and no moves in the first version; logs without names, codes or addresses
   for a week (dev) or a month (prod). No account, email, contacts or location, no advertising, no
   tracking.
-- **Where:** AWS in the United States (`us-east-1`). The privacy policy says so (open question 5).
+- **Where:** AWS in the United States (`us-east-1`). The privacy policy says so (§12).
 - **Privacy policy:** a "Play online" section in each app's `privacy.md`, like the nearby one, and
   a line in "The short version". It names AWS as the processor and gives the retention times above.
 - **App Privacy label:** nearby play added nothing because nothing left the room. Online does send
@@ -482,9 +536,9 @@ the hourly alarm pauses the service long before that.
 | A player stops without leaving | The other phone's reconnect sheet after the waiting time: *Keep waiting / Play the computer / Leave*, as nearby | A turn timer on the server with the referee |
 | Abandoned rooms | Expire by TTL | |
 | "Your turn" notifications | **None.** Both players are in the app; the game is live | Stage 9. APNs called straight from Lambda (free) or through SNS; needs the Push capability, an APNs key held as an SSM secure parameter, and a permission prompt. FCM for Android |
-| Ludo's computer seats | The creator's phone | The referee |
+| Ludo's computer seats | The creator's phone chooses the move; the server rolls the die | The referee |
 | Rematch | In the same room, both must ask (built) | |
-| Game Center, achievements | None for online games with friends, as for nearby (easy to farm) | |
+| Game Center, achievements | None. The owner no longer wants Game Center at all, for leaderboards or achievements (2026-11-15); `FeatureFlags.gameCenter` stays `false` | |
 | App Review | Review notes say online play needs two devices and give the demo (`--online-demo`) and a two-phone video, as for nearby | |
 
 ### Watching it, cheaply
@@ -516,46 +570,49 @@ stage 6. Effort is rough, for one person.
 
 | Stage | Repo | Pull request | Effort | The owner does by hand |
 |---|---|---|---|---|
-| 0 | — | Decisions: the open questions in §12 | — | Answer them. Confirm which AWS account. Create the AWS Budget email |
+| 0 | — | Decisions: §12 | done 2026-11-15 | Create the AWS Budget email |
 | 1 | here | `test(matchkit): pin the room messages` then `feat(matchkit): the relay wire format and room timings` — JSON examples of every room message in `shared/vectors/room-v1/` (a version 2 if the automatic form needs tidying); `relay-v1/`, `RelayMessage`, `RoomTiming` (nearby keeps 2 / 4 / 15 s) | 2–3 days | — |
 | 2 | AWS | `feat(lelu-play): rooms and a relay` — `npm run new-app`, WebSocket API in place of REST, the core with its tests, local server, scripted game, preview workflow; deploy `dev` | 3–4 days | Run the first `dev` deploy |
-| 3 | AWS | `feat(lelu-play): limits, alarms and an off switch` — throttles, caps, limits, budget, alarms, pause, `play.leluoware.com` | 2 days | Confirm the alarm email. If the account differs from the website's, delegate `play.leluoware.com` to it |
-| 4 | here | `feat(matchkit): an online transport` — `MatchKitOnline`, reconnect and rejoin, tests on a fake socket | 3 days | — |
-| 5 | here | `feat(oware): play online with a friend (hidden)` — lobby, code and Share, Enter code, Ready, reconnect wording, links, `--online-demo`, analytics; website: `apple-app-site-association` and the join page | 5–7 days | Turn on Associated Domains for the App ID. Try it on two phones, one on mobile data (`-onlinePlay YES`) |
-| 6 | both | `feat(oware): turn on online play` — deploy `prod`; privacy page, label, review notes and video, What's New; `online` to `.free` or `.unlock` | 2 days, then review | Privacy label and review notes in App Store Connect. If paid: the product, with the build |
-| 7 | both | Ludo with friends — after Ludo nearby steps 1–3. `feat(lelu-play): dice for Ludo`; `feat(ludo): play online with friends` (2–4 seats, computer seats, server dice checked in `LudoMatch`) | 1–2 days + 5–7 days | Four devices for a real game |
+| 3 | AWS | `feat(lelu-play): limits, alarms and an off switch` — throttles, caps, limits, budget, alarms, pause, the `requireProof` setting (off), `play.leluoware.com` in the website's account | 2 days | Confirm the alarm email |
+| 4 | here | `feat(matchkit): an online transport` — `MatchKitOnline`, reconnect and rejoin, the saved game a phone rejoins from after a relaunch, tests on a fake socket | 4 days | — |
+| 5 | here | `feat(oware): play online with a friend (hidden)` — lobby, code and Share, Enter code, Ready, reconnect wording, the Rejoin card on Home after the app was closed, *Start game* tested both free and paid, links, `--online-demo`, analytics; website: `apple-app-site-association` and the join page | 6–8 days | Turn on Associated Domains for the App ID. Try it on two phones, one on mobile data (`-onlinePlay YES`) |
+| 6 | both | `feat(oware): turn on online play` — deploy `prod`; privacy page, label, review notes and video, What's New; `online` to `.free` | 2 days, then review | Privacy label and review notes in App Store Connect |
+| 7 | both | Ludo with friends — after Ludo nearby steps 1–3. `feat(lelu-play): dice for Ludo`; `feat(ludo): play online with friends` (2–4 seats, computer seats, server dice for every seat checked in `LudoMatch`) | 1–2 days + 5–7 days | Four devices for a real game |
 | 8 | both | The server referees — a spike first (Swift on Lambda: build, size, cold start); the server passes `shared/vectors`; `OwareTable` and `OwareRoomRules` into a package; no phone in charge | 1–2 weeks | Decide Swift or TypeScript after the spike |
 | 9 | both | Games that last days, "your turn" notifications | 1–2 weeks | Push capability, an APNs key |
 | 10 | both | Play with anyone — queue, the computer when nobody waits, names, report and block, App Attest; rankings after | 2–3 weeks, then ongoing | Age rating answers; someone to read reports |
 
-Stages 1–6 are **about three to four weeks** of work for Oware with a friend. Stages 1–3 can go
+Stages 1–6 are **about four weeks** of work for Oware with a friend. Stages 1–3 can go
 ahead while nearby play's redesign steps 3–4 finish: the Connection lost sheet and Rejoin card they
 add are the same views online needs.
 
-## 12. Open questions for the owner
+## 12. Decisions and open questions
 
-1. **Free at first, or paid from day one?** The earlier decision is a one-time unlock where the
-   host pays. Proposed: `.free` while it is new (in-app purchases cannot ship until the Paid Apps
-   Agreement is active, and a game costs a tenth of a cent), then `.unlock(hostPays: true)` with
-   founding players included. Or hold online back until it can be sold.
-2. **Is the AWS repo the right home**, as `apps/lelu-play`? And is that name right?
-3. **Which AWS account?** The same one as the website keeps `play.leluoware.com` simple. A separate
-   one keeps the bill and the blast apart, and costs one more hosted zone (US$0.50 a month).
-4. **How long to wait for a lost phone online?** Proposed: "Reconnecting…" after 25 s, give up
+Decided by the owner on 2026-11-15:
+
+| Question | Decision |
+|---|---|
+| Free or paid | **Free at first, easy to switch to paid.** The paid path is built and tested now and left off (§5, *Free now, paid later*). |
+| Home of the backend | The AWS repo, as `apps/lelu-play`, one app for both games. |
+| AWS account | The website's. `play.leluoware.com` sits in the existing hosted zone. |
+| Region | `us-east-1` for now. Moving later means a new deploy and an app update with the new address; no data needs moving, since nothing is kept beyond a day. |
+| A game survives the app being closed | **Yes**, in the first version, because phone networks cut out (§5, *A game that survives the app closing*). Done with saved games and 24-hour rooms, not by bringing the referee forward. |
+| Ludo: who rolls for a computer seat | The server, like every other roll. |
+| Game Center | Not wanted, for online play, leaderboards or achievements. |
+
+Still open. Each has a proposal, and the work goes ahead on the proposal unless the owner says
+otherwise:
+
+1. **How long before the "Reconnecting…" sheet?** Proposed: "Reconnecting…" after 25 s, the sheet
    after 90 s (nearby: 4 s and 15 s).
-5. **Region.** `us-east-1` matches everything else and is the cheapest. Ireland or London would be
-   nearer UK and Ghana players and a simpler story under UK and EU privacy law, at almost the same
-   price. Turn-based games do not feel the distance.
-6. **May the creator still turn someone away** who has the code (the **Not now** button), or does
-   having the code let you straight in?
-7. **Should a game survive the app being closed** in the first version? Proposed: no, as nearby.
-   Yes means stage 8 first.
-8. **One name or two?** Proposed: the nearby name is also the online name.
-9. **Ludo: who rolls for a computer seat?** Proposed: the server, like every other roll.
-10. **Stage 8: Swift on the server, or rules in TypeScript?** Proposed: Swift, after a spike. Either
-    way it passes the same `shared/vectors` as the Swift and Kotlin engines.
-11. **Game Center.** Still wanted for leaderboards and achievements only? This plan no longer uses
-    it for online play.
+2. **May the creator still turn someone away** who has the code (the **Not now** button), or does
+   having the code let you straight in? Proposed: keep **Not now**.
+3. **One name or two?** Proposed: the nearby name is also the online name.
+4. **Stage 8: Swift on the server, or rules in TypeScript?** Proposed: Swift, after a spike. Either
+   way it passes the same `shared/vectors` as the Swift and Kotlin engines. Not needed before
+   stage 8.
+5. **If the creator never comes back,** the guest can only finish against the computer until
+   stage 8. Is that acceptable for the first version, or should the referee come before Ludo?
 
 ## 13. Not verified
 
