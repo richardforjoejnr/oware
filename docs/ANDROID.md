@@ -93,7 +93,7 @@ left out.
 | Dynamic Type | Text grows with the reader's setting | `sp` units and the system font scale | Same |
 | Reduce Motion | Fewer animations | "Remove animations" (animator scale 0) | Same |
 | Accessibility identifiers | Tests find controls | Compose `testTag`, exposed as resource ids | Same (see §5.6) |
-| New York serif and SF sans | Titles and body | Apple's fonts may not ship on Android. Bundle an open-licence serif for titles; body in the system sans. | Not carried: the owner picks a serif (§9) |
+| New York serif and SF sans | Titles and body | Apple's fonts may not ship on Android. Bundle an open-licence serif for titles; body in the system sans. | Not carried: titles in Source Serif 4 (§9) |
 | SF Symbols (27 uses) | Chevrons, small icons | Not available. Use the planned carved icons, or plain vector icons in the wood colours. | Not carried: replaced |
 | Liquid Glass / system button styles | Floating chips | Android has no such style. Draw the chips ourselves (dark translucent wood). | Different |
 | Game Center (`GameKit`): 3 leaderboards, 6 achievements, player name | Scores; default nearby name | **No Android version.** Google's Play Games Services has leaderboards and achievements, but it is a separate system and Google ended its iOS support in 2017. Scores and achievements cannot be shared between iPhone and Android players. | Not carried (§3.1) |
@@ -491,7 +491,7 @@ What Android asks for, and how the apps answer:
 | **Side edges belong to the back gesture** | Nothing draggable within about 24 dp of the left and right edges. In landscape the end troughs of the Oware board sit there: they are not tappable, so this is safe, but houses A1 and A6 must stay clear. |
 | **Material** | Used where it is invisible or expected: bottom sheets' behaviour, switches' and sliders' behaviour, ripple replaced by the "2–3 % lift and warmer light" press. Not used for looks: no Material colours from the wallpaper, no floating action button, no top app bar, no navigation bar, no elevation shadows. One fixed dark theme. |
 | **Touch targets** | 48 dp minimum (iOS: 44 pt). Menu tiles 56–64 dp, as now. |
-| **Type** | Titles in a bundled open-licence serif with the warmth of New York (owner's choice, §9); body and controls in the system sans. Sizes in `sp` so they follow the reader's setting; never below 13 sp; bone on wood at 4.5:1 or better. Android can scale text to 200 %, so each screen is checked at the largest size, as the iOS ones are. |
+| **Type** | Titles in **Source Serif 4**, bundled with the app (§9); body and controls in the system sans. Sizes in `sp` so they follow the reader's setting; never below 13 sp; bone on wood at 4.5:1 or better. Android can scale text to 200 %, so each screen is checked at the largest size, as the iOS ones are. |
 | **Icons** | The carved icons from `art/nearby` and the two Adinkra paths. Where iOS uses an SF Symbol (a chevron, a close mark), a plain line icon in bone. |
 | **Haptics** | The same four moments (seed drop, pick-up, capture, game over), with the lightest effect the phone offers. A phone that can only buzz gets none for seed drops. Settings ▸ Sound and touch as on iOS. |
 | **Sound** | Follows the media volume. First launch does not blare: the first sound is a seed click at modest level. |
@@ -555,7 +555,7 @@ What the owner does by hand:
 |---|---|
 | Before step 6 | Create the Google Play developer account (US$25, ID check). Create the two apps in Play Console. Add friends' Google account emails to the internal testing list. |
 | Before step 6 | Create the upload key with the script the PR provides; put it in GitHub secrets. |
-| Step 4 | Approve the adaptive icon and choose the title serif. |
+| Step 4 | Approve the adaptive icon, and look at the titles in Source Serif 4 on the Home screen. |
 | Steps 5–6 | Try each build in the emulator; friends try the step 6 build on their own phones. |
 | Before step 7 | Buy or borrow an Android phone (sound and haptics cannot be judged in the emulator). Then try each build on it, as with TestFlight. |
 | Step 10 | Find 12 testers for 14 days; fill in the store listing, content rating and data safety forms; apply for production. |
@@ -572,20 +572,16 @@ Decided by the owner on 2026-11-15:
 | Android phone to test on | None yet. Emulator for steps 1–5; one is needed before step 7. |
 | Nearby play on Android | Not needed. Play with a friend comes through online play when that is ready. Step 9 is dropped. |
 | Package name | `com.richardforjoe.oware`. It cannot be changed after the first upload. |
+| Google Play account | Personal. It is all a solo developer needs; the price is the 12-tester, 14-day closed test before going public (§6). |
+| Title typeface | **Source Serif 4** (Adobe, SIL Open Font License), bundled as one variable font file. Chosen because, like New York, it is a warm transitional serif with optical sizes, so large titles and small labels each get the right cut, and it has the semibold and bold weights the titles use. The licence allows shipping it inside an app; its text goes in the app's acknowledgements. Body text stays in the system sans. |
+| Leaderboards on Android | None for now. Game Center is off on iOS too. |
 | Repo layout | Top-level `android/` and `shared/`, with CI arranged so macOS jobs start only for a change that touches the iOS apps (§5.7). |
 
 Still open:
 
 1. **Which Android phones do the friends have** (make and rough age)? It decides the minimum
    version and what to test on.
-2. **Google Play account: personal or organisation?** Personal is quick but needs the 12-tester
-   test and shows the owner's legal name. An organisation account skips the test but needs a
-   registered business and a D-U-N-S number. Needed before step 6.
-3. **Title typeface** on Android, since New York cannot be used: pick an open-licence serif, or
-   commission lettering for the title only. Needed at step 4.
-4. **Leaderboards on Android:** none for now (recommended), or Play Games Services as a separate
-   board?
-5. **Package name for Lelu Ludo:** follow the same pattern as its bundle id?
+2. **Package name for Lelu Ludo:** follow the same pattern as its bundle id?
 
 ## 10. Checked and not checked
 

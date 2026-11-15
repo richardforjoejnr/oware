@@ -67,4 +67,4 @@ class, as on iOS.
 
 ## Still to decide
 
-In the shared plan §9. For Oware in particular: the title typeface.
+In the shared plan §9. Nothing is open for Oware in particular.
