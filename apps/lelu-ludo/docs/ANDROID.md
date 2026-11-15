@@ -17,7 +17,7 @@ build, the wood kit, the asset script, CI, signing and the Play account. The sha
 | Orientation | portrait and landscape | portrait on phones; tablets any way up |
 | Players | 2 | 2–4, so pass and play matters more and the colour picker ports too |
 | End-to-end tests | Appium and Maestro exist | XCUITest only today; Android starts with Compose UI tests and one Maestro flow |
-| Nearby play | built on iOS | not built on iOS yet ([NEARBY_PLAY.md](NEARBY_PLAY.md)); Android follows iOS |
+| Nearby play | built on iOS | not built on iOS yet ([NEARBY_PLAY.md](NEARBY_PLAY.md)); not planned on Android, which waits for online play |
 
 ## What ports
 

@@ -31,8 +31,12 @@ Owner decisions this plan starts from (not reopened here):
 - **Cost:** US$25 once for Google Play. A new personal account must run a closed test with 12
   testers for 14 days before the app can be public. Friends can play before that through the
   internal testing track (§6).
-- **Order:** Lelu Oware first, then Lelu Ludo. Eleven small steps, tests first (§8). Friends can
+- **Order:** Lelu Oware first, then Lelu Ludo. Small steps, tests first (§8). Friends can
   have a playable build after step 6, about three weeks of work in.
+- **Decided on 2026-11-15** (§9): the Kotlin port with shared vectors, Lelu Oware first, no nearby
+  play on Android (mixed pairs wait for online play), package name `com.richardforjoe.oware`, and a
+  top-level `android/` and `shared/` with CI arranged so macOS jobs start only for a change that
+  touches the iOS apps.
 
 ## 2. What exists today
 
@@ -154,8 +158,8 @@ browse for it, with `includePeerToPeer` on. Messages are length-prefixed JSON ov
 
 **The wire format must be pinned first.** The JSON is whatever Swift's automatic `Codable`
 produces (for example `{"hello":{"name":"Ama","rejoin":null}}`, and `_0` for an unnamed value).
-Nothing tests its exact shape today. Step 9 adds JSON files of real messages that the Swift and
-Kotlin sides both read and write, so neither can drift. The online backend needs the same files.
+Nothing tests its exact shape today. The online play work adds JSON files of real messages that
+the Swift side, the backend and later the Kotlin side all read and write, so none can drift.
 
 ## 4. How to share while both screens stay native
 
@@ -300,10 +304,25 @@ online backend.
 
 ### 5.7 CI, website, privacy
 
-- **CI:** a new `android-ci.yml`, filtered to `android/**` and `shared/**`, all on Linux: engine
-  tests, lint, unit tests, build, emulator tests. iOS workflows gain `shared/vectors/<game>/**` in
-  their path filters and nothing else. PR titles, release tags (`android-oware-vX.Y.Z`) and
-  What's new follow the existing scripts.
+- **CI:** macOS minutes cost about ten times Linux minutes, so the rule (owner, 2026-11-15) is:
+  **a macOS job starts only when the change touches something the iOS apps are built from.** The
+  existing workflows already filter by path (`apps/lelu-oware/**`, `packages/...`), so a change
+  under `android/` starts none of them today. What the Android work adds:
+
+  | Change under | Starts | Runner |
+  |---|---|---|
+  | `android/**` | `android-ci.yml`: engine tests, lint, unit tests, build, emulator tests | Linux |
+  | `shared/vectors/**` | `shared-vectors.yml`: the Swift engine tests (in the `swift` container, as `reusable-swift-package.yml` already does) and the Kotlin engine tests, against the same files | Linux |
+  | `shared/tokens/**` | `android-ci.yml`, and the iOS app job, because the iOS `Theme` test reads the file. This is the one shared change that reaches both apps. | Linux + macOS |
+  | `apps/lelu-oware/**`, `packages/**` | The iOS workflows, as today. `android-ci.yml` does not start. | as today |
+
+  The iOS workflows do **not** gain `shared/vectors/**` in their path filters: the vectors test
+  lives in the engine package, which runs on Linux, so a vectors change never needs a Mac. Only
+  the app job gains `shared/tokens/**`. A docs-only change (`apps/*/docs/**`) still starts the
+  macOS jobs today because it sits under `apps/lelu-oware/**`; step 2 narrows that filter at the
+  same time, so a plan like this one costs no macOS minutes.
+
+  PR titles, release tags (`android-oware-vX.Y.Z`) and What's new follow the existing scripts.
 - **Website:** the same support and What's new pages. The privacy policy gains a short Android
   section (same data: anonymous usage counts through TelemetryDeck, nothing else). Play requires a
   privacy policy link; `leluoware.com/lelu-oware/privacy` serves.
@@ -317,7 +336,7 @@ online backend.
 | Internal testing | Not subject to that rule. Up to 100 testers by email address, builds available within minutes. **This is how friends play first.** | Free |
 | Sideloaded APK | Also possible: CI attaches an APK to each build and friends install it by hand. Good as a stopgap before the Play account exists. Google is bringing in developer verification for installs outside Play (enforced in Brazil, Indonesia, Singapore and Thailand from 30 September 2026, everywhere in 2027), so do not rely on it long term; a Play account covers the verification. | Free |
 | Android Studio, emulator | On the existing Mac | Free |
-| A real Android phone | Needed for haptics, sound latency and nearby play. A mid-range phone a few years old is the right test device, not a flagship. | Owned or borrowed; about £100–150 used |
+| A real Android phone | Needed for haptics and sound latency. The owner has none yet (2026-11-15). Steps 1–5 need only the emulator; friends' phones cover step 6; buy or borrow one before step 7. A mid-range phone a few years old is the right test device, not a flagship. | About £100–150 used |
 | CI minutes | Linux about US$0.006 a minute against about US$0.062 for macOS (third-party figures, 2026). All Android jobs are Linux. | Small |
 | Play's cut of tips, later | Depends on the buyer's country; Google changed its fees in 2026. Read the current table before turning tips on. | Later |
 | Yearly fee | None (Apple's is US$99 a year) | 0 |
@@ -431,8 +450,7 @@ android/                          one Gradle build, opened as one project in And
   gradle/libs.versions.toml       every version in one file
   engines/oware-engine/           pure Kotlin: rules, computer player, OwareMatch, fingerprint
   engines/ludo-engine/            pure Kotlin
-  kits/match-kit/                 pure Kotlin: Envelope, Framer, Room, LoopbackTransport
-  kits/match-kit-nearby/          Android: NsdManager + sockets
+  kits/match-kit/                 pure Kotlin: Envelope, Framer, Room, LoopbackTransport (arrives with online play)
   kits/akan-kit/                  Compose: tokens, wood surfaces, chips, Adinkra icons
   kits/support-kit/               later: tips, feature switches
   apps/lelu-oware/                the app (applicationId com.richardforjoe.oware)
@@ -445,12 +463,14 @@ apps/lelu-oware/                  as today: the iOS app, its art, its e2e tests,
 apps/lelu-ludo/
 packages/                         as today: Swift packages
 scripts/export-android-assets.py  asset catalogues → android/apps/*/src/main/res
-.github/workflows/android-ci.yml  Linux only
+.github/workflows/android-ci.yml       Linux only
+.github/workflows/shared-vectors.yml   Linux only: Swift and Kotlin engines against shared/vectors
 ```
 
 Why a top-level `android/` and not `apps/lelu-oware/android/`: MONOREPO.md says one folder per
 app, but the iOS workflows are filtered on `apps/lelu-oware/**`. Android files inside that folder
-would start the macOS jobs on every Android change, at ten times the price. One Gradle build is
+would start the macOS jobs on every Android change, at ten times the price (the CI rule is in
+§5.7). One Gradle build is
 also what Android Studio expects. Docs stay per app, in `apps/<app>/docs`. The Kotlin modules
 mirror the Swift packages one for one, with the same type and function names, so a change can be
 read across.
@@ -490,7 +510,7 @@ Screen by screen, Lelu Oware:
 | Riddles (`PuzzlesView`, `RiddleCard`) | Same. The riddle text opens as a bottom sheet. |
 | Heritage (`HeritageView`) | Same. The one place Gye Nyame may appear. |
 | Settings (`SettingsView`) | A sheet over Home, as on iOS, not a separate Material settings screen. No Game Center row. |
-| Nearby (`NearbyView`) | The redesigned screens (NEARBY_PLAY_REDESIGN.md) as they are, with the help text changed to say *same Wi-Fi or hotspot*. Comes in step 9. |
+| Nearby (`NearbyView`) | The redesigned screens (NEARBY_PLAY_REDESIGN.md) as they are, with the help text changed to say *same Wi-Fi or hotspot*. Not planned for Android (§9); the online screens reuse this lobby. |
 | Support me (`OwareTipJar`) | Hidden until tips are on; *Rate Lelu Oware* opens the Play listing. |
 
 Lelu Ludo is covered in its own note; the board and dice are already drawn in code, which ports
@@ -509,22 +529,23 @@ treat the numbers as rough.
 | # | PR | What | Tests first | Days |
 |---|---|---|---|---|
 | 0 | `docs: plan for native Android apps` | This document | n/a | done |
-| 1 | `test(engine): rules vectors any language can run` | `oware vectors` writes `shared/vectors/oware/*.json`; a Swift test fails if the engine and the files differ. No app change. | The vectors are the tests | 1–2 |
-| 2 | `feat(android): Oware rules in Kotlin` | `android/` Gradle build, `engines/oware-engine`, `android-ci.yml` on Linux | Kotlin tests read the vectors and fail until the port is right; random games must match fingerprints | 2–3 |
+| 1 | `test(engine): rules vectors any language can run` | `oware vectors` writes `shared/vectors/oware/*.json`; a Swift test fails if the engine and the files differ. `shared-vectors.yml` runs it on Linux. No app change. | The vectors are the tests | 1–2 |
+| 2 | `feat(android): Oware rules in Kotlin` | `android/` Gradle build, `engines/oware-engine`, `android-ci.yml` on Linux; the Kotlin job joins `shared-vectors.yml`; iOS path filters narrowed as in §5.7 | Kotlin tests read the vectors and fail until the port is right; random games must match fingerprints | 2–3 |
 | 3 | `feat(android): Oware computer player in Kotlin` | `OwareAI` port, levels, riddles check | `ai.json`; the balance test ported | 2 |
 | 4 | `feat(android): colours, type and art from one source` | `shared/tokens/tokens.json`, `Tokens.kt`, `export-android-assets.py`, `akan-kit` wood surfaces | iOS test: `Theme` matches the file. Android: token and asset-presence tests | 1–2 |
 | 5 | `feat(android): play Oware on one phone` | Home, Game (pass and play), saves, launch options, same identifiers | Session unit tests; Compose UI tests; Maestro smoke flow on an emulator | 4–6 |
 | 6 | `ci(android): builds for friends` | Signing, fastlane lane to the internal testing track, APK attached to CI runs | Release-readiness checks for Android | 1–2 (+ owner: account) |
 | 7 | `feat(android): computer opponents, sound, touch, TalkBack` | Levels, Settings, sounds as files, haptics, accessibility pass | Unit tests; accessibility checks in UI tests; Appium specs run on Android | 3–4 |
 | 8 | `feat(android): Journey, riddles, lesson, heritage` | The rest of the single-player game; riddle reminder | Ported `RulesFollowSettings` and Journey tests | 4–5 |
-| 9 | `feat(android): nearby play on the same Wi-Fi` | Spike first (throwaway): iPhone and Android find each other and exchange one message. Then `messages.json`, `match-kit`, `match-kit-nearby`, the screens. | Wire vectors on both sides; Room tests ported; loopback demo flow | 5–7 |
+| 9 | Not planned: nearby play on Android | Dropped on 2026-11-15. Android players, and iPhone with Android pairs, play together through online play (`docs/ONLINE_PLAY.md`, PR #113). `match-kit` in Kotlin and the pinned message vectors arrive with that work. §3.2 and §7.2 stay as the record of what nearby play would take. | n/a | 0 |
 | 10 | `chore(android): Lelu Oware on Google Play` | Store listing, data safety, closed test, production | The real-phone checklist | 2 (+ 14 days waiting) |
 | 11 | Lelu Ludo: steps 1–8 again for Ludo | Vectors, engine, app. Reuses the Gradle build, kits, CI, signing and account. | As above | 10–14 |
 
 - **Friends can play after step 6:** about 11–17 working days from the start, pass and play only.
   After step 7 they can play the computer.
-- **Whole of Lelu Oware on Android,** through step 10: about 25–35 working days, plus the 14-day
-  closed test.
+- **Whole of Lelu Oware on Android,** through step 10 and without nearby play: about 20–28
+  working days, plus the 14-day closed test. Playing with a friend on another phone comes with
+  online play, which is planned and counted separately.
 - Steps 1–4 can be reviewed without an Android phone. Step 1 is worth doing even if Android were
   dropped.
 
@@ -535,32 +556,36 @@ What the owner does by hand:
 | Before step 6 | Create the Google Play developer account (US$25, ID check). Create the two apps in Play Console. Add friends' Google account emails to the internal testing list. |
 | Before step 6 | Create the upload key with the script the PR provides; put it in GitHub secrets. |
 | Step 4 | Approve the adaptive icon and choose the title serif. |
-| Steps 5–9 | Try each build on a real Android phone, as with TestFlight. |
-| Step 9 | The two-phone spike: an iPhone and an Android phone on the same Wi-Fi. |
+| Steps 5–6 | Try each build in the emulator; friends try the step 6 build on their own phones. |
+| Before step 7 | Buy or borrow an Android phone (sound and haptics cannot be judged in the emulator). Then try each build on it, as with TestFlight. |
 | Step 10 | Find 12 testers for 14 days; fill in the store listing, content rating and data safety forms; apply for production. |
 | Later | Payments profile and tax details, when tips are turned on. |
 
-## 9. Questions for the owner
+## 9. Decisions and open questions
 
-1. **Engine: agree with the Kotlin port and shared vectors?** The alternative with one engine and
-   no iOS risk is the Swift SDK for Android (§4 b); it means newer tooling and a larger app.
-2. **Lelu Oware first?** Or is Ludo what friends are asking for?
-3. **Which Android phones do the friends have** (make and rough age)? It decides the minimum
+Decided by the owner on 2026-11-15:
+
+| Question | Decision |
+|---|---|
+| Engine | Kotlin port, kept honest by shared vectors (§4 c). |
+| Which game first | Lelu Oware, then Lelu Ludo. |
+| Android phone to test on | None yet. Emulator for steps 1–5; one is needed before step 7. |
+| Nearby play on Android | Not needed. Play with a friend comes through online play when that is ready. Step 9 is dropped. |
+| Package name | `com.richardforjoe.oware`. It cannot be changed after the first upload. |
+| Repo layout | Top-level `android/` and `shared/`, with CI arranged so macOS jobs start only for a change that touches the iOS apps (§5.7). |
+
+Still open:
+
+1. **Which Android phones do the friends have** (make and rough age)? It decides the minimum
    version and what to test on.
-4. **Is there an Android phone to test on,** or should one be bought?
-5. **Is nearby play needed in the first Android version,** given it means "same Wi-Fi or hotspot"
-   for any pair that includes an Android phone? Or wait for online play for mixed pairs?
-6. **Google Play account: personal or organisation?** Personal is quick but needs the 12-tester
+2. **Google Play account: personal or organisation?** Personal is quick but needs the 12-tester
    test and shows the owner's legal name. An organisation account skips the test but needs a
-   registered business and a D-U-N-S number.
-7. **Package name:** `com.richardforjoe.oware`, the same as the bundle id? It cannot be changed
-   after the first upload.
-8. **Title typeface** on Android, since New York cannot be used: pick an open-licence serif, or
-   commission lettering for the title only.
-9. **Leaderboards on Android:** none for now (recommended), or Play Games Services as a separate
+   registered business and a D-U-N-S number. Needed before step 6.
+3. **Title typeface** on Android, since New York cannot be used: pick an open-licence serif, or
+   commission lettering for the title only. Needed at step 4.
+4. **Leaderboards on Android:** none for now (recommended), or Play Games Services as a separate
    board?
-10. **Repo layout:** is a top-level `android/` and `shared/` acceptable beside `apps/` and
-    `packages/`?
+5. **Package name for Lelu Ludo:** follow the same pattern as its bundle id?
 
 ## 10. Checked and not checked
 
@@ -584,7 +609,7 @@ Checked against current pages on 2026-11-15:
 Not verified, or only from third-party sources:
 
 - **iPhone and Android finding each other over Bonjour on the same Wi-Fi with this app's code.**
-  Expected from the standards; needs the step 9 spike.
+  Expected from the standards; never tried, and no longer planned (§9).
 - **Wi-Fi Aware between iPhone and Android:** forum reports of failures in 2025; no later result
   found.
 - **Size added by the Swift runtime on Android:** forum figures only.

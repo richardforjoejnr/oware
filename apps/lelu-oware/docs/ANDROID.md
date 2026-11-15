@@ -21,7 +21,7 @@ nothing is built yet.
 | `RiddleReminder.swift` | Notification permission and a scheduled job | Same rule: 9 am, skips a day already done. |
 | `GameCenter.swift` | Not ported | Off on iOS too today. |
 | `OwareTipJar`, SupportKit | Not in the first version | *Rate Lelu Oware* opens the Play listing. |
-| `NearbyLobby`, `RemoteGame`, `NearbyView` | Step 9 | Same Wi-Fi or hotspot only. The Bonjour type stays `_leluoware._tcp` so iPhones see Android games and the other way round. |
+| `NearbyLobby`, `RemoteGame`, `NearbyView` | Not ported | Decided 2026-11-15: no nearby play on Android. Playing with a friend comes with online play, which reuses the lobby screens. |
 
 ## Identifiers the tests rely on
 
@@ -64,10 +64,7 @@ class, as on iOS.
 6. TalkBack: start a game, play a house, hear the turn change.
 7. Rotate during a sow: the move finishes and the board is right.
 8. Leave the app mid-game, return an hour later: the game is there.
-9. (From step 9) iPhone and Android on one Wi-Fi: each can start, the other joins, a game
-   finishes, one phone drops and comes back.
 
 ## Still to decide
 
-In the shared plan §9. For Oware in particular: whether nearby play is in the first Android
-version, and the title typeface.
+In the shared plan §9. For Oware in particular: the title typeface.
