@@ -366,13 +366,23 @@ public final class Room<Rules: RoomRules> {
     private func handle(_ event: TransportEvent) async {
         switch event {
         case let .connected(peer):
-            if role == .guest, hostPeer == nil {
+            switch role {
+            case .guest:
+                // The first connection, or the same host on a fresh one (online, after either
+                // phone's link came back): ask for the seat again and take the match as it is now.
+                guard hostPeer == nil || hostPeer == peer else { break }
                 hostPeer = peer
+                if token != nil { awaitingWelcome = true }
                 await post(.hello(name: name, rejoin: token), to: peer)
+            case .host:
+                // A seated phone on a fresh connection may have missed moves.
+                if seat(of: peer) != nil, let match { await post(.snapshot(match), to: peer) }
             }
         case let .disconnected(peer):
             pending[peer] = nil
             filter.forget(peer)
+            // Guest: the link to the host is down. Moves made now are held until it has us back.
+            if role == .guest, peer == hostPeer, token != nil { awaitingWelcome = true }
             if let seat = seat(of: peer) {
                 peerForSeat[seat] = nil
                 if seats[seat]?.isReconnecting == false {
