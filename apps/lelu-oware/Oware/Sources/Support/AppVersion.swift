@@ -9,6 +9,16 @@ enum AppChannel: String, Sendable {
     case sandbox = "Sandbox"
     case development = "Development"
 
+    /// What is known without asking the App Store: a build from Xcode, or (until `current()`
+    /// answers) an App Store one.
+    static var buildTime: AppChannel {
+        #if DEBUG
+        .development
+        #else
+        .appStore
+        #endif
+    }
+
     /// TestFlight and App Review builds run in StoreKit's sandbox; App Store builds in production.
     static func current() async -> AppChannel {
         #if DEBUG

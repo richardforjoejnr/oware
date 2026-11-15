@@ -302,7 +302,7 @@ struct HomeView: View {
                 WoodPlank(title: "Play nearby", subtitle: "two phones, one game", glyph: "people", height: 56) { openNearby() }
                     .accessibilityIdentifier("btn-nearby")
             }
-            if Feature.showsOnlinePlay {
+            if settings.showsOnlinePlay {
                 WoodPlank(title: "Play online", subtitle: "a friend, anywhere", glyph: "people", height: 56) { openOnline() }
                     .accessibilityIdentifier("btn-online")
             }

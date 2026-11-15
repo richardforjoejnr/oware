@@ -95,6 +95,43 @@ final class OnlineUITests: XCTestCase {
         XCTAssertTrue(app.buttons["btn-start-online"].waitForExistence(timeout: 5))
     }
 
+    /// Settings ▸ Play online puts Play online on Home, with nothing passed in at launch.
+    func testTheSwitchInSettingsPutsPlayOnlineOnHome() {
+        app.launchArguments = ["--reset-state", "--fast-animations"]
+        app.launch()
+        let more = app.buttons["btn-more"]
+        XCTAssertTrue(more.waitForExistence(timeout: 10))
+        if !app.buttons["btn-settings"].waitForExistence(timeout: 5) { more.tap() }
+        let settings = app.buttons["btn-settings"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 6))
+        if !settings.isHittable { app.swipeUp() }
+        settings.tap()
+        let toggle = app.switches["setting-online-play"]
+        for _ in 0..<4 where !toggle.exists || !toggle.isHittable { app.swipeUp() }
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertEqual(toggle.value as? String, "0", "off until asked for")
+        // A SwiftUI Toggle is one element with its label: tap the switch itself, at its right end.
+        if toggle.switches.firstMatch.exists {
+            toggle.switches.firstMatch.tap()
+        } else {
+            toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        }
+        XCTAssertEqual(toggle.value as? String, "1")
+        app.terminate()
+
+        // Still there on the next launch, from the icon.
+        app.launchArguments = ["--fast-animations"]
+        app.launch()
+        XCTAssertTrue(more.waitForExistence(timeout: 10))
+        let online = app.buttons["btn-online"]
+        for _ in 0..<2 where !online.exists {
+            if !more.isHittable { app.swipeUp() }
+            more.tap()
+            if online.waitForExistence(timeout: 6) { break }
+        }
+        XCTAssertTrue(online.exists)
+    }
+
     /// Play online is hidden until its switch is on.
     func testPlayOnlineIsNotOnHomeWithoutTheSwitch() {
         app.launchArguments = ["--reset-state", "--fast-animations"]

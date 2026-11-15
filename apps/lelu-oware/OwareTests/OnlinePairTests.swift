@@ -194,6 +194,28 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(found, [link.absoluteString])
     }
 
+    // MARK: The switch in Settings
+
+    func testSettingsOffersTheSwitchInXcodeAndTestFlightBuildsButNeverAnAppStoreOne() {
+        XCTAssertTrue(AppSettings.offersOnlineSwitch(in: .development))
+        XCTAssertTrue(AppSettings.offersOnlineSwitch(in: .sandbox))
+        XCTAssertFalse(AppSettings.offersOnlineSwitch(in: .appStore))
+    }
+
+    func testPlayOnlineShowsOnlyWhenSwitchedOnInABuildThatOffersIt() {
+        let defaults = TestSupport.defaults()
+        let settings = AppSettings(defaults: defaults, testMode: true)
+        XCTAssertFalse(settings.onlinePlayOn, "off until asked for")
+        XCTAssertFalse(settings.showsOnlinePlay)
+        settings.onlinePlayOn = true
+        XCTAssertTrue(settings.showsOnlinePlay)
+        XCTAssertTrue(AppSettings(defaults: defaults, testMode: true).onlinePlayOn, "remembered")
+
+        // The same phone later gets the App Store build: the switch it had on no longer counts.
+        settings.offersOnlineSwitch = false
+        XCTAssertFalse(settings.showsOnlinePlay)
+    }
+
     /// Each build knows its relay: dev for builds from Xcode (which is what runs these tests).
     func testTheBuildCarriesItsRelaysAddress() {
         XCTAssertEqual(OnlineConfig.relay.scheme, "wss")

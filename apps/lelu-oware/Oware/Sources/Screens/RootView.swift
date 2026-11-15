@@ -41,7 +41,7 @@ struct RootView: View {
 
     /// Straight to Ready to play in the game the link is for. Ignored while Play online is hidden.
     private func openInvitation(_ url: URL) {
-        guard Feature.showsOnlinePlay else { return }
+        guard settings.showsOnlinePlay else { return }
         guard online.open(link: url, name: NearbyLobby.myName, pace: settings.effectiveSpeed) else { return }
         showSettings = false
         showSplash = false
@@ -121,6 +121,8 @@ struct RootView: View {
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
             if let url = activity.webpageURL { openInvitation(url) }
         }
+        // A TestFlight build learns what it is from the App Store, then offers Settings ▸ Play online.
+        .task { settings.offersOnlineSwitch = AppSettings.offersOnlineSwitch(in: await AppChannel.current()) }
         .onAppear {
             lobby.onStart = { screen = .game }
             online.lobby.onStart = { screen = .game }

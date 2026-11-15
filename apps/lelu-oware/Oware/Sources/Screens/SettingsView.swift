@@ -117,6 +117,17 @@ struct SettingsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
+            if settings.offersOnlineSwitch {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Play online", isOn: $settings.onlinePlayOn)
+                        .accessibilityIdentifier("setting-online-play")
+                    Text("Play a friend anywhere, with an invitation link or a code. Adds Play online under More on the home screen.")
+                        .font(Theme.caption(12))
+                        .foregroundStyle(Theme.ivoryDim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             VStack(alignment: .leading, spacing: 4) {
                 // Changing the switch is an answer too, so the one-time question is not asked again.
                 Toggle("Share anonymous usage stats", isOn: Binding(get: { settings.shareUsageStats },

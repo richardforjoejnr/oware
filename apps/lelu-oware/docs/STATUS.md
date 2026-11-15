@@ -31,16 +31,23 @@ Built so far, in the plan's stages:
   opens both, and `leluoware://join?c=CODE`). The waiting screen shows the code and a QR code; the code
   box takes a pasted message. The joining phone sows its own move at once, on nearby play too.
 
-Try it (Debug builds only; the switches are kept from one launch to the next):
-`-onlinePlay YES -relayURL <ws:// or wss:// address>`, or `--online-demo` for Ama with no network.
-Locally the relay is `npm run dev` in the AWS repo's `apps/lelu-play` (`ws://localhost:8787`).
+Try it: **Settings ▸ Play online**, a switch in builds from Xcode and TestFlight builds, never in
+an App Store build (`AppSettings.offersOnlineSwitch`). App Review's builds cannot be told from
+TestFlight's, so a reviewer sees the switch too: before a build with it is submitted, the privacy
+page and review notes for online play (stage 6) must be in, or the switch limited to Xcode builds.
+A build knows its relay (`RELAY_URL` in `project.yml`): the relay's `dev` stage from Xcode, `prod`
+for TestFlight. Debug builds can also take `-onlinePlay YES -relayURL <address>` (kept between
+launches) or `--online-demo` for Ama with no network; a relay on the Mac is `npm run dev` in the
+AWS repo's `apps/lelu-play` (`ws://localhost:8787`).
 
 For the owner:
 - **Associated Domains** for the App ID (developer portal), so a tapped link opens the app. Then add
   `com.apple.developer.associated-domains: [applinks:leluoware.com]` to `entitlements` in `project.yml`
   and to the allowed list in `../../scripts/release_readiness.py`, and refresh the signing profiles.
   Until then no build carries it; the join page's button and pasting the message still work.
-- Deploy the relay's `dev` stage for a lasting address (the PR preview goes when its PR closes).
+- The relay's `dev` and `prod` stages are deployed (2026-11-15). Deploy or destroy either from the
+  AWS repo: Actions ▸ *Lelu Play — Deploy* / *Destroy*. A destroyed stage gets a new address when it
+  is made again: put it in `RELAY_URL`.
 
 Still to build before it is turned on: the relay's limits, alarms, off switch and `play.leluoware.com`
 (stage 3); a game that survives the app closing (saved game, Rejoin card, the seat kept past 90 s);
