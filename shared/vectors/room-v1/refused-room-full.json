@@ -1,0 +1,11 @@
+{
+  "body": {
+    "refused": {
+      "_0": {
+        "roomFull": {}
+      }
+    }
+  },
+  "protocolVersion": 1,
+  "sequence": 4
+}

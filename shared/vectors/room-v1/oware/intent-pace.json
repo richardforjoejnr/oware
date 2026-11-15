@@ -1,0 +1,13 @@
+{
+  "body": {
+    "intent": {
+      "_0": {
+        "pace": {
+          "_0": 0.6
+        }
+      }
+    }
+  },
+  "protocolVersion": 1,
+  "sequence": 7
+}

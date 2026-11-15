@@ -14,7 +14,7 @@ public enum TransportEvent: Sendable {
 }
 
 /// Moves whole messages between phones. Nearby play uses `NearbyTransport` (MatchKitNearby);
-/// tests and demos use `LoopbackTransport`; online play will add a Game Center one.
+/// tests and demos use `LoopbackTransport`; online play adds one that talks to the relay (`RelayMessage`).
 public protocol MatchTransport: AnyObject, Sendable {
     var me: PeerID { get }
     var events: AsyncStream<TransportEvent> { get }

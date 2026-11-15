@@ -1,0 +1,13 @@
+{
+  "body": {
+    "intent": {
+      "_0": {
+        "ready": {
+          "stateHash": "2de35c20d63699b4"
+        }
+      }
+    }
+  },
+  "protocolVersion": 1,
+  "sequence": 8
+}

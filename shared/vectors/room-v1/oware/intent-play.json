@@ -1,0 +1,17 @@
+{
+  "body": {
+    "intent": {
+      "_0": {
+        "game": {
+          "_0": {
+            "play": {
+              "house": 9
+            }
+          }
+        }
+      }
+    }
+  },
+  "protocolVersion": 1,
+  "sequence": 9
+}

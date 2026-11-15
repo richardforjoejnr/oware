@@ -1,0 +1,15 @@
+{
+  "body": {
+    "intent": {
+      "_0": {
+        "game": {
+          "_0": {
+            "resign": {}
+          }
+        }
+      }
+    }
+  },
+  "protocolVersion": 1,
+  "sequence": 10
+}

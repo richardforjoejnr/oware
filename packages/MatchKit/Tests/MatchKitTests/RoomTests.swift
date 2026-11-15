@@ -379,3 +379,50 @@ struct RoomTests {
         withExtendedLifetime(guest) {}
     }
 }
+
+@MainActor
+@Suite("Room timings")
+struct RoomTimingTests {
+    @Test func nearbyKeepsItsTimingsAndOnlineWaitsLonger() {
+        #expect(RoomTiming.nearby == RoomTiming(heartbeatInterval: 2, quietAfter: 4, lostAfter: 15))
+        #expect(RoomTiming.online == RoomTiming(heartbeatInterval: 10, quietAfter: 25, lostAfter: 90))
+    }
+
+    @Test func aRoomUsesNearbyTimingsUnlessTold() {
+        let room = TallyRoom(hosting: Tally(), name: "Ama", rules: TallyRules(), transport: LoopbackTransport())
+        #expect(room.timing == .nearby)
+        room.stop()
+    }
+
+    /// With online timings a seat is still only "reconnecting" long after nearby play would have
+    /// given it up.
+    @Test func aRoomWaitsAsLongAsItsTimingSays() async {
+        let clock = ManualClock()
+        let hostSide = LoopbackTransport(), guestSide = LoopbackTransport()
+        let host = TallyRoom(hosting: Tally(), name: "Ama", rules: TallyRules(), transport: hostSide,
+                             clock: clock, timing: .online)
+        let guest = TallyRoom(joiningAs: "Kofi", rules: TallyRules(), transport: guestSide, clock: clock, timing: .online)
+        var events: [RoomEvent<Tally>] = []
+        host.onEvent = { events.append($0) }
+        hostSide.connect(guestSide)
+        for _ in 0..<2_000 where host.pending.isEmpty { await Task.yield() }
+        await host.accept(guestSide.me)
+        for _ in 0..<2_000 where guest.mySeat == nil { await Task.yield() }
+        guestSide.isQuiet = true
+
+        clock.advance(by: 20)
+        await host.tick()
+        #expect(host.seats[1]?.isReconnecting == false, "20 s of silence is ordinary on mobile data")
+        clock.advance(by: 5)
+        await host.tick()
+        #expect(events.contains(.reconnecting(seat: 1)))
+        clock.advance(by: 60)
+        await host.tick()
+        #expect(host.seats[1] != nil, "85 s: still waiting")
+        clock.advance(by: 5)
+        await host.tick()
+        #expect(events.contains(.seatLost(seat: 1)))
+        host.stop()
+        guest.stop()
+    }
+}

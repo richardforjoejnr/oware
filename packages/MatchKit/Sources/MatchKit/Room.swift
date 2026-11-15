@@ -13,6 +13,28 @@ public protocol RoomRules: Sendable {
     func shouldReplace(_ current: Match, with snapshot: Match) -> Bool
 }
 
+/// How patient a room is. Each transport brings its own: phones side by side notice a break in
+/// seconds, while mobile data is slower to come back and every ping through the relay is paid for.
+public struct RoomTiming: Sendable, Equatable {
+    /// A ping goes out this often.
+    public var heartbeatInterval: Double
+    /// A seat silent this long is shown as reconnecting.
+    public var quietAfter: Double
+    /// A seat silent this long is given up.
+    public var lostAfter: Double
+
+    public init(heartbeatInterval: Double, quietAfter: Double, lostAfter: Double) {
+        self.heartbeatInterval = heartbeatInterval
+        self.quietAfter = quietAfter
+        self.lostAfter = lostAfter
+    }
+
+    /// 15 s: the owner found a minute too long and 10 s too short.
+    public static let nearby = RoomTiming(heartbeatInterval: 2, quietAfter: 4, lostAfter: 15)
+    /// docs/ONLINE_PLAY.md §5, Connections.
+    public static let online = RoomTiming(heartbeatInterval: 10, quietAfter: 25, lostAfter: 90)
+}
+
 public enum Refusal: Codable, Sendable, Equatable {
     case roomFull
     case declined
@@ -65,15 +87,11 @@ public final class Room<Rules: RoomRules> {
         public var isReconnecting = false
     }
 
-    /// A ping goes out this often; a seat silent for `quietAfter` is reconnecting, and gone
-    /// after `lostAfter` (15 s: the owner found a minute too long and 10 s too short).
-    public static var heartbeatInterval: Double { 2 }
-    public static var quietAfter: Double { 4 }
-    public static var lostAfter: Double { 15 }
-
     public let role: Role
     public let rules: Rules
     public let name: String
+    /// How often a ping goes out, and how long a silent seat is waited for.
+    public let timing: RoomTiming
     public private(set) var match: Match?
     public private(set) var mySeat: Int?
     public private(set) var seats: [Int: Seat] = [:]
@@ -103,13 +121,15 @@ public final class Room<Rules: RoomRules> {
 
     /// Opens a room with the host in seat 0.
     public init(hosting match: Match, name: String, rules: Rules, transport: any MatchTransport,
-                clock: any RoomClock = SystemClock(), protocolVersion: Int = MatchKit.protocolVersion) {
+                clock: any RoomClock = SystemClock(), timing: RoomTiming = .nearby,
+                protocolVersion: Int = MatchKit.protocolVersion) {
         role = .host
         self.rules = rules
         self.name = name
         self.match = match
         self.transport = transport
         self.clock = clock
+        self.timing = timing
         self.protocolVersion = protocolVersion
         mySeat = 0
         seats[0] = Seat(name: name)
@@ -118,12 +138,14 @@ public final class Room<Rules: RoomRules> {
 
     /// Joins the room at the other end of `transport` once it connects.
     public init(joiningAs name: String, rules: Rules, transport: any MatchTransport,
-                clock: any RoomClock = SystemClock(), protocolVersion: Int = MatchKit.protocolVersion) {
+                clock: any RoomClock = SystemClock(), timing: RoomTiming = .nearby,
+                protocolVersion: Int = MatchKit.protocolVersion) {
         role = .guest
         self.rules = rules
         self.name = name
         self.transport = transport
         self.clock = clock
+        self.timing = timing
         self.protocolVersion = protocolVersion
         listen()
     }
@@ -200,7 +222,7 @@ public final class Room<Rules: RoomRules> {
 
     // MARK: - Connection
 
-    /// Sends a ping and checks who has gone quiet. `startHeartbeat()` calls it every 2 s; tests
+    /// Sends a ping and checks who has gone quiet. `startHeartbeat()` calls it every `timing.heartbeatInterval`; tests
     /// call it by hand with a `ManualClock`.
     public func tick() async {
         guard !stopped else { return }
@@ -208,9 +230,9 @@ public final class Room<Rules: RoomRules> {
         let now = clock.now
         for (seat, heard) in lastHeard where seat != mySeat {
             let silence = now - heard
-            if silence >= Self.lostAfter {
+            if silence >= timing.lostAfter {
                 lose(seat)
-            } else if silence >= Self.quietAfter, seats[seat]?.isReconnecting == false {
+            } else if silence >= timing.quietAfter, seats[seat]?.isReconnecting == false {
                 seats[seat]?.isReconnecting = true
                 onEvent?(.reconnecting(seat: seat))
             }
@@ -219,9 +241,10 @@ public final class Room<Rules: RoomRules> {
 
     public func startHeartbeat() {
         heartbeat?.cancel()
+        let interval = UInt64(timing.heartbeatInterval * 1_000_000_000)
         heartbeat = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(Self.heartbeatInterval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: interval)
                 await self?.tick()
             }
         }
