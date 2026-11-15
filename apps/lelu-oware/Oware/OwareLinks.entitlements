@@ -4,8 +4,10 @@
 <dict>
 	<key>com.apple.developer.game-center</key>
 	<true/>
-	<!-- Invitation links open the app (docs/.well-known/apple-app-site-association). Debug builds
-	     only until online play ships: the App Store profile does not carry this capability yet. -->
+	<!-- Invitation links open the app (docs/.well-known/apple-app-site-association). Not used by
+	     any build yet: the App ID needs the Associated Domains capability first. Once it has it,
+	     build for a test phone with CODE_SIGN_ENTITLEMENTS=Oware/OwareLinks.entitlements, and at
+	     stage 6 of docs/ONLINE_PLAY.md add the key to project.yml's entitlements for every build. -->
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:leluoware.com</string>
