@@ -4,6 +4,11 @@
 > [HANDOFF-2026-10-04.md](HANDOFF-2026-10-04.md) (dice, menus, Learn the game, launch screen, TestFlight). Work goes in stages; finish one
 > (tests, implement, test, improve) before starting the next.
 
+## Android (planned 2026-11-15)
+
+After Lelu Oware's Android app. Plan: [docs/ANDROID.md](../../../docs/ANDROID.md); what is different
+for Ludo: [ANDROID.md](ANDROID.md). Nothing is built.
+
 ## Nearby play (planned 2026-10-28)
 
 After Lelu Oware's: 2–4 phones, free, empty seats played by the computer. Plan: [NEARBY_PLAY.md](NEARBY_PLAY.md).
