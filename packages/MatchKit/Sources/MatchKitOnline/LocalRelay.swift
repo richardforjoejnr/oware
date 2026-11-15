@@ -95,6 +95,15 @@ public actor LocalRelay {
         cut(id)
     }
 
+    /// Forgets one phone's connection while leaving it open, as the real relay did when it was
+    /// wrongly told the phone had gone. The phone's next message is refused with `notFound`.
+    public func forget(_ peer: PeerID, in code: String) {
+        guard let seat = Self.seat(of: peer), let id = rooms[code]?.seats[seat]?.connection else { return }
+        places[id] = nil
+        rooms[code]?.seats[seat]?.connection = nil
+        tell(code, about: seat, .dropped)
+    }
+
     public func hasRoom(_ code: String) -> Bool { rooms[code].map { !$0.isClosed } ?? false }
 
     // MARK: - Connections
@@ -165,14 +174,15 @@ public actor LocalRelay {
             tell(code, about: seat, .joined)
         case let .data(text, to):
             count("data")
-            guard let place = places[id], let room = rooms[place.code] else { return send(.refused(.invalid), to: id) }
+            // Not in a room on this connection (any more).
+            guard let place = places[id], let room = rooms[place.code] else { return send(.refused(.notFound), to: id) }
             guard !room.isClosed else { return }
             for (seat, other) in room.seats where seat != place.seat && (to == nil || to == Self.peer(seat)) {
                 if let connection = other.connection { send(.data(text, from: Self.peer(place.seat)), to: connection) }
             }
         case .leave:
             count("leave")
-            guard let place = places.removeValue(forKey: id) else { return send(.refused(.invalid), to: id) }
+            guard let place = places.removeValue(forKey: id) else { return send(.refused(.notFound), to: id) }
             if place.seat == 0 {
                 rooms[place.code]?.isClosed = true
             } else {

@@ -29,5 +29,6 @@ Each message is one JSON object with a `type`. Swift: `RelayRequest` and `RelayE
 - `data` is one room message as JSON text, passed on untouched and never read or logged by the
   relay (the text in these examples is from room protocol version 1; the relay does not care). Without `to` it goes to everyone else in the room.
 - `refused` reasons: `notFound`, `full`, `paused`, `needsUpdate`, `needsUnlock`, `tooMany`,
-  `invalid`. A phone treats a reason or a `type` it does not know as something to pass over, so
+  `invalid`. `notFound` answers a wrong code or token, and also any message from a connection
+  that is not in a room: a phone that thought it was seated takes its seat back with `rejoin`. A phone treats a reason or a `type` it does not know as something to pass over, so
   the relay can say new things without breaking old apps.

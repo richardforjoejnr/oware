@@ -208,8 +208,13 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
             case let .data(text, from):
                 if shows(from) { eventsOut.yield(.received(Data(text.utf8), from: from)) }
             case let .refused(reason):
-                // Once seated a refusal is about one message (too large, say), not the seat.
-                guard !seated else { break }
+                if seated {
+                    // The relay no longer has this connection in the room, though it is open (it
+                    // was wrongly told the phone had gone): take the seat back on a new one.
+                    // Any other refusal is about one message (too large, say), not the seat.
+                    if reason == .notFound { live.close() }
+                    break
+                }
                 finish(.refused(reason))
                 return .final
             case .rolled, .pong, .unknown:

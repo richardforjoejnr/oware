@@ -185,6 +185,26 @@ struct OnlineTransportTests {
         await eventually("and he sees it") { table.guest.match?.numbers == [4, 7] }
     }
 
+    /// Seen on AWS: the relay was told a phone had gone when it had not, and forgot it. The
+    /// phone's connection was still open, so nothing told it. Its next message is refused as
+    /// "not in a room", and it takes its seat back by itself.
+    @Test func aPhoneTheRelayForgotTakesItsSeatBack() async throws {
+        let table = await seated()
+        try await table.host.send(4)
+        await eventually("first move") { table.guest.match?.numbers == [4] }
+        await relay.forget(PeerID("p1"), in: "K7M2QD")
+        await eventually("Ama sees him reconnecting") { table.hostLog.events.contains(.reconnecting(seat: 1)) }
+
+        clock.advance(by: 10)
+        await table.guest.tick()   // his next ping is the message that is refused
+        await eventually("his phone takes its seat back") { await relay.received["rejoin"] == 1 }
+        await eventually("and Ama sees him back") { table.hostLog.events.contains(.back(seat: 1)) }
+        #expect(table.guestLink.me == PeerID("p1"))
+        try await table.guest.send(7)
+        await eventually("play goes on") { table.host.match?.numbers == [4, 7] }
+        await eventually("on both phones") { table.guest.match?.numbers == [4, 7] }
+    }
+
     @Test func aGameWhoseRoomHasGoneIsNotRejoined() async {
         let gone = OnlineTransport.Seat(code: "K7M2QD", peer: PeerID("p1"), token: "old")
         let link = OnlineTransport(entry: .rejoin(gone), install: "kofi", dial: relay.dial, sleep: Self.noSleep)
