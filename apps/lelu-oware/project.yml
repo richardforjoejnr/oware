@@ -77,6 +77,8 @@ targets:
       path: Oware/Info.plist
       properties:
         CFBundleDisplayName: Lelu Oware
+        # The relay for online play (the AWS repo's apps/lelu-play): RELAY_URL, per configuration below.
+        RelayURL: $(RELAY_URL)
         # leluoware://join?c=<code>: the join page's "Open in Lelu Oware" button, for when an
         # invitation link was opened in a browser instead of the app.
         CFBundleURLTypes:
@@ -112,6 +114,14 @@ targets:
         # CI overrides these with manual match signing via xcargs in fastlane/Fastfile.
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
+      configs:
+        # Builds from Xcode play through the relay's dev stage; TestFlight and App Store builds
+        # through prod. These are the stages' own addresses (the deploy prints them); they change
+        # only if a stage is destroyed and made again. play.leluoware.com replaces prod's later.
+        Debug:
+          RELAY_URL: "wss://e1y2lt3abg.execute-api.us-east-1.amazonaws.com/dev"
+        Release:
+          RELAY_URL: "wss://rcxi7c6ru9.execute-api.us-east-1.amazonaws.com/prod"
   OwareTests:
     type: bundle.unit-test
     platform: iOS

@@ -194,6 +194,16 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(found, [link.absoluteString])
     }
 
+    /// Each build knows its relay: dev for builds from Xcode (which is what runs these tests).
+    func testTheBuildCarriesItsRelaysAddress() {
+        XCTAssertEqual(OnlineConfig.relay.scheme, "wss")
+        XCTAssertTrue(OnlineConfig.relay.absoluteString.hasSuffix("/dev"), OnlineConfig.relay.absoluteString)
+        XCTAssertEqual(OnlineConfig.relay(from: "wss://example.com/prod").absoluteString, "wss://example.com/prod")
+        XCTAssertEqual(OnlineConfig.relay(from: nil).host, "play.leluoware.com")
+        XCTAssertEqual(OnlineConfig.relay(from: "$(RELAY_URL)").host, "play.leluoware.com", "a setting that was never filled in")
+        XCTAssertEqual(OnlineConfig.relay(from: "").host, "play.leluoware.com")
+    }
+
     /// Debug builds keep `-onlinePlay YES -relayURL …` from one launch, so Play online is still
     /// there when the app is opened from its icon or from a link.
     func testOnlineSwitchesGivenAtLaunchAreKept() {

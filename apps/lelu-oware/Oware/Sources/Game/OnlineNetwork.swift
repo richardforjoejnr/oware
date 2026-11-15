@@ -30,9 +30,16 @@ final class OnlinePlay {
 
 /// Where the relay is, and who this phone is to it.
 enum OnlineConfig {
-    /// The relay (the AWS repo's `apps/lelu-play`). A Debug build can point elsewhere with
-    /// `--relay=ws://localhost:8787`.
-    static let relay = URL(string: "wss://play.leluoware.com")!
+    /// The relay (the AWS repo's `apps/lelu-play`): its dev stage for Debug builds and prod for
+    /// TestFlight and App Store builds, from `RELAY_URL` in project.yml. A Debug build can point
+    /// elsewhere with `--relay=ws://localhost:8787`.
+    static let relay = relay(from: Bundle.main.object(forInfoDictionaryKey: "RelayURL") as? String)
+
+    /// The address in the build, if it is a WebSocket address; otherwise the one planned for prod.
+    static func relay(from configured: String?) -> URL {
+        if let configured, let url = URL(string: configured), ["ws", "wss"].contains(url.scheme), url.host != nil { return url }
+        return URL(string: "wss://play.leluoware.com")!
+    }
 
     static var relayURL: URL { LaunchOptions.relayURL ?? relay }
 
