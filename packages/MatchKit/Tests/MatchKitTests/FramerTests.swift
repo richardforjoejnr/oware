@@ -49,14 +49,30 @@ struct FramerTests {
 
 @Suite("Envelopes: versions and the order of messages")
 struct EnvelopeTests {
-    @Test func sequencesOnlyMoveForwardPerSender() {
+    /// Through the relay two messages sent close together can swap places. The earlier one still
+    /// counts when it arrives second; only a repeat, or something long gone, is dropped.
+    @Test func aMessageThatArrivesALittleLateIsStillTaken() {
+        var filter = SequenceFilter()
+        let a = PeerID("a")
+        func accept(_ n: Int) -> Bool { filter.accept(n, from: a) }
+        #expect(accept(1))
+        #expect(accept(3), "the later one arrived first")
+        #expect(accept(2), "and the earlier one is not lost")
+        #expect(!accept(2), "but only once")
+        #expect(!accept(3))
+        #expect(accept(500))
+        #expect(!accept(4), "something from long ago is not news")
+        #expect(accept(499))
+    }
+
+    @Test func repeatsAreDroppedPerSender() {
         var filter = SequenceFilter()
         let a = PeerID("a"), b = PeerID("b")
         func accept(_ n: Int, _ peer: PeerID) -> Bool { filter.accept(n, from: peer) }
         #expect(accept(1, a))
         #expect(accept(2, a))
         #expect(!accept(2, a), "a repeat is dropped")
-        #expect(!accept(1, a), "a late message is dropped")
+        #expect(!accept(1, a), "and so is an older one already heard")
         #expect(accept(1, b), "each sender counts on its own")
         #expect(accept(5, a), "a gap is fine: the next snapshot carries everything")
         filter.forget(a)

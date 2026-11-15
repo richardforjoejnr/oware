@@ -389,6 +389,28 @@ final class NearbyLobby {
 
     static func rulesName(_ rules: RuleSet) -> String { rules.variant == .namNam ? "Nam-Nam" : "Abapa" }
 
+    /// The rules of the game on the Ready screen, once this phone has it. Whoever starts a game
+    /// chooses them, so they may not be the ones in this phone's Settings.
+    var gameVariant: RuleSet.Variant? { link?.table?.match.rules.variant }
+
+    /// The one difference a player notices in the first move, said plainly, so nobody waits for a
+    /// sowing to carry on in Abapa or is surprised when it does in Nam-Nam.
+    static func rulesHint(_ variant: RuleSet.Variant) -> String {
+        switch variant {
+        case .namNam: "Nam-Nam: when your last seed lands in a house with seeds, you pick them all up and sow on. A house brought to four is captured."
+        case .abapa: "Abapa: you sow once and your turn ends, wherever the last seed lands. Twos and threes on the other side are captured."
+        }
+    }
+
+    /// For the player whose own Settings say otherwise.
+    static func rulesDiffer(game: RuleSet.Variant, mine: RuleSet.Variant, creator: String?, iAmCreator: Bool) -> String? {
+        guard game != mine else { return nil }
+        let theirs = rulesName(RuleSet(variant: game)), own = rulesName(RuleSet(variant: mine))
+        return iAmCreator
+            ? "You chose \(theirs) for this game. Your other games use \(own)."
+            : "\(creator ?? friend) started this game with \(theirs). Your own games use \(own)."
+    }
+
     // MARK: Names
 
     static let defaultName = "Oware Player"

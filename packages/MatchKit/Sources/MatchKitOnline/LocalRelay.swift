@@ -63,6 +63,9 @@ public actor LocalRelay {
     private var nextConnection = 0
     private var codes: [String]
     private var reachable = true
+    /// Messages between phones arrive a little late and not always in the order sent, as they
+    /// can through the real relay (each is handled on its own, side by side).
+    private var disorder = false
     private var paused = false
     /// Every message the relay took in, by `type` (for counting what a game costs).
     public private(set) var received: [String: Int] = [:]
@@ -85,6 +88,9 @@ public actor LocalRelay {
         reachable = on
         if !on, cutting { for id in Array(sockets.keys) { cut(id) } }
     }
+
+    /// Room messages take a random moment each, so two sent close together can swap places.
+    public func setDisorder(_ on: Bool) { disorder = on }
 
     /// Online play is switched off: `create` and `join` are refused.
     public func setPaused(_ on: Bool) { paused = on }
@@ -178,7 +184,17 @@ public actor LocalRelay {
             guard let place = places[id], let room = rooms[place.code] else { return send(.refused(.notFound), to: id) }
             guard !room.isClosed else { return }
             for (seat, other) in room.seats where seat != place.seat && (to == nil || to == Self.peer(seat)) {
-                if let connection = other.connection { send(.data(text, from: Self.peer(place.seat)), to: connection) }
+                guard let connection = other.connection else { continue }
+                let event = RelayEvent.data(text, from: Self.peer(place.seat))
+                if disorder {
+                    let wait = UInt64.random(in: 0...6_000_000)
+                    Task { [weak self] in
+                        try? await Task.sleep(nanoseconds: wait)
+                        await self?.send(event, to: connection)
+                    }
+                } else {
+                    send(event, to: connection)
+                }
             }
         case .leave:
             count("leave")

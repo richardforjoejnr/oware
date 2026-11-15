@@ -68,6 +68,39 @@ final class OnlineUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter().wait(for: [yoursAgain], timeout: 20), .completed, "Ama never answered: \(turn.label)")
     }
 
+    /// Nam-Nam online, on the real board at real speed: the first move (A1) lands its last seed in
+    /// a house with seeds, so it is scooped up and sown on, four times, before the turn passes.
+    /// The board must end where the rules say, not where the first lap stopped.
+    func testNamNamRelaySowingIsPlayedOutOnline() {
+        app.launchArguments = ["--reset-state", "--fast-animations", "--real-speed", "--rules=namnam", "--online-demo"]
+        openOnline()
+        app.buttons["btn-start-online"].tap()
+        let ready = app.buttons["btn-ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 10), "Ama joins: Ready to play")
+        let note = app.staticTexts["nearby-game-note"]
+        XCTAssertTrue(note.label.hasPrefix("Nam-Nam"), note.label)
+        XCTAssertTrue(app.staticTexts["nearby-rules-hint"].label.contains("sow on"), "the Ready screen says what Nam-Nam does")
+        let ama = app.descendants(matching: .any)["nearby-player-other"]
+        let amaReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'Ama, red side, Ready'"), object: ama)
+        XCTAssertEqual(XCTWaiter().wait(for: [amaReady], timeout: 10), .completed)
+        ready.tap()
+        let turn = app.staticTexts["turn-indicator"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 10))
+        let yours = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'Your turn'"), object: turn)
+        XCTAssertEqual(XCTWaiter().wait(for: [yours], timeout: 15), .completed, turn.label)
+
+        app.buttons["house-A1"].tap()
+        // Four seeds, then four relay laps: the turn passes only when the last lap ends.
+        let passed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != 'Your turn'"), object: turn)
+        XCTAssertEqual(XCTWaiter().wait(for: [passed], timeout: 60), .completed, "the turn never passed")
+        // Where Nam-Nam leaves the board after A1 from the opening (the engine's own answer; a
+        // single lap, as in Abapa, would leave A1 empty and A2 to A5 with five each).
+        let expected = ["A1": 2, "A2": 7, "A3": 1, "A4": 6, "A5": 1, "A6": 6, "B1": 6, "B2": 6, "B3": 0]
+        for (house, seeds) in expected.sorted(by: { $0.key < $1.key }) {
+            XCTAssertEqual(app.buttons["house-\(house)"].value as? String, "\(seeds) seeds", "house \(house)")
+        }
+    }
+
     /// A code that is not six of the letters and numbers used cannot be sent.
     func testJoinIsOfferedOnlyForSomethingThatCouldBeACode() {
         openOnline()

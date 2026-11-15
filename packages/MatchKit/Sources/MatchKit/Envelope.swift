@@ -29,17 +29,40 @@ public struct EnvelopeHeader: Decodable, Sendable {
     public var protocolVersion: Int
 }
 
-/// Keeps only messages newer than the last one heard from each sender.
+/// Drops repeats and messages far older than the newest heard from that sender.
+///
+/// A message that arrives a little late is still taken. Through the relay two messages sent
+/// close together can swap places (each is handled on its own), and dropping the earlier one lost
+/// a player's sowing speed sent just before Ready, or a move sent beside a ping. Order does not
+/// matter to a room: the host checks every intent against the rules, and a guest takes a snapshot
+/// only if it carries the match further.
 public struct SequenceFilter: Sendable {
-    private var last: [PeerID: Int] = [:]
+    /// How far behind the newest a late message may be.
+    static let window = 64
+
+    private struct Heard: Sendable {
+        var newest: Int
+        var recent: Set<Int>
+    }
+
+    private var heard: [PeerID: Heard] = [:]
 
     public init() {}
 
     public mutating func accept(_ sequence: Int, from peer: PeerID) -> Bool {
-        if let seen = last[peer], sequence <= seen { return false }
-        last[peer] = sequence
+        guard var mine = heard[peer] else {
+            heard[peer] = Heard(newest: sequence, recent: [sequence])
+            return true
+        }
+        guard sequence > mine.newest - Self.window, !mine.recent.contains(sequence) else { return false }
+        mine.recent.insert(sequence)
+        if sequence > mine.newest {
+            mine.newest = sequence
+            mine.recent = mine.recent.filter { $0 > sequence - Self.window }
+        }
+        heard[peer] = mine
         return true
     }
 
-    public mutating func forget(_ peer: PeerID) { last[peer] = nil }
+    public mutating func forget(_ peer: PeerID) { heard[peer] = nil }
 }

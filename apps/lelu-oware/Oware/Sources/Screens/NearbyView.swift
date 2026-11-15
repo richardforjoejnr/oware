@@ -411,10 +411,32 @@ struct NearbyView: View {
                            status: status(of: opponent), ready: opponent.isReady, isMe: false)
             }
             if !lobby.gameNote.isEmpty {
-                Text(lobby.gameNote)
-                    .font(Theme.caption(15))
-                    .foregroundStyle(Theme.ivoryDim)
-                    .accessibilityIdentifier("nearby-game-note")
+                // Which game this is, where nobody can miss it: the two phones may be set to
+                // different rules, and the game follows whoever started it.
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(lobby.gameNote)
+                        .font(Theme.body(17))
+                        .foregroundStyle(Theme.ivory)
+                        .accessibilityIdentifier("nearby-game-note")
+                    if let variant = lobby.gameVariant {
+                        Text(NearbyLobby.rulesHint(variant))
+                            .font(Theme.caption(14))
+                            .foregroundStyle(Theme.ivoryDim)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .accessibilityIdentifier("nearby-rules-hint")
+                        if let differ = NearbyLobby.rulesDiffer(game: variant, mine: settings.rules.variant,
+                                                                creator: lobby.opponent?.name, iAmCreator: lobby.isCreator) {
+                            Text(differ)
+                                .font(Theme.caption(14))
+                                .foregroundStyle(Theme.gold)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("nearby-rules-differ")
+                        }
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.ember, in: RoundedRectangle(cornerRadius: 16))
             }
             if lobby.iAmReady {
                 HStack(spacing: 12) {

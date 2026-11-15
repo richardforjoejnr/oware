@@ -332,6 +332,37 @@ final class RemoteGameTests: XCTestCase {
         await until("the computer opens as South") { p.guest.state.moveNumber == 1 }
     }
 
+    /// Every rule of the game is the engine's, on both phones, whoever moves: a whole game on two
+    /// phones ends in the same positions as the same moves played on one. Nam-Nam is the one that
+    /// shows a slip at once: a last seed in a house with seeds is scooped up and sown on.
+    func testATwoPhoneGameFollowsTheSameRulesAsAGameOnOnePhone() async throws {
+        for rules in [RuleSet.namNam, .abapa] {
+            let p = await pair(rules: rules)
+            var alone = GameState.initial(rules: rules)
+            struct LCG: RandomNumberGenerator {
+                var s: UInt64
+                mutating func next() -> UInt64 { s = s &* 6364136223846793005 &+ 1442695040888963407; return s }
+            }
+            var rng = LCG(s: 11)
+            var plies = 0, relays = 0
+            while !alone.isOver, plies < 120 {
+                let mover = alone.sideToMove == .south ? p.host : p.guest
+                await until("\(rules.variant) move \(plies + 1): the mover's turn") { mover.humanToMove }
+                XCTAssertEqual(mover.state, alone, "\(rules.variant) before move \(plies + 1)")
+                let move = try XCTUnwrap(alone.legalMoves().randomElement(using: &rng))
+                let result = try alone.applying(move)
+                relays += result.events.filter { if case .relay = $0 { true } else { false } }.count
+                alone = result.state
+                mover.play(house: move.absoluteIndex)
+                plies += 1
+                await until("\(rules.variant) move \(plies) on both phones") { p.host.state == alone && p.guest.state == alone }
+            }
+            if rules.variant == .namNam { XCTAssertGreaterThan(relays, 10, "the game had relay sowing in it") }
+            XCTAssertEqual(p.host.state.rules, rules)
+            XCTAssertEqual(p.guest.state.rules, rules)
+        }
+    }
+
     func testBothPhonesAlwaysShowTheSamePosition() async {
         let p = await pair()
         // Seeded, so a failure can be replayed.

@@ -106,6 +106,24 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(p.ama.link?.table?.stateHash, p.kofi.link?.table?.stateHash, "the same position on both phones")
     }
 
+    // MARK: Which rules
+
+    /// The owner's two phones were set to different rules, and a game started on the Abapa one
+    /// looked broken to the Nam-Nam player: the sowing stopped and the turn passed. The game
+    /// follows whoever starts it, and the Ready screen now says so on both phones.
+    func testTheGameUsesItsCreatorsRulesAndBothPhonesAreTold() async {
+        let p = await phones(rules: .abapa)
+        XCTAssertEqual(p.ama.gameVariant, .abapa)
+        XCTAssertEqual(p.kofi.gameVariant, .abapa, "the joining phone has the game's rules, not its own")
+        XCTAssertTrue(NearbyLobby.rulesHint(.abapa).contains("sow once and your turn ends"))
+        XCTAssertTrue(NearbyLobby.rulesHint(.namNam).contains("sow on"))
+        XCTAssertEqual(NearbyLobby.rulesDiffer(game: .abapa, mine: .namNam, creator: "Ama", iAmCreator: false),
+                       "Ama started this game with Abapa. Your own games use Nam-Nam.")
+        XCTAssertEqual(NearbyLobby.rulesDiffer(game: .abapa, mine: .namNam, creator: nil, iAmCreator: true),
+                       "You chose Abapa for this game. Your other games use Nam-Nam.")
+        XCTAssertNil(NearbyLobby.rulesDiffer(game: .namNam, mine: .namNam, creator: "Ama", iAmCreator: false))
+    }
+
     // MARK: Invitations
 
     /// One phone's Play online with its lobby, as the app holds it.
@@ -340,6 +358,126 @@ final class OnlinePairTests: XCTestCase {
         let p = await playing()
         await p.kofi.session.link?.leave()
         await until("Ama is told") { p.ama.session.opponentLeft }
+    }
+
+    // MARK: The rules, with seeds that take time to sow
+
+    /// A board that takes a while over every move, as the real one does, and remembers what it
+    /// was asked to show: each sowing in full (`animate`), or a position put down at once (`render`).
+    @MainActor
+    final class SlowBoard: BoardAnimator {
+        var humanSide: Player?
+        var sown: [[MoveEvent]] = []
+        var putDown = 0
+        var seconds: Double
+        init(seconds: Double) { self.seconds = seconds }
+
+        func animate(events: [MoveEvent], from before: GameState, to after: GameState) async {
+            sown.append(events)
+            try? await Task.sleep(for: .seconds(seconds))
+        }
+
+        func render(_ state: GameState) { putDown += 1 }
+    }
+
+    struct LCG: RandomNumberGenerator {
+        var s: UInt64
+        mutating func next() -> UInt64 { s = s &* 6364136223846793005 &+ 1442695040888963407; return s }
+    }
+
+    /// A whole online game in each rule set, with sowing that takes longer than the messages do.
+    /// Every move is sown in full on both phones, once, and leaves both boards where the same
+    /// move leaves a board on one phone. In Nam-Nam that includes every relay lap: a last seed in
+    /// a house with seeds is scooped up and sown on before the turn passes.
+    func testEveryMoveOfAnOnlineGameIsSownInFullOnBothPhones() async throws {
+        for rules in [RuleSet.namNam, .abapa] {
+            let relay = LocalRelay()
+            let ama = phone(relay, install: "ama"), kofi = phone(relay, install: "kofi")
+            let amaBoard = SlowBoard(seconds: 0.03), kofiBoard = SlowBoard(seconds: 0.05)
+            ama.session.attach(amaBoard)
+            kofi.session.attach(kofiBoard)
+            ama.start(name: "Ama", rules: rules)
+            await until("a code") { ama.roomCode != nil }
+            XCTAssertTrue(kofi.join(code: ama.roomCode ?? "", name: "Kofi"))
+            await until("Kofi is in") { kofi.opponent?.isConnected == true && ama.opponent != nil }
+            await kofi.ready()
+            await ama.ready()
+            await until("started") { ama.session.isStarted && kofi.session.isStarted }
+            XCTAssertEqual(kofi.session.state.rules, rules, "the joining phone plays the rules of the game it joined")
+            let putDownAtStart = (amaBoard.putDown, kofiBoard.putDown)
+            amaBoard.sown = []
+            kofiBoard.sown = []
+
+            var alone = GameState.initial(rules: rules)
+            var rng = LCG(s: 5)
+            var plies = 0, relays = 0
+            while !alone.isOver, plies < 60 {
+                let mover = alone.sideToMove == .south ? ama.session : kofi.session
+                await until("\(rules.variant) move \(plies + 1): the mover's turn", timeout: 10) { mover.humanToMove }
+                XCTAssertEqual(mover.state, alone, "\(rules.variant) before move \(plies + 1)")
+                let move = try XCTUnwrap(alone.legalMoves().randomElement(using: &rng))
+                let result = try alone.applying(move)
+                relays += result.events.filter { if case .relay = $0 { true } else { false } }.count
+                alone = result.state
+                mover.play(house: move.absoluteIndex)
+                plies += 1
+                await until("\(rules.variant) move \(plies) settles on both phones", timeout: 10) {
+                    ama.session.state == alone && kofi.session.state == alone
+                        && !ama.session.isAnimating && !kofi.session.isAnimating
+                }
+                XCTAssertEqual(amaBoard.sown.count, plies, "\(rules.variant): Ama's board sowed move \(plies) once")
+                XCTAssertEqual(kofiBoard.sown.count, plies, "\(rules.variant): Kofi's board sowed move \(plies) once")
+                XCTAssertEqual(amaBoard.sown.last, result.events, "\(rules.variant) move \(plies): the whole sowing, on Ama's board")
+                XCTAssertEqual(kofiBoard.sown.last, result.events, "\(rules.variant) move \(plies): the whole sowing, on Kofi's board")
+                // Nam-Nam ends a round by putting the next one down; nothing else may jump the board.
+                let roundsEnded = alone.roundHistory.count
+                XCTAssertLessThanOrEqual(amaBoard.putDown - putDownAtStart.0, roundsEnded, "\(rules.variant) move \(plies): Ama's board jumped")
+                XCTAssertLessThanOrEqual(kofiBoard.putDown - putDownAtStart.1, roundsEnded, "\(rules.variant) move \(plies): Kofi's board jumped")
+            }
+            if rules.variant == .namNam { XCTAssertGreaterThan(relays, 5, "the game had relay sowing in it") }
+            ama.cancel()
+            kofi.cancel()
+        }
+    }
+
+    /// Through the real relay two messages sent close together can arrive the other way round.
+    /// Nothing is lost by that: both sowing speeds are known (they go out with Ready, one after
+    /// the other), and a whole game is still played the same on both phones.
+    func testMessagesArrivingOutOfOrderLoseNothing() async throws {
+        for round in 0..<6 {
+            let relay = LocalRelay()
+            await relay.setDisorder(true)
+            let ama = phone(relay, install: "ama"), kofi = phone(relay, install: "kofi")
+            ama.start(name: "Ama", rules: .namNam, pace: 1.0)
+            await until("a code") { ama.roomCode != nil }
+            XCTAssertTrue(kofi.join(code: ama.roomCode ?? "", name: "Kofi", pace: 0.7))
+            await until("Kofi is in") { kofi.opponent?.isConnected == true && ama.opponent != nil }
+            await kofi.ready()
+            await ama.ready()
+            await until("round \(round): started") { ama.session.isStarted && kofi.session.isStarted }
+            await until("round \(round): both phones sow at the slower speed") {
+                ama.session.sharedPace == 0.7 && kofi.session.sharedPace == 0.7
+            }
+
+            var alone = GameState.initial(rules: .namNam)
+            var rng = LCG(s: UInt64(round + 1))
+            var plies = 0
+            while !alone.isOver, plies < 16 {
+                let mover = alone.sideToMove == .south ? ama.session : kofi.session
+                await until("round \(round) move \(plies + 1): the mover's turn") { mover.humanToMove }
+                let move = try XCTUnwrap(alone.legalMoves().randomElement(using: &rng))
+                alone = try alone.applying(move).state
+                mover.play(house: move.absoluteIndex)
+                // A ping goes out with the move, as the heartbeat's sometimes does.
+                await (mover === ama.session ? ama : kofi).link?.tick()
+                plies += 1
+                await until("round \(round) move \(plies) on both phones") {
+                    ama.session.state == alone && kofi.session.state == alone
+                }
+            }
+            ama.cancel()
+            kofi.cancel()
+        }
     }
 
     // MARK: A real relay
