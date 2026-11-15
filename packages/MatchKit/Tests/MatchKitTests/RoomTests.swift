@@ -167,7 +167,7 @@ struct RoomTests {
         #expect(table.host.pending.isEmpty, "the host is not asked about a phone it cannot talk to")
     }
 
-    @Test func anOlderGuestRefusesANewerHost() async {
+    @Test func anOlderAppIsToldToUpdate() async {
         let clock = ManualClock()
         let hostLink = LoopbackTransport()
         let host = TallyRoom(hosting: Tally(), name: "Kofi", rules: TallyRules(), transport: hostLink, clock: clock,
@@ -177,10 +177,31 @@ struct RoomTests {
         let guest = TallyRoom(joiningAs: "Ama", rules: TallyRules(), transport: link, clock: clock)
         guest.onEvent = { log.events.append($0) }
         hostLink.connect(link)
-        await eventually("join request") { !host.pending.isEmpty }
-        await host.accept(host.pending.keys.first!)
         await eventually("refusal") { log.events.contains(.refused(.needsUpdate(hostVersion: MatchKit.protocolVersion + 1))) }
         #expect(guest.mySeat == nil && guest.match == nil)
+        #expect(host.pending.isEmpty, "the host is not asked about a phone it cannot talk to")
+    }
+
+    /// Phones with the first nearby play speak version 1, in another JSON form. Its hello is not
+    /// read as a join request; it is answered so that the old phone asks its player to update.
+    @Test func aPhoneOnVersionOneIsAnsweredNotIgnored() async throws {
+        let clock = ManualClock()
+        let hostLink = LoopbackTransport(), oldPhone = LoopbackTransport()
+        let host = TallyRoom(hosting: Tally(), name: "Kofi", rules: TallyRules(), transport: hostLink, clock: clock)
+        hostLink.connect(oldPhone)
+        try await oldPhone.send(Data(#"{"protocolVersion":1,"sequence":1,"body":{"hello":{"name":"Ama"}}}"#.utf8), to: nil)
+        var answer: Data?
+        let reading = Task {
+            for await event in oldPhone.events {
+                if case let .received(data, _) = event { answer = data; break }
+            }
+        }
+        await eventually("an answer") { answer != nil }
+        reading.cancel()
+        let header = try JSONDecoder().decode(EnvelopeHeader.self, from: try #require(answer))
+        #expect(header.protocolVersion == 2, "an old phone reads this number and nothing else")
+        #expect(host.pending.isEmpty)
+        host.stop()
     }
 
     // MARK: Play
@@ -377,5 +398,52 @@ struct RoomTests {
         await eventually("the guest hears it") { log.events.contains(.left(seat: 0)) }
         #expect(!log.events.contains(.seatLost(seat: 0)))
         withExtendedLifetime(guest) {}
+    }
+}
+
+@MainActor
+@Suite("Room timings")
+struct RoomTimingTests {
+    @Test func nearbyKeepsItsTimingsAndOnlineWaitsLonger() {
+        #expect(RoomTiming.nearby == RoomTiming(heartbeatInterval: 2, quietAfter: 4, lostAfter: 15))
+        #expect(RoomTiming.online == RoomTiming(heartbeatInterval: 10, quietAfter: 25, lostAfter: 90))
+    }
+
+    @Test func aRoomUsesNearbyTimingsUnlessTold() {
+        let room = TallyRoom(hosting: Tally(), name: "Ama", rules: TallyRules(), transport: LoopbackTransport())
+        #expect(room.timing == .nearby)
+        room.stop()
+    }
+
+    /// With online timings a seat is still only "reconnecting" long after nearby play would have
+    /// given it up.
+    @Test func aRoomWaitsAsLongAsItsTimingSays() async {
+        let clock = ManualClock()
+        let hostSide = LoopbackTransport(), guestSide = LoopbackTransport()
+        let host = TallyRoom(hosting: Tally(), name: "Ama", rules: TallyRules(), transport: hostSide,
+                             clock: clock, timing: .online)
+        let guest = TallyRoom(joiningAs: "Kofi", rules: TallyRules(), transport: guestSide, clock: clock, timing: .online)
+        var events: [RoomEvent<Tally>] = []
+        host.onEvent = { events.append($0) }
+        hostSide.connect(guestSide)
+        for _ in 0..<2_000 where host.pending.isEmpty { await Task.yield() }
+        await host.accept(guestSide.me)
+        for _ in 0..<2_000 where guest.mySeat == nil { await Task.yield() }
+        guestSide.isQuiet = true
+
+        clock.advance(by: 20)
+        await host.tick()
+        #expect(host.seats[1]?.isReconnecting == false, "20 s of silence is ordinary on mobile data")
+        clock.advance(by: 5)
+        await host.tick()
+        #expect(events.contains(.reconnecting(seat: 1)))
+        clock.advance(by: 60)
+        await host.tick()
+        #expect(host.seats[1] != nil, "85 s: still waiting")
+        clock.advance(by: 5)
+        await host.tick()
+        #expect(events.contains(.seatLost(seat: 1)))
+        host.stop()
+        guest.stop()
     }
 }

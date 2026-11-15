@@ -13,14 +13,38 @@ public protocol RoomRules: Sendable {
     func shouldReplace(_ current: Match, with snapshot: Match) -> Bool
 }
 
-public enum Refusal: Codable, Sendable, Equatable {
+/// How patient a room is. Each transport brings its own: phones side by side notice a break in
+/// seconds, while mobile data is slower to come back and every ping through the relay is paid for.
+public struct RoomTiming: Sendable, Equatable {
+    /// A ping goes out this often.
+    public var heartbeatInterval: Double
+    /// A seat silent this long is shown as reconnecting.
+    public var quietAfter: Double
+    /// A seat silent this long is given up.
+    public var lostAfter: Double
+
+    public init(heartbeatInterval: Double, quietAfter: Double, lostAfter: Double) {
+        self.heartbeatInterval = heartbeatInterval
+        self.quietAfter = quietAfter
+        self.lostAfter = lostAfter
+    }
+
+    /// 15 s: the owner found a minute too long and 10 s too short.
+    public static let nearby = RoomTiming(heartbeatInterval: 2, quietAfter: 4, lostAfter: 15)
+    /// docs/ONLINE_PLAY.md §5, Connections.
+    public static let online = RoomTiming(heartbeatInterval: 10, quietAfter: 25, lostAfter: 90)
+}
+
+public enum Refusal: Sendable, Equatable {
     case roomFull
     case declined
     /// The phones run different versions of the room protocol; whoever is older should update.
     case needsUpdate(hostVersion: Int)
 }
 
-public enum RoomMessage<Match: Codable & Sendable, Intent: Codable & Sendable>: Codable, Sendable {
+/// What the phones in one game send each other, inside an `Envelope`. The JSON is written by
+/// hand (below) and pinned by the examples in `shared/vectors/room-v2`.
+public enum RoomMessage<Match: Codable & Sendable, Intent: Codable & Sendable>: Sendable {
     /// `rejoin` is the token from an earlier `welcome`, to take the same seat back.
     case hello(name: String, rejoin: UUID?)
     case welcome(seat: Int, token: UUID, names: [Int: String], snapshot: Match)
@@ -29,6 +53,80 @@ public enum RoomMessage<Match: Codable & Sendable, Intent: Codable & Sendable>: 
     case snapshot(Match)
     case ping
     case bye
+}
+
+/// One object with a `type`, and that kind's values beside it:
+/// `{"type": "hello", "name": "Kofi"}`, `{"type": "refused", "reason": "roomFull"}`.
+extension RoomMessage: Codable {
+    private enum Key: String, CodingKey {
+        case type, name, rejoin, seat, token, names, snapshot, reason, hostVersion, intent
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Key.self)
+        let type = try c.decode(String.self, forKey: .type)
+        switch type {
+        case "hello":
+            self = .hello(name: try c.decode(String.self, forKey: .name), rejoin: try c.decodeIfPresent(UUID.self, forKey: .rejoin))
+        case "welcome":
+            let byText = try c.decode([String: String].self, forKey: .names)
+            var names: [Int: String] = [:]
+            for (seat, name) in byText {
+                guard let seat = Int(seat) else {
+                    throw DecodingError.dataCorruptedError(forKey: .names, in: c, debugDescription: "seat \(seat) is not a number")
+                }
+                names[seat] = name
+            }
+            self = .welcome(seat: try c.decode(Int.self, forKey: .seat), token: try c.decode(UUID.self, forKey: .token),
+                            names: names, snapshot: try c.decode(Match.self, forKey: .snapshot))
+        case "refused":
+            let reason = try c.decode(String.self, forKey: .reason)
+            switch reason {
+            case "roomFull": self = .refused(.roomFull)
+            case "declined": self = .refused(.declined)
+            case "needsUpdate": self = .refused(.needsUpdate(hostVersion: try c.decode(Int.self, forKey: .hostVersion)))
+            default: throw DecodingError.dataCorruptedError(forKey: .reason, in: c, debugDescription: "unknown reason \(reason)")
+            }
+        case "intent": self = .intent(try c.decode(Intent.self, forKey: .intent))
+        case "snapshot": self = .snapshot(try c.decode(Match.self, forKey: .snapshot))
+        case "ping": self = .ping
+        case "bye": self = .bye
+        default: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown message \(type)")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: Key.self)
+        switch self {
+        case let .hello(name, rejoin):
+            try c.encode("hello", forKey: .type)
+            try c.encode(name, forKey: .name)
+            try c.encodeIfPresent(rejoin, forKey: .rejoin)
+        case let .welcome(seat, token, names, snapshot):
+            try c.encode("welcome", forKey: .type)
+            try c.encode(seat, forKey: .seat)
+            try c.encode(token, forKey: .token)
+            try c.encode(Dictionary(uniqueKeysWithValues: names.map { (String($0.key), $0.value) }), forKey: .names)
+            try c.encode(snapshot, forKey: .snapshot)
+        case let .refused(refusal):
+            try c.encode("refused", forKey: .type)
+            switch refusal {
+            case .roomFull: try c.encode("roomFull", forKey: .reason)
+            case .declined: try c.encode("declined", forKey: .reason)
+            case let .needsUpdate(hostVersion):
+                try c.encode("needsUpdate", forKey: .reason)
+                try c.encode(hostVersion, forKey: .hostVersion)
+            }
+        case let .intent(intent):
+            try c.encode("intent", forKey: .type)
+            try c.encode(intent, forKey: .intent)
+        case let .snapshot(snapshot):
+            try c.encode("snapshot", forKey: .type)
+            try c.encode(snapshot, forKey: .snapshot)
+        case .ping: try c.encode("ping", forKey: .type)
+        case .bye: try c.encode("bye", forKey: .type)
+        }
+    }
 }
 
 public enum RoomEvent<Match: Sendable & Equatable>: Sendable, Equatable {
@@ -65,15 +163,11 @@ public final class Room<Rules: RoomRules> {
         public var isReconnecting = false
     }
 
-    /// A ping goes out this often; a seat silent for `quietAfter` is reconnecting, and gone
-    /// after `lostAfter` (15 s: the owner found a minute too long and 10 s too short).
-    public static var heartbeatInterval: Double { 2 }
-    public static var quietAfter: Double { 4 }
-    public static var lostAfter: Double { 15 }
-
     public let role: Role
     public let rules: Rules
     public let name: String
+    /// How often a ping goes out, and how long a silent seat is waited for.
+    public let timing: RoomTiming
     public private(set) var match: Match?
     public private(set) var mySeat: Int?
     public private(set) var seats: [Int: Seat] = [:]
@@ -103,13 +197,15 @@ public final class Room<Rules: RoomRules> {
 
     /// Opens a room with the host in seat 0.
     public init(hosting match: Match, name: String, rules: Rules, transport: any MatchTransport,
-                clock: any RoomClock = SystemClock(), protocolVersion: Int = MatchKit.protocolVersion) {
+                clock: any RoomClock = SystemClock(), timing: RoomTiming = .nearby,
+                protocolVersion: Int = MatchKit.protocolVersion) {
         role = .host
         self.rules = rules
         self.name = name
         self.match = match
         self.transport = transport
         self.clock = clock
+        self.timing = timing
         self.protocolVersion = protocolVersion
         mySeat = 0
         seats[0] = Seat(name: name)
@@ -118,12 +214,14 @@ public final class Room<Rules: RoomRules> {
 
     /// Joins the room at the other end of `transport` once it connects.
     public init(joiningAs name: String, rules: Rules, transport: any MatchTransport,
-                clock: any RoomClock = SystemClock(), protocolVersion: Int = MatchKit.protocolVersion) {
+                clock: any RoomClock = SystemClock(), timing: RoomTiming = .nearby,
+                protocolVersion: Int = MatchKit.protocolVersion) {
         role = .guest
         self.rules = rules
         self.name = name
         self.transport = transport
         self.clock = clock
+        self.timing = timing
         self.protocolVersion = protocolVersion
         listen()
     }
@@ -200,7 +298,7 @@ public final class Room<Rules: RoomRules> {
 
     // MARK: - Connection
 
-    /// Sends a ping and checks who has gone quiet. `startHeartbeat()` calls it every 2 s; tests
+    /// Sends a ping and checks who has gone quiet. `startHeartbeat()` calls it every `timing.heartbeatInterval`; tests
     /// call it by hand with a `ManualClock`.
     public func tick() async {
         guard !stopped else { return }
@@ -208,9 +306,9 @@ public final class Room<Rules: RoomRules> {
         let now = clock.now
         for (seat, heard) in lastHeard where seat != mySeat {
             let silence = now - heard
-            if silence >= Self.lostAfter {
+            if silence >= timing.lostAfter {
                 lose(seat)
-            } else if silence >= Self.quietAfter, seats[seat]?.isReconnecting == false {
+            } else if silence >= timing.quietAfter, seats[seat]?.isReconnecting == false {
                 seats[seat]?.isReconnecting = true
                 onEvent?(.reconnecting(seat: seat))
             }
@@ -219,9 +317,10 @@ public final class Room<Rules: RoomRules> {
 
     public func startHeartbeat() {
         heartbeat?.cancel()
+        let interval = UInt64(timing.heartbeatInterval * 1_000_000_000)
         heartbeat = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: UInt64(Self.heartbeatInterval * 1_000_000_000))
+                try? await Task.sleep(nanoseconds: interval)
                 await self?.tick()
             }
         }
@@ -288,7 +387,8 @@ public final class Room<Rules: RoomRules> {
 
     private func receive(_ data: Data, from peer: PeerID) async {
         guard let header = try? JSONDecoder().decode(EnvelopeHeader.self, from: data) else { return }
-        if header.protocolVersion > protocolVersion {
+        // Another version of the protocol, older or newer: the body cannot be trusted to mean the same.
+        if header.protocolVersion != protocolVersion {
             switch role {
             case .host: await post(.refused(.needsUpdate(hostVersion: protocolVersion)), to: peer)
             case .guest: if peer == hostPeer { onEvent?(.refused(.needsUpdate(hostVersion: header.protocolVersion))) }

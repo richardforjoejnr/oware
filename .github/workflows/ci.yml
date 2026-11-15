@@ -1,6 +1,6 @@
 name: CI
 
-# Lelu Oware's CI (apps/lelu-oware, packages/OwareEngine, packages/SupportKit, packages/MatchKit). The name stays "CI":
+# Lelu Oware's CI (apps/lelu-oware, packages/OwareEngine, packages/SupportKit, packages/MatchKit, shared/vectors). The name stays "CI":
 # the Site workflow (pages.yml) triggers on it and scripts/build-reports.py downloads its
 # `TestResults` artifact by that name.
 #
@@ -20,6 +20,7 @@ on:
       - packages/OwareEngine/**
       - packages/SupportKit/**
       - packages/MatchKit/**
+      - shared/vectors/**
       - docs/lelu-oware/**
       - scripts/release_readiness.py
       - .github/workflows/reusable-app-readiness.yml
@@ -42,6 +43,7 @@ on:
       - packages/OwareEngine/**
       - packages/SupportKit/**
       - packages/MatchKit/**
+      - shared/vectors/**
       - docs/lelu-oware/**
       - scripts/release_readiness.py
       - .github/workflows/reusable-app-readiness.yml

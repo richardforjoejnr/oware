@@ -1,12 +1,14 @@
 import Foundation
 
 public enum MatchKit {
-    /// The room protocol. Bump when messages change; a phone refuses newer versions and the
-    /// players are told to update.
-    public static let protocolVersion = 1
+    /// The room protocol. Bump when messages change; a phone refuses every other version and the
+    /// players are told who should update. Version 2 (November 2026) gave the messages a plain
+    /// JSON form that other languages can write (`shared/vectors/room-v2`).
+    public static let protocolVersion = 2
 }
 
-/// Every message between phones.
+/// Every message between phones. `protocolVersion` keeps its name and place in every version:
+/// it is how a phone with any version of the app knows it cannot read the rest.
 public struct Envelope<Body: Codable & Sendable>: Codable, Sendable {
     public var protocolVersion: Int
     /// Per sender, so repeats and stale messages are dropped.

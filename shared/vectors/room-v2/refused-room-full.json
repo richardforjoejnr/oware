@@ -1,0 +1,8 @@
+{
+  "body": {
+    "reason": "roomFull",
+    "type": "refused"
+  },
+  "protocolVersion": 2,
+  "sequence": 4
+}

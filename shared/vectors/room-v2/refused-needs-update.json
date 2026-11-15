@@ -1,0 +1,9 @@
+{
+  "body": {
+    "hostVersion": 2,
+    "reason": "needsUpdate",
+    "type": "refused"
+  },
+  "protocolVersion": 2,
+  "sequence": 6
+}

@@ -1,0 +1,32 @@
+{
+  "body": {
+    "snapshot": {
+      "isOutOfStep": false,
+      "match": {
+        "game": 1,
+        "houses": [2, 9],
+        "matchID": "6F1E2D3C-4B5A-4978-8A69-5B4C3D2E1F00",
+        "rules": {
+          "grandSlam": "forfeitCapture",
+          "maxRounds": 20,
+          "mustFeed": true,
+          "repetitionLimit": 3,
+          "variant": "abapa",
+          "winningSeeds": 25
+        },
+        "starter": 0,
+        "version": 2
+      },
+      "paces": {
+        "0": 0.35,
+        "1": 0.6
+      },
+      "ready": [0, 1],
+      "rematchAsked": [],
+      "stateHash": "1a94966d4dd55eca"
+    },
+    "type": "snapshot"
+  },
+  "protocolVersion": 2,
+  "sequence": 13
+}

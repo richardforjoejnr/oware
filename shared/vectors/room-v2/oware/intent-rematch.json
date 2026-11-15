@@ -1,0 +1,10 @@
+{
+  "body": {
+    "intent": {
+      "type": "rematch"
+    },
+    "type": "intent"
+  },
+  "protocolVersion": 2,
+  "sequence": 11
+}

@@ -16,7 +16,7 @@ struct RemoteGame: Codable, Hashable, Sendable {
 /// What the phones share: the match, who has asked for another game (a rematch starts only once
 /// both have asked), each player's sowing speed (both phones sow at the slower), and the start
 /// handshake: nobody moves until both phones have acknowledged the same opening.
-struct OwareTable: Codable, Sendable, Equatable {
+struct OwareTable: Sendable, Equatable {
     var match: OwareMatch
     var rematchAsked: Set<Player> = []
     var paces: [Player: Double] = [:]
@@ -41,10 +41,78 @@ struct OwareTable: Codable, Sendable, Equatable {
 
 /// What a phone may ask the host: a move, resign or rematch, its sowing speed, or to start, with
 /// the fingerprint of the opening it replayed.
-enum TableIntent: Codable, Sendable, Equatable {
+enum TableIntent: Sendable, Equatable {
     case game(OwareIntent)
     case pace(Double)
     case ready(stateHash: String)
+}
+
+// MARK: - JSON (room protocol version 2, pinned by shared/vectors/room-v2/oware)
+
+/// Players are numbers (0 South, 1 North), sets are lists in order, and `paces` is an object
+/// keyed by the player's number: `{"0": 0.35, "1": 0.6}`.
+extension OwareTable: Codable {
+    private enum Key: String, CodingKey { case match, rematchAsked, paces, ready, stateHash, isOutOfStep }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Key.self)
+        match = try c.decode(OwareMatch.self, forKey: .match)
+        rematchAsked = Set(try c.decode([Player].self, forKey: .rematchAsked))
+        ready = Set(try c.decode([Player].self, forKey: .ready))
+        for (number, pace) in try c.decode([String: Double].self, forKey: .paces) {
+            guard let player = Int(number).flatMap(Player.init(rawValue:)) else {
+                throw DecodingError.dataCorruptedError(forKey: .paces, in: c, debugDescription: "no player \(number)")
+            }
+            paces[player] = pace
+        }
+        stateHash = try c.decodeIfPresent(String.self, forKey: .stateHash)
+        isOutOfStep = try c.decode(Bool.self, forKey: .isOutOfStep)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: Key.self)
+        try c.encode(match, forKey: .match)
+        try c.encode(rematchAsked.sorted { $0.rawValue < $1.rawValue }, forKey: .rematchAsked)
+        try c.encode(ready.sorted { $0.rawValue < $1.rawValue }, forKey: .ready)
+        try c.encode(Dictionary(uniqueKeysWithValues: paces.map { (String($0.key.rawValue), $0.value) }), forKey: .paces)
+        try c.encodeIfPresent(stateHash, forKey: .stateHash)
+        try c.encode(isOutOfStep, forKey: .isOutOfStep)
+    }
+}
+
+/// One object with a `type`: `play` (`house`), `resign`, `rematch`, `pace` (`pace`), `ready` (`stateHash`).
+extension TableIntent: Codable {
+    private enum Key: String, CodingKey { case type, house, pace, stateHash }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Key.self)
+        let type = try c.decode(String.self, forKey: .type)
+        switch type {
+        case "play": self = .game(.play(house: try c.decode(Int.self, forKey: .house)))
+        case "resign": self = .game(.resign)
+        case "rematch": self = .game(.rematch)
+        case "pace": self = .pace(try c.decode(Double.self, forKey: .pace))
+        case "ready": self = .ready(stateHash: try c.decode(String.self, forKey: .stateHash))
+        default: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown intent \(type)")
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: Key.self)
+        switch self {
+        case let .game(.play(house)):
+            try c.encode("play", forKey: .type)
+            try c.encode(house, forKey: .house)
+        case .game(.resign): try c.encode("resign", forKey: .type)
+        case .game(.rematch): try c.encode("rematch", forKey: .type)
+        case let .pace(pace):
+            try c.encode("pace", forKey: .type)
+            try c.encode(pace, forKey: .pace)
+        case let .ready(stateHash):
+            try c.encode("ready", forKey: .type)
+            try c.encode(stateHash, forKey: .stateHash)
+        }
+    }
 }
 
 /// The host's checks, through the engine. Seat 0 (the host) is South, seat 1 North.
