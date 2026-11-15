@@ -16,7 +16,8 @@ templates/ios-app/     Starting point for a new app (make new-app NAME=…)
 scripts/               Shared helpers (simulator picker, bootstrap, scaffolding)
 .github/workflows/     CI / E2E / TestFlight / App Store per app
 docs/                  Repo-wide docs: PIPELINE.md (credentials + release), MONOREPO.md (conventions),
-                       WEBSITE_ON_AWS.md (public site on AWS); also the website's source pages
+                       WEBSITE_ON_AWS.md (public site on AWS), ANDROID.md (plan for native Android
+                       apps; nothing built yet); also the website's source pages
 infra/site/            CDK app for the public website (S3 + CloudFront + domain)
 Gemfile                fastlane for every app (BUNDLE_GEMFILE points here)
 ```
