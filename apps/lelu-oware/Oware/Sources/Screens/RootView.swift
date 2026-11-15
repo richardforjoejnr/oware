@@ -39,6 +39,15 @@ struct RootView: View {
         screen = .nearby
     }
 
+    /// Straight to Ready to play in the game the link is for. Ignored while Play online is hidden.
+    private func openInvitation(_ url: URL) {
+        guard Feature.showsOnlinePlay else { return }
+        guard online.open(link: url, name: NearbyLobby.myName, pace: settings.effectiveSpeed) else { return }
+        showSettings = false
+        showSplash = false
+        screen = .online
+    }
+
     var body: some View {
         ZStack {
             Theme.night.ignoresSafeArea()
@@ -105,6 +114,12 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             Task { await reminder.reschedule(solvedToday: library.dailySolved, streak: library.currentStreak()) }
+        }
+        // An invitation to an online game: tapped in a message (a universal link), or the join
+        // page's "Open in Lelu Oware" button (leluoware://join?c=…).
+        .onOpenURL { openInvitation($0) }
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            if let url = activity.webpageURL { openInvitation(url) }
         }
         .onAppear {
             lobby.onStart = { screen = .game }

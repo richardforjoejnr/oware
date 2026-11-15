@@ -66,7 +66,7 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(ama.phase, .waiting)
         XCTAssertNil(ama.roomCode, "not until the relay has made the room")
         await until("the code") { ama.roomCode == "K7M2QD" }
-        XCTAssertEqual(OnlineConfig.joinLink("K7M2QD").absoluteString, "https://leluoware.com/lelu-oware/join/K7M2QD")
+        XCTAssertEqual(OnlineConfig.joinLink("K7M2QD").absoluteString, "https://leluoware.com/lelu-oware/join?c=K7M2QD")
         ama.cancel()
         await until("the room closes when she cancels") { await !relay.hasRoom("K7M2QD") }
         XCTAssertNil(ama.roomCode)
@@ -104,6 +104,107 @@ final class OnlinePairTests: XCTestCase {
         await p.kofi.link?.send(.play(house: 9))
         await until("Ama sees his") { houses(p.ama) == [2, 9] }
         XCTAssertEqual(p.ama.link?.table?.stateHash, p.kofi.link?.table?.stateHash, "the same position on both phones")
+    }
+
+    // MARK: Invitations
+
+    /// One phone's Play online with its lobby, as the app holds it.
+    private func play(_ relay: LocalRelay, install: String) -> OnlinePlay {
+        let network = OnlineNetwork(dial: relay.dial, install: install, retryDelays: [0.01, 0.01, 0.02])
+        let play = OnlinePlay(session: TestSupport.session(), network: network)
+        play.lobby.onStart = {}
+        return play
+    }
+
+    /// Kofi taps the link Ama sent: no code to type, straight to Ready to play in her game.
+    func testTappingTheInvitationLinkJoinsTheGame() async {
+        let relay = LocalRelay()
+        let ama = phone(relay, install: "ama"), kofi = play(relay, install: "kofi")
+        ama.start(name: "Ama", rules: .abapa)
+        await until("a code") { ama.roomCode != nil }
+        let link = OnlineConfig.joinLink(ama.roomCode ?? "")
+
+        XCTAssertTrue(kofi.open(link: link, name: "Kofi"))
+        XCTAssertEqual(kofi.lobby.phase, .ready)
+        await until("Ama sees Kofi") { ama.opponent?.name == "Kofi" }
+        await until("Kofi sees whose game it is") { kofi.lobby.opponent?.name == "Ama" }
+    }
+
+    func testTheJoinPagesButtonAndTheOlderLinkFormOpenTheGameToo() async {
+        for form in ["leluoware://join?c=%@", "https://leluoware.com/lelu-oware/join/%@"] {
+            let relay = LocalRelay()
+            let ama = phone(relay, install: "ama"), kofi = play(relay, install: "kofi")
+            ama.start(name: "Ama", rules: .abapa)
+            await until("a code") { ama.roomCode != nil }
+            let link = URL(string: String(format: form, ama.roomCode ?? ""))!
+            XCTAssertTrue(kofi.open(link: link, name: "Kofi"), form)
+            await until("Ama sees Kofi (\(form))") { ama.opponent?.name == "Kofi" }
+        }
+    }
+
+    func testALinkThatIsNotAnInvitationDoesNothing() async {
+        let relay = LocalRelay()
+        let kofi = play(relay, install: "kofi")
+        XCTAssertFalse(kofi.open(link: URL(string: "https://leluoware.com/lelu-oware/privacy")!, name: "Kofi"))
+        XCTAssertFalse(kofi.open(link: URL(string: "https://leluoware.com/lelu-oware/join?c=nonsense")!, name: "Kofi"))
+        XCTAssertEqual(kofi.lobby.phase, .lobby)
+    }
+
+    /// A link tapped in the middle of a game does not end that game.
+    func testAnInvitationDoesNotInterruptAGameBeingPlayed() async {
+        let relay = LocalRelay(codes: ["K7M2QD", "ABCDEF"])
+        let ama = phone(relay, install: "ama"), kofi = play(relay, install: "kofi"), yaw = phone(relay, install: "yaw")
+        ama.start(name: "Ama", rules: .abapa)
+        await until("a code") { ama.roomCode != nil }
+        XCTAssertTrue(kofi.open(link: OnlineConfig.joinLink(ama.roomCode ?? ""), name: "Kofi"))
+        await until("Ama sees Kofi") { ama.opponent?.name == "Kofi" }
+        await until("Kofi is in") { kofi.lobby.opponent?.isConnected == true }
+        await kofi.lobby.ready()
+        await ama.ready()
+        await until("playing") { kofi.lobby.phase == .playing && kofi.lobby.session.isStarted }
+
+        yaw.start(name: "Yaw", rules: .abapa)
+        await until("another game") { yaw.roomCode != nil }
+        XCTAssertFalse(kofi.open(link: OnlineConfig.joinLink(yaw.roomCode ?? ""), name: "Kofi"))
+        XCTAssertEqual(kofi.lobby.phase, .playing)
+        XCTAssertEqual(kofi.lobby.session.remoteGame?.opponentName, "Ama")
+    }
+
+    /// A pasted message or link works where a code is asked for.
+    func testAPastedInvitationJoinsLikeACode() async {
+        let relay = LocalRelay()
+        let ama = phone(relay, install: "ama"), kofi = phone(relay, install: "kofi")
+        ama.start(name: "Ama", rules: .abapa)
+        await until("a code") { ama.roomCode != nil }
+        let code = ama.roomCode ?? ""
+        let message = OnlineConfig.invitation(code: code) + " " + OnlineConfig.joinLink(code).absoluteString
+        XCTAssertTrue(kofi.join(code: message, name: "Kofi"))
+        await until("Ama sees Kofi") { ama.opponent?.name == "Kofi" }
+    }
+
+    func testTheInvitationSaysTheCodeAndTheQRCodeHoldsTheLink() throws {
+        XCTAssertTrue(OnlineConfig.invitation(code: "K7M2QD").contains("K7M2QD"))
+        let link = OnlineConfig.joinLink("K7M2QD")
+        XCTAssertEqual(RoomCode(link: link)?.text, "K7M2QD", "the link the app shares is one the app opens")
+        let image = try XCTUnwrap(InvitationQR.image(for: link))
+        XCTAssertGreaterThan(image.size.width, 100)
+        // Read it back as a camera would.
+        let detector = try XCTUnwrap(CIDetector(ofType: CIDetectorTypeQRCode, context: nil, options: nil))
+        let found = detector.features(in: CIImage(image: image)!).compactMap { ($0 as? CIQRCodeFeature)?.messageString }
+        XCTAssertEqual(found, [link.absoluteString])
+    }
+
+    /// Debug builds keep `-onlinePlay YES -relayURL …` from one launch, so Play online is still
+    /// there when the app is opened from its icon or from a link.
+    func testOnlineSwitchesGivenAtLaunchAreKept() {
+        let defaults = TestSupport.defaults()
+        LaunchOptions.keepOnlineSwitches(["Oware", "-onlinePlay", "YES", "-relayURL", "ws://localhost:8787"], defaults: defaults)
+        XCTAssertTrue(defaults.bool(forKey: "onlinePlay"))
+        XCTAssertEqual(defaults.string(forKey: "relayURL"), "ws://localhost:8787")
+        LaunchOptions.keepOnlineSwitches(["Oware"], defaults: defaults)
+        XCTAssertTrue(defaults.bool(forKey: "onlinePlay"), "a launch without them changes nothing")
+        LaunchOptions.keepOnlineSwitches(["Oware", "-onlinePlay", "NO"], defaults: defaults)
+        XCTAssertFalse(defaults.bool(forKey: "onlinePlay"))
     }
 
     // MARK: Not getting in

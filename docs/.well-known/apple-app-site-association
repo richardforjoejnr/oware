@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["2H3QQFZLL3.com.richardforjoe.oware"],
+        "components": [
+          { "/": "/lelu-oware/join", "comment": "An invitation to an online game: ?c=<code>" },
+          { "/": "/lelu-oware/join/*", "comment": "The same, with the code in the path" }
+        ]
+      }
+    ]
+  }
+}

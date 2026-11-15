@@ -126,6 +126,23 @@ struct RoomCodeTests {
         #expect(RoomCode(link: URL(string: "https://leluoware.com/join/K7M2QD/more")!) == nil)
     }
 
+    @Test func theLinkTheAppsShareCarriesTheCodeAsAQuery() {
+        #expect(RoomCode(link: URL(string: "https://leluoware.com/lelu-oware/join?c=K7M2QD")!)?.text == "K7M2QD")
+        #expect(RoomCode(link: URL(string: "https://leluoware.com/lelu-oware/join/?c=k7m2qd")!)?.text == "K7M2QD")
+        #expect(RoomCode(link: URL(string: "leluoware://join?c=K7M2QD")!)?.text == "K7M2QD", "the app's own link")
+        #expect(RoomCode(link: URL(string: "https://leluoware.com/lelu-oware/join?c=K7M2Q0")!) == nil)
+        #expect(RoomCode(link: URL(string: "https://leluoware.com/lelu-oware/join")!) == nil)
+        #expect(RoomCode(link: URL(string: "https://leluoware.com/lelu-oware/support?c=K7M2QD")!) == nil, "only a join link")
+    }
+
+    @Test func aPastedLinkOrMessageGivesTheCode() {
+        #expect(RoomCode(pasted: "k7m 2qd")?.text == "K7M2QD")
+        #expect(RoomCode(pasted: "https://leluoware.com/lelu-oware/join?c=K7M2QD")?.text == "K7M2QD")
+        #expect(RoomCode(pasted: "Play Oware with me. https://leluoware.com/lelu-oware/join?c=K7M2QD")?.text == "K7M2QD")
+        #expect(RoomCode(pasted: "see you at six") == nil)
+        #expect(RoomCode(pasted: "") == nil)
+    }
+
     @Test func readsAloudLetterByLetter() {
         #expect(RoomCode("K7M2QD")?.spelledOut == "K 7 M 2 Q D")
     }

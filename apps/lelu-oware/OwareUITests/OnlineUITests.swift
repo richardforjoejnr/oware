@@ -34,6 +34,8 @@ final class OnlineUITests: XCTestCase {
         openOnline()
         XCTAssertFalse(app.buttons["btn-look-nearby"].exists, "no games nearby to look for online")
         XCTAssertTrue(app.textFields["online-code-field"].exists, "a friend's code can be entered")
+        XCTAssertEqual(app.buttons["btn-start-online"].label, "Invite a friend")
+        XCTAssertTrue(app.buttons["btn-paste-code"].exists, "a pasted invitation is taken too")
         app.buttons["btn-start-online"].tap()
 
         // The code and Share show until Ama's phone joins (a second and a half; a slow run can miss them).
@@ -41,7 +43,8 @@ final class OnlineUITests: XCTestCase {
         let ready = app.buttons["btn-ready"]
         if code.waitForExistence(timeout: 5) {
             XCTAssertEqual(code.label, "Your code: K 7 M 2 Q D", "read out letter by letter")
-            XCTAssertTrue(app.buttons["btn-share-code"].exists || ready.exists)
+            XCTAssertTrue(app.buttons["btn-share-code"].exists || ready.exists, "the invitation can be sent")
+            XCTAssertTrue(app.images["online-qr"].exists || ready.exists, "and scanned by a friend in the room")
         }
         XCTAssertTrue(ready.waitForExistence(timeout: 10), "Ama joins: Ready to play")
         let ama = app.descendants(matching: .any)["nearby-player-other"]

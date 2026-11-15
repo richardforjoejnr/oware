@@ -1,0 +1,49 @@
+---
+title: Play Oware with me
+description: Tap to join my game in Lelu Oware.
+---
+
+<!-- Where an invitation link lands when Lelu Oware did not open by itself: the phone does not have
+     the app yet, or the link was opened inside another app's browser. The code is read from the
+     address (?c=K7M2QD, or /join/K7M2QD) in the browser; nothing is sent anywhere. -->
+<h1>Play Oware with me</h1>
+
+<div id="invited" hidden>
+  <p>You have been invited to a game in <strong>Lelu Oware</strong>.</p>
+  <p><a id="open" class="join-button" href="#">Open in Lelu Oware</a></p>
+  <p>Or open Lelu Oware, choose <strong>More ▸ Play online</strong> and enter this code:</p>
+  <p id="code" class="join-code" aria-live="polite"></p>
+  <h2>Don't have Lelu Oware yet?</h2>
+  <p><a href="https://apps.apple.com/app/id6816694006">Get it free on the App Store</a>, then come back to
+    the message your friend sent and <strong>tap the link again</strong>. It will open the game.</p>
+</div>
+
+<div id="no-code" hidden>
+  <p>This invitation has no game code. Ask your friend to send the link again from
+    <strong>Play online</strong> in Lelu Oware.</p>
+  <p><a href="https://apps.apple.com/app/id6816694006">Get Lelu Oware on the App Store</a></p>
+</div>
+
+<noscript>
+  <p>Open Lelu Oware, choose <strong>More ▸ Play online</strong> and enter the code at the end of the
+    link your friend sent.</p>
+</noscript>
+
+<style>
+  .join-code { font: 700 2.2rem ui-monospace, Menlo, monospace; letter-spacing: 0.3em; }
+  .join-button { display: inline-block; padding: 0.7em 1.2em; border-radius: 0.6em; background: #8a5a1c;
+    color: #fff; font-weight: 700; text-decoration: none; }
+</style>
+<script>
+  (function () {
+    var alphabet = /^[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/;
+    var fromQuery = new URLSearchParams(location.search).get('c') || '';
+    var fromPath = (location.pathname.match(/\/join\/([^\/]+)\/?$/) || [])[1] || '';
+    var code = (fromQuery || fromPath).toUpperCase().replace(/[\s-]/g, '');
+    if (!alphabet.test(code)) { document.getElementById('no-code').hidden = false; return; }
+    document.getElementById('code').textContent = code;
+    document.getElementById('code').setAttribute('aria-label', 'Code: ' + code.split('').join(' '));
+    document.getElementById('open').href = 'leluoware://join?c=' + code;
+    document.getElementById('invited').hidden = false;
+  })();
+</script>

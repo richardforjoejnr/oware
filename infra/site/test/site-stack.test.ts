@@ -51,6 +51,23 @@ describe('SiteStack', () => {
     expect(route('/lelu-oware/')).toBe('/lelu-oware/index.html');
     expect(route('/')).toBe('/index.html');
     expect(route('/assets/css/style.css')).toBe('/assets/css/style.css');
+    expect(route('/lelu-oware/join')).toBe('/lelu-oware/join/index.html');
+  });
+
+  test('the file that lets an invitation link open the app is served as it is, as JSON', () => {
+    const t = synth();
+    const fns = t.findResources('AWS::CloudFront::Function');
+    const code: string = Object.values(fns)[0].Properties.FunctionCode;
+    const handler = new Function(`${code}; return handler;`)() as (e: { request: { uri: string } }) => { uri: string };
+    expect(handler({ request: { uri: '/.well-known/apple-app-site-association' } }).uri)
+      .toBe('/.well-known/apple-app-site-association');
+
+    const deployments = Object.values(t.findResources('Custom::CDKBucketDeployment')).map((d) => d.Properties);
+    const wellKnown = deployments.find((d) => (d.Include ?? []).includes('.well-known/*'));
+    expect(wellKnown?.SystemMetadata?.['content-type']).toBe('application/json');
+    expect(wellKnown?.Prune).toBe(false);
+    const rest = deployments.find((d) => !(d.Include ?? []).includes('.well-known/*'));
+    expect(rest?.Exclude).toContain('.well-known/*');
   });
 
   test('without a domain there is no certificate or DNS', () => {

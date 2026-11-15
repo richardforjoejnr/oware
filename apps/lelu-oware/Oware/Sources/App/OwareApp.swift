@@ -28,6 +28,7 @@ struct OwareApp: App {
                 keys.forEach(UserDefaults.standard.removeObject(forKey:))
             }
         }
+        LaunchOptions.keepOnlineSwitches()
         // The session records results itself, so a game that ends off-screen still counts.
         let progress = JourneyProgress()
         let session = GameSession()
@@ -149,6 +150,19 @@ enum LaunchOptions {
     static var relayURL: URL? {
         guard enabled else { return nil }
         return (value("--relay=") ?? UserDefaults.standard.string(forKey: "relayURL")).flatMap(URL.init(string:))
+    }
+    /// Debug builds: `-onlinePlay YES -relayURL …` given once at launch (from Xcode or devicectl)
+    /// are kept, so Play online is still there when the app is next opened from its icon or from
+    /// an invitation link. `-onlinePlay NO` switches it off again.
+    static func keepOnlineSwitches(_ arguments: [String] = CommandLine.arguments, defaults: UserDefaults = .standard) {
+        guard enabled else { return }
+        for (key, value) in zip(arguments, arguments.dropFirst()) {
+            switch key {
+            case "-onlinePlay": defaults.set(["yes", "true", "1"].contains(value.lowercased()), forKey: "onlinePlay")
+            case "-relayURL": defaults.set(value, forKey: "relayURL")
+            default: break
+            }
+        }
     }
     /// `--demo-resign-after=N`: Ama resigns her first game once she has made N moves.
     static var demoResignAfter: Int? { number("--demo-resign-after=", defaultsKey: "demoResignAfter") }

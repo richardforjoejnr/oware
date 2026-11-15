@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyLists-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.game-center</key>
+	<true/>
+	<!-- Invitation links open the app (docs/.well-known/apple-app-site-association). Debug builds
+	     only until online play ships: the App Store profile does not carry this capability yet. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:leluoware.com</string>
+		<string>applinks:leluoware.com?mode=developer</string>
+	</array>
+</dict>
+</plist>

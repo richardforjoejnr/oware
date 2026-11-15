@@ -77,6 +77,11 @@ targets:
       path: Oware/Info.plist
       properties:
         CFBundleDisplayName: Lelu Oware
+        # leluoware://join?c=<code>: the join page's "Open in Lelu Oware" button, for when an
+        # invitation link was opened in a browser instead of the app.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.richardforjoe.oware
+            CFBundleURLSchemes: [leluoware]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         # Set TELEMETRYDECK_APP_ID (e.g. in CI or a local xcconfig); empty leaves analytics off.
@@ -107,6 +112,12 @@ targets:
         # CI overrides these with manual match signing via xcargs in fastlane/Fastfile.
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
+      configs:
+        # Debug builds add Associated Domains, so an invitation link opens the app on a test
+        # phone. Release keeps Oware.entitlements until online play ships and the App Store
+        # profile has the capability (docs/ONLINE_PLAY.md stage 6).
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: Oware/OwareDebug.entitlements
   OwareTests:
     type: bundle.unit-test
     platform: iOS

@@ -1,3 +1,4 @@
+import CoreImage.CIFilterBuiltins
 import SwiftUI
 import UIKit
 import MatchKit
@@ -26,6 +27,9 @@ struct NearbyView: View {
     @State private var showHelp = false
     /// Online: the code being typed.
     @State private var typedCode = ""
+    /// Online: Invite a friend was tapped, so the share sheet opens as soon as there is a code.
+    @State private var inviting = false
+    @State private var invitation: Invitation?
 
     /// Play online: the same screen, with a code in place of the games nearby.
     private var online: Bool { lobby.kind == .online }
@@ -93,6 +97,18 @@ struct NearbyView: View {
         .onDisappear { lobby.close() }
         // Back from Settings or Control Center: Wi-Fi or Local Network may have changed.
         .onChange(of: scenePhase) { _, phase in if phase == .active { lobby.recheck() } }
+        // Invite a friend: the share sheet, the moment the game has its code. Not for the demo
+        // player, who needs no invitation (and a UI test could not put the sheet away).
+        .onChange(of: lobby.roomCode) { _, code in
+            guard inviting, let code else { return }
+            inviting = false
+            if !lobby.isDemo { invitation = Invitation(code: code) }
+        }
+        .onChange(of: lobby.phase) { _, phase in if phase != .waiting { inviting = false } }
+        .sheet(item: $invitation) { invitation in
+            ActivityView(items: [OnlineConfig.invitation(code: invitation.code), OnlineConfig.joinLink(invitation.code)])
+                .presentationDetents([.medium, .large])
+        }
         .sheet(isPresented: $showHelp) {
             NearbyHelp()
                 .presentationDetents([.medium, .large])
@@ -182,7 +198,9 @@ struct NearbyView: View {
                 .font(Theme.caption(13))
                 .foregroundStyle(Theme.ivoryDim)
                 .fixedSize(horizontal: false, vertical: true)
-            Button(online ? "Start online game" : "Start nearby game") {
+            Button(online ? "Invite a friend" : "Start nearby game") {
+                // Online, one tap makes the game and opens the share sheet with its link.
+                inviting = online
                 lobby.start(name: NearbyLobby.myName, rules: rules, pace: settings.effectiveSpeed)
             }
             .buttonStyle(NearbyButtonStyle(.primary))
@@ -277,6 +295,10 @@ struct NearbyView: View {
     private var enterCode: some View {
         VStack(alignment: .leading, spacing: 14) {
             sectionLabel("Join a friend's game")
+            Text("If they sent you a link, tap it. Or enter their code, or paste their message here.")
+                .font(Theme.caption(13))
+                .foregroundStyle(Theme.ivoryDim)
+                .fixedSize(horizontal: false, vertical: true)
             TextField("Their code", text: $typedCode)
                 .font(.system(size: 24, weight: .semibold, design: .monospaced))
                 .textInputAutocapitalization(.characters)
@@ -289,10 +311,20 @@ struct NearbyView: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.ivoryDim.opacity(0.35)))
                 .accessibilityLabel("Their code, six letters and numbers")
                 .accessibilityIdentifier("online-code-field")
-            Button("Join game", action: joinTyped)
-                .buttonStyle(NearbyButtonStyle(.primary))
-                .disabled(RoomCode(typedCode) == nil)
-                .accessibilityIdentifier("btn-join-online")
+            HStack(spacing: 12) {
+                Button("Join game", action: joinTyped)
+                    .buttonStyle(NearbyButtonStyle(.primary))
+                    .disabled(RoomCode(pasted: typedCode) == nil)
+                    .accessibilityIdentifier("btn-join-online")
+                // The system's own Paste button: no "allow paste" question.
+                PasteButton(payloadType: String.self) { strings in
+                    guard let pasted = strings.first else { return }
+                    Task { @MainActor in typedCode = RoomCode(pasted: pasted)?.text ?? pasted }
+                }
+                .labelStyle(.titleAndIcon)
+                .tint(Theme.wood)
+                .accessibilityIdentifier("btn-paste-code")
+            }
         }
         .padding(16)
         .background(Theme.ember, in: RoundedRectangle(cornerRadius: 16))
@@ -316,12 +348,27 @@ struct NearbyView: View {
                     .textSelection(.enabled)
                     .accessibilityLabel("Your code: \(spelled)")
                     .accessibilityIdentifier("online-code")
-                ShareLink(item: OnlineConfig.joinLink(code),
-                          message: Text("Play Oware with me. Open Lelu Oware, choose Play online and enter the code \(code).")) {
-                    Label("Share the code", systemImage: "square.and.arrow.up")
+                ShareLink(item: OnlineConfig.joinLink(code), message: Text(OnlineConfig.invitation(code: code))) {
+                    Label("Send the invitation", systemImage: "square.and.arrow.up")
                 }
                 .buttonStyle(NearbyButtonStyle(.primary))
                 .accessibilityIdentifier("btn-share-code")
+                if let qr = InvitationQR.image(for: OnlineConfig.joinLink(code)) {
+                    HStack(alignment: .center, spacing: 14) {
+                        Image(uiImage: qr)
+                            .interpolation(.none)
+                            .resizable()
+                            .frame(width: 132, height: 132)
+                            .padding(8)
+                            .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
+                            .accessibilityLabel("QR code for this game")
+                            .accessibilityIdentifier("online-qr")
+                        Text("Sitting together? They can point their camera at this.")
+                            .font(Theme.caption(14))
+                            .foregroundStyle(Theme.ivoryDim)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -542,6 +589,36 @@ struct NearbyView: View {
 
 /// Nearby play's buttons. Primary: filled gold, one per screen, the main action. Secondary: wood
 /// with a gold edge. Small: a compact secondary for a row (Stop). All at least 44 pt tall.
+/// An invitation ready to send.
+private struct Invitation: Identifiable {
+    let code: String
+    var id: String { code }
+}
+
+/// The system share sheet, for opening it without a second tap.
+private struct ActivityView: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+/// The invitation link as a QR code, for a friend in the same room: the iPhone camera reads it
+/// and opens the link.
+enum InvitationQR {
+    static func image(for link: URL) -> UIImage? {
+        let filter = CIFilter.qrCodeGenerator()
+        filter.message = Data(link.absoluteString.utf8)
+        filter.correctionLevel = "M"
+        guard let output = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: 8, y: 8)),
+              let cg = CIContext().createCGImage(output, from: output.extent) else { return nil }
+        return UIImage(cgImage: cg)
+    }
+}
+
 struct NearbyButtonStyle: ButtonStyle {
     enum Kind { case primary, secondary, small }
     let kind: Kind

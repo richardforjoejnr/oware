@@ -15,6 +15,17 @@ final class OnlinePlay {
     init(session: GameSession, network: OnlineNetwork? = nil) {
         lobby = NearbyLobby(session: session, network: network ?? (LaunchOptions.onlineDemo ? .demo() : .live()), kind: .online)
     }
+
+    /// An invitation link was tapped: join that game. False when it is not an invitation, or a
+    /// game with another phone is already being played here (the link does not end it).
+    @discardableResult
+    func open(link: URL, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) -> Bool {
+        let session = lobby.session
+        let playing = session.link != nil && session.isStarted && !session.state.isOver
+        guard let code = RoomCode(link: link), !playing else { return false }
+        lobby.prepare(demo: lobby.isDemo)
+        return lobby.join(code: code.text, name: name, pace: pace)
+    }
 }
 
 /// Where the relay is, and who this phone is to it.
@@ -29,8 +40,15 @@ enum OnlineConfig {
     static let game = RelayRequest.Game(name: "oware", protocolVersion: MatchKit.protocolVersion,
                                         formatVersion: OwareMatch.formatVersion)
 
-    /// What a friend taps to join.
-    static func joinLink(_ code: String) -> URL { URL(string: "https://leluoware.com/lelu-oware/join/\(code)")! }
+    /// What a friend taps to join. With the app it opens straight into the game; without, a page
+    /// with the code and the App Store (docs/lelu-oware/join.html).
+    static func joinLink(_ code: String) -> URL { URL(string: "https://leluoware.com/lelu-oware/join?c=\(code)")! }
+
+    /// The words that go with the link in a message. The code is there too, for a friend whose
+    /// phone opens the link somewhere it cannot open the app.
+    static func invitation(code: String) -> String {
+        "Play Oware with me in Lelu Oware. Tap the link to join, or enter the code \(code) under Play online."
+    }
 
     private static let installKey = "onlineInstall"
 

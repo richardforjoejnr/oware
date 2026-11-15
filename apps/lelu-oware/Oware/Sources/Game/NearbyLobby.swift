@@ -245,10 +245,11 @@ final class NearbyLobby {
         }
     }
 
-    /// Online: join the game with this code, as typed or from a link. False if it is not a code.
+    /// Online: join the game with this code, as typed, or pasted as a whole invitation link or
+    /// message. False if there is no code in it.
     @discardableResult
     func join(code typed: String, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) -> Bool {
-        guard kind == .online, let code = RoomCode(typed) else { return false }
+        guard kind == .online, let code = RoomCode(pasted: typed) else { return false }
         reset()
         // Who made the game and its rules are not known until their phone answers.
         join(NearbyListing(name: code.text, info: ["name": Self.friend]), name: name, pace: pace)
