@@ -1,6 +1,7 @@
 import Foundation
 import MatchKit
 import MatchKitNearby
+import MatchKitOnline
 import Network
 import Observation
 import OwareEngine
@@ -65,11 +66,21 @@ protocol NearbyNetwork: AnyObject {
     func stopFinding()
     /// Back out: stop finding, and send the demo player home.
     func shutDown()
+    /// Online: reports the code of the room this phone is in, and anything that stops it getting
+    /// into one (a wrong code, no internet), in words for the player.
+    func watchRoom(code: @escaping @MainActor (String) -> Void, problem: @escaping @MainActor (String) -> Void)
+}
+
+extension NearbyNetwork {
+    func watchRoom(code: @escaping @MainActor (String) -> Void, problem: @escaping @MainActor (String) -> Void) {}
 }
 
 /// Play nearby (NEARBY_PLAY_REDESIGN.md §2): one screen that lists the games nearby by itself, or
 /// starts yours; then Ready to play on both phones, and the room goes to the `GameSession`. Lives
 /// as long as the app, so a game's demo player outlives the Nearby screen.
+///
+/// Play online (docs/ONLINE_PLAY.md) is the same lobby with `kind == .online`: a code in place of
+/// the list of games nearby, and an `OnlineNetwork` in place of Bonjour.
 @MainActor
 @Observable
 final class NearbyLobby {
@@ -98,6 +109,12 @@ final class NearbyLobby {
         creatorStarts ? "\(creatorName) starts" : "You start"
     }
 
+    /// How the phones reach each other.
+    enum Kind: Equatable { case nearby, online }
+
+    let kind: Kind
+    /// Online: the code to give a friend, once the relay has made the room.
+    private(set) var roomCode: String?
     private(set) var phase: Phase = .lobby
     private(set) var games: [NearbyListing] = []
     private(set) var status: NearbyStatus = .working
@@ -125,7 +142,7 @@ final class NearbyLobby {
     /// Local Network first (it must be fixed); Wi-Fi second (it may be wrong: Try anyway). Never
     /// for the pretend player.
     var blocker: Blocker? {
-        guard !isDemo else { return nil }
+        guard !isDemo, kind == .nearby else { return nil }
         if !access.localNetworkAllowed || status == .localNetworkDenied { return .localNetwork }
         if !access.wifiOn && !triedAnyway { return .wifi }
         return nil
@@ -142,15 +159,35 @@ final class NearbyLobby {
     /// each phone sees the other's Ready).
     var canPressReady: Bool { phase == .ready && !iAmReady && link != nil && (!isCreator || opponent != nil) }
 
-    init(session: GameSession, network: any NearbyNetwork) {
+    init(session: GameSession, network: any NearbyNetwork, kind: Kind = .nearby) {
         self.session = session
         self.network = network
+        self.kind = kind
+    }
+
+    private var timing: RoomTiming { kind == .online ? .online : .nearby }
+    private var via: RemoteGame.Via { kind == .online ? .online : .nearby }
+
+    /// Online: hear the room's code, and whatever stops this phone getting into a room.
+    private func watchRoom() {
+        network.watchRoom(code: { [weak self] in self?.roomCode = $0 }, problem: { [weak self] in self?.fail($0) })
+    }
+
+    /// No game after all: say why, with Back.
+    private func fail(_ reason: String) {
+        guard phase != .playing else { return }
+        link?.room.stop()
+        link = nil
+        opponent = nil
+        iAmReady = false
+        network.shutDown()
+        phase = .refused(reason)
     }
 
     /// Opening the Nearby screen: real phones, or the demo player (Settings ▸ Try nearby play).
     func prepare(demo: Bool) {
         reset()
-        if demo != network.isDemo { network = demo ? DemoNetwork() : LiveNearbyNetwork() }
+        if kind == .nearby, demo != network.isDemo { network = demo ? DemoNetwork() : LiveNearbyNetwork() }
         triedAnyway = false
         network.watchAccess { [weak self] in self?.access = $0 }
         open()
@@ -195,20 +232,32 @@ final class NearbyLobby {
         // "starter" stays in the listing so a card can say "Kofi starts".
         let info = ["rules": Self.rulesName(rules), "starter": "creator", "game": match.matchID.uuidString, "name": name]
         do {
+            watchRoom()
             let transport = try network.host(gameName: "\(name)'s game", info: info, status: { [weak self] in self?.status = $0 })
-            let link = MatchLink(hosting: match, name: name, pace: pace, transport: transport)
+            let link = MatchLink(hosting: match, name: name, pace: pace, transport: transport, timing: timing)
             link.onEvent = { [weak self] in self?.handle($0) }
             self.link = link
             gameNote = "\(Self.rulesName(rules)) · You start"
             phase = .waiting
-            session.events.nearbyHosted(demo: isDemo)
+            if kind == .online { session.events.onlineStarted(demo: isDemo) } else { session.events.nearbyHosted(demo: isDemo) }
         } catch {
             status = .failed
         }
     }
 
+    /// Online: join the game with this code, as typed or from a link. False if it is not a code.
+    @discardableResult
+    func join(code typed: String, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) -> Bool {
+        guard kind == .online, let code = RoomCode(typed) else { return false }
+        reset()
+        // Who made the game and its rules are not known until their phone answers.
+        join(NearbyListing(name: code.text, info: ["name": Self.friend]), name: name, pace: pace)
+        return true
+    }
+
     func join(_ listing: NearbyListing, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
-        let link = MatchLink(joiningAs: name, pace: pace, transport: network.connect(to: listing))
+        watchRoom()
+        let link = MatchLink(joiningAs: name, pace: pace, transport: network.connect(to: listing), timing: timing)
         link.onEvent = { [weak self] in self?.handle($0) }
         link.rejoin = { [weak self] in self?.network.rejoin(listing) }
         self.link?.room.stop()
@@ -248,6 +297,7 @@ final class NearbyLobby {
         opponent = nil
         iAmReady = false
         isLooking = false
+        roomCode = nil
         games = []
         status = .working
         phase = .lobby
@@ -267,7 +317,7 @@ final class NearbyLobby {
             // The creator's game stays listed until it starts, in case this one is sent away.
             if link.room.role == .guest {
                 network.stopFinding()
-                session.events.nearbyJoined(demo: isDemo)
+                if kind == .online { session.events.onlineJoined(demo: isDemo) } else { session.events.nearbyJoined(demo: isDemo) }
             }
             link.startHeartbeat()
         case let .refused(refusal):
@@ -303,6 +353,12 @@ final class NearbyLobby {
         guard phase == .ready, let link else { return }
         if let table = link.table, link.room.mySeat != nil, opponent != nil {
             let theirs: Player = link.isHost ? .north : .south
+            if kind == .online, !link.isHost {
+                // Joined by code: only now is it known whose game this is, and its rules.
+                if let name = link.opponentName { opponent?.name = name }
+                gameNote = "\(Self.rulesName(table.match.rules)) · "
+                    + Self.startNote(creatorStarts: table.match.starter == .south, creatorName: opponent?.name ?? Self.friend)
+            }
             opponent?.isConnected = link.isHost ? link.room.seats[1] != nil : true
             opponent?.isReady = table.ready.contains(theirs)
             iAmReady = iAmReady || link.iAmReady
@@ -315,7 +371,7 @@ final class NearbyLobby {
     private func begin(_ link: MatchLink) {
         network.stopFinding()
         phase = .playing
-        session.startRemote(link)
+        session.startRemote(link, via: via)
         onStart?()
     }
 
@@ -336,6 +392,8 @@ final class NearbyLobby {
 
     static let defaultName = "Oware Player"
     static let otherPlayer = "Other player"
+    /// Online, before the other phone has said who it is.
+    static let friend = "Your friend"
     private static let nameKey = "nearbyName"
 
     /// What nearby players see: the Nearby name saved in Settings, else the Game Center name, else
@@ -536,7 +594,7 @@ final class DemoNetwork: NearbyNetwork {
     func rejoin(_ listing: NearbyListing) -> (any MatchTransport)? {
         guard let player, player.room.role == .host, !player.isAway else { return nil }
         let mine = LoopbackTransport()
-        player.transport.connect(mine)
+        (player.transport as? LoopbackTransport)?.connect(mine)
         return mine
     }
 
@@ -591,7 +649,8 @@ final class DemoPlayer {
 
     let room: Room<OwareRoomRules>
     /// Her end of the connection. Hosting, a phone that lost her game connects to it again.
-    let transport: LoopbackTransport
+    let transport: any MatchTransport
+    private var loopback: LoopbackTransport? { transport as? LoopbackTransport }
     /// Joining: the host phone's end, to connect to again after a drop.
     private weak var host: LoopbackTransport?
     private let script: Script
@@ -607,6 +666,14 @@ final class DemoPlayer {
         self.host = host
         self.script = script
         room = Room(joiningAs: Self.name, rules: OwareRoomRules(), transport: transport)
+        start()
+    }
+
+    /// Online: she joins through the relay, like any friend with the code.
+    init(joining transport: OnlineTransport, script: Script) {
+        self.transport = transport
+        self.script = script
+        room = Room(joiningAs: Self.name, rules: OwareRoomRules(), transport: transport, timing: .online)
         start()
     }
 
@@ -680,20 +747,22 @@ final class DemoPlayer {
     private func played() {
         totalMoves += 1
         if totalMoves == script.dropAfter { drop() }
-        guard totalMoves == script.quietAfter else { return }
-        transport.isQuiet = true
+        guard totalMoves == script.quietAfter, let loopback else { return }
+        loopback.isQuiet = true
         let quietFor = script.quietFor
-        Task { [transport] in
+        Task { [loopback] in
             try? await Task.sleep(for: .seconds(quietFor))
-            transport.isQuiet = false
+            loopback.isQuiet = false
         }
     }
 
     /// Her connection breaks; after `awayFor` she is back: joining, she connects again herself;
     /// hosting, the other phone may connect again (`DemoNetwork.rejoin`).
     private func drop() {
+        // Online her transport dials again by itself.
+        if let online = transport as? OnlineTransport { return online.dropConnection() }
         isAway = true
-        transport.drop()
+        loopback?.drop()
         let awayFor = script.awayFor
         Task { [weak self] in
             try? await Task.sleep(for: .seconds(awayFor))

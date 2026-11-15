@@ -152,7 +152,8 @@ struct OnlineTransportTests {
         #expect(table.guestLink.me == PeerID("p1"), "the same seat")
         try await table.guest.send(7)
         await eventually("and play goes on") { table.host.match?.numbers == [4, 7] }
-        #expect(await relay.received["rejoin"] == 1)
+        let rejoins = await relay.received["rejoin"]
+        #expect(rejoins == 1)
     }
 
     /// The phone in charge loses its connection: the game is still there when it is back.
@@ -203,7 +204,8 @@ struct OnlineTransportTests {
         let table = await seated()
         await table.guest.leave()
         await eventually("Ama is told") { table.hostLog.events.contains(.left(seat: 1)) }
-        #expect(await relay.hasRoom("K7M2QD"), "her room is still there for someone else")
+        let stillThere = await relay.hasRoom("K7M2QD")
+        #expect(stillThere, "her room is still there for someone else")
     }
 
     // MARK: Four phones

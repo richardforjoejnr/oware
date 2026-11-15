@@ -14,6 +14,8 @@ enum AnalyticsEvent: Equatable, Sendable {
     /// Nearby play. Never who played: no names, no devices.
     case nearbyHosted(demo: Bool)
     case nearbyJoined(demo: Bool)
+    case onlineStarted(demo: Bool)
+    case onlineJoined(demo: Bool)
     case nearbyFinished(result: String, rules: String)
     case nearbyDropped(finishedAgainstComputer: Bool)
 
@@ -28,6 +30,8 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .tipPurchased: "tipJar.purchased"
         case .nearbyHosted: "nearby.hosted"
         case .nearbyJoined: "nearby.joined"
+        case .onlineStarted: "online.started"
+        case .onlineJoined: "online.joined"
         case .nearbyFinished: "nearby.finished"
         case .nearbyDropped: "nearby.dropped"
         }
@@ -42,7 +46,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case let .riddleSolved(kind, daily): ["kind": kind, "daily": daily ? "yes" : "no"]
         case let .lessonCompleted(rules): ["rules": rules]
         case let .tipPurchased(tier): ["tier": tier]
-        case let .nearbyHosted(demo), let .nearbyJoined(demo): ["demo": demo ? "yes" : "no"]
+        case let .nearbyHosted(demo), let .nearbyJoined(demo), let .onlineStarted(demo), let .onlineJoined(demo): ["demo": demo ? "yes" : "no"]
         case let .nearbyFinished(result, rules): ["result": result, "rules": rules]
         case let .nearbyDropped(computer): ["then": computer ? "computer" : "left"]
         }

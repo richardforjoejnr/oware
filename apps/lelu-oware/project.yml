@@ -64,6 +64,8 @@ targets:
         product: MatchKit
       - package: MatchKit
         product: MatchKitNearby
+      - package: MatchKit
+        product: MatchKitOnline
       - package: TelemetryDeck
         product: TelemetryDeck
       - sdk: GameKit.framework

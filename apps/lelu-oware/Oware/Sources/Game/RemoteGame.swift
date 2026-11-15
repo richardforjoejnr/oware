@@ -210,19 +210,19 @@ final class MatchLink {
     private let myName: String
 
     init(hosting match: OwareMatch, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
-         transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
+         transport: any MatchTransport, clock: any RoomClock = SystemClock(), timing: RoomTiming = .nearby) {
         self.pace = pace
         myName = name
         room = Room(hosting: OwareTable.opening(match, paces: [.south: pace]), name: name, rules: OwareRoomRules(),
-                    transport: transport, clock: clock)
+                    transport: transport, clock: clock, timing: timing)
         room.onEvent = { [weak self] in self?.handle($0) }
     }
 
     init(joiningAs name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
-         transport: any MatchTransport, clock: any RoomClock = SystemClock()) {
+         transport: any MatchTransport, clock: any RoomClock = SystemClock(), timing: RoomTiming = .nearby) {
         self.pace = pace
         myName = name
-        room = Room(joiningAs: name, rules: OwareRoomRules(), transport: transport, clock: clock)
+        room = Room(joiningAs: name, rules: OwareRoomRules(), transport: transport, clock: clock, timing: timing)
         room.onEvent = { [weak self] in self?.handle($0) }
     }
 

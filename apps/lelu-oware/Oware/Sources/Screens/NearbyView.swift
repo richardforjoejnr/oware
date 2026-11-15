@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import MatchKit
 import MatchKitNearby
 import OwareEngine
 
@@ -23,6 +24,11 @@ struct NearbyView: View {
     @State private var variant: RuleSet.Variant?
     @State private var name = NearbyLobby.savedName() ?? ""
     @State private var showHelp = false
+    /// Online: the code being typed.
+    @State private var typedCode = ""
+
+    /// Play online: the same screen, with a code in place of the games nearby.
+    private var online: Bool { lobby.kind == .online }
 
     private var rules: RuleSet { (variant ?? settings.rules.variant) == .namNam ? .namNam : .abapa }
 
@@ -51,14 +57,16 @@ struct NearbyView: View {
                             .accessibilityIdentifier("nearby-title")
                             .accessibilityAddTraits(.isHeader)
                         if lobby.phase == .lobby {
-                            Text("Two phones. One game. No internet needed. Stay close and keep Wi-Fi on.")
+                            Text(online ? "Two phones, anywhere. Start a game and send your friend the code, or enter theirs."
+                                 : "Two phones. One game. No internet needed. Stay close and keep Wi-Fi on.")
                                 .font(Theme.caption(15))
                                 .foregroundStyle(Theme.ivoryDim)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     if demo {
-                        Text("Demo: \(DemoPlayer.name) plays on a pretend phone inside this one, the way a friend's phone would.")
+                        Text(online ? "Demo: \(DemoPlayer.name) joins the game you start, on a pretend phone inside this one. Nothing leaves this phone."
+                             : "Demo: \(DemoPlayer.name) plays on a pretend phone inside this one, the way a friend's phone would.")
                             .font(Theme.caption(14))
                             .foregroundStyle(Theme.ivoryDim)
                             .fixedSize(horizontal: false, vertical: true)
@@ -94,7 +102,7 @@ struct NearbyView: View {
 
     private var title: String {
         switch lobby.phase {
-        case .lobby, .playing, .refused: "Play nearby"
+        case .lobby, .playing, .refused: online ? "Play online" : "Play nearby"
         case .waiting: "Your game is ready"
         case .ready: "Ready to play"
         }
@@ -104,8 +112,12 @@ struct NearbyView: View {
         switch lobby.phase {
         case .lobby, .playing:
             startGame
-            gamesNearby
-            helpLink("How nearby play works")
+            if online {
+                enterCode
+            } else {
+                gamesNearby
+                helpLink("How nearby play works")
+            }
         case .waiting:
             waiting
         case .ready:
@@ -165,16 +177,17 @@ struct NearbyView: View {
                 .background(Theme.night.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.ivoryDim.opacity(0.35)))
             }
-            Text("You move first. Your name is shown only to players near you.")
+            Text(online ? "You move first. Your name is shown only to the friend who joins."
+                 : "You move first. Your name is shown only to players near you.")
                 .font(Theme.caption(13))
                 .foregroundStyle(Theme.ivoryDim)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("Start nearby game") {
+            Button(online ? "Start online game" : "Start nearby game") {
                 lobby.start(name: NearbyLobby.myName, rules: rules, pace: settings.effectiveSpeed)
             }
             .buttonStyle(NearbyButtonStyle(.primary))
             .disabled(!lobby.canSearch)
-            .accessibilityIdentifier("btn-start-nearby")
+            .accessibilityIdentifier(online ? "btn-start-online" : "btn-start-nearby")
         }
         .padding(16)
         .background(Theme.ember, in: RoundedRectangle(cornerRadius: 16))
@@ -259,11 +272,70 @@ struct NearbyView: View {
 
     // MARK: B. Your game is ready
 
+    // MARK: Online: enter a code, and the code to share
+
+    private var enterCode: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            sectionLabel("Join a friend's game")
+            TextField("Their code", text: $typedCode)
+                .font(.system(size: 24, weight: .semibold, design: .monospaced))
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .submitLabel(.join)
+                .onSubmit(joinTyped)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 52)
+                .background(Theme.night.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Theme.ivoryDim.opacity(0.35)))
+                .accessibilityLabel("Their code, six letters and numbers")
+                .accessibilityIdentifier("online-code-field")
+            Button("Join game", action: joinTyped)
+                .buttonStyle(NearbyButtonStyle(.primary))
+                .disabled(RoomCode(typedCode) == nil)
+                .accessibilityIdentifier("btn-join-online")
+        }
+        .padding(16)
+        .background(Theme.ember, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func joinTyped() {
+        if lobby.join(code: typedCode, name: NearbyLobby.myName, pace: settings.effectiveSpeed) { typedCode = "" }
+    }
+
+    /// The code in large letters, with Share, once the relay has made the room.
+    @ViewBuilder private var codeToShare: some View {
+        if let code = lobby.roomCode, let spelled = RoomCode(code)?.spelledOut {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Your code")
+                    .font(Theme.caption(13))
+                    .foregroundStyle(Theme.ivoryDim)
+                Text(code)
+                    .font(.system(size: 40, weight: .bold, design: .monospaced))
+                    .tracking(6)
+                    .foregroundStyle(Theme.gold)
+                    .textSelection(.enabled)
+                    .accessibilityLabel("Your code: \(spelled)")
+                    .accessibilityIdentifier("online-code")
+                ShareLink(item: OnlineConfig.joinLink(code),
+                          message: Text("Play Oware with me. Open Lelu Oware, choose Play online and enter the code \(code).")) {
+                    Label("Share the code", systemImage: "square.and.arrow.up")
+                }
+                .buttonStyle(NearbyButtonStyle(.primary))
+                .accessibilityIdentifier("btn-share-code")
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.ember, in: RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
     private var waiting: some View {
         VStack(alignment: .leading, spacing: 18) {
+            if online { codeToShare }
             HStack(spacing: 12) {
                 WaitingMark()
-                Text("Looking for another player nearby…")
+                Text(online ? (lobby.roomCode == nil ? "Getting a code…" : "Waiting for your friend to join…")
+                     : "Looking for another player nearby…")
                     .accessibilityIdentifier("nearby-waiting")
             }
             VStack(alignment: .leading, spacing: 10) {
@@ -276,7 +348,7 @@ struct NearbyView: View {
             Button("Cancel", role: .cancel) { lobby.cancel() }
                 .buttonStyle(NearbyButtonStyle(.secondary))
                 .accessibilityIdentifier("btn-cancel")
-            helpLink("Can't find each other?")
+            if !online { helpLink("Can't find each other?") }
         }
     }
 

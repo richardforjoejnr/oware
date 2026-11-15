@@ -634,11 +634,11 @@ final class GameSession {
 
     /// Shows the game on the other end of `link`: the host's phone decides every move, and its
     /// snapshots are played on this board like the computer's moves.
-    func startRemote(_ link: MatchLink) {
+    func startRemote(_ link: MatchLink, via: RemoteGame.Via = .nearby) {
         leaveRemote()
         interrupt()
         self.link = link
-        mode = .remote(RemoteGame(mySide: link.mySide ?? (link.isHost ? .south : .north), opponentName: link.opponentName ?? ""))
+        mode = .remote(RemoteGame(mySide: link.mySide ?? (link.isHost ? .south : .north), opponentName: link.opponentName ?? "", via: via))
         shownMatch = link.table?.match
         latestMatch = shownMatch
         state = (try? shownMatch?.state()) ?? .initial
