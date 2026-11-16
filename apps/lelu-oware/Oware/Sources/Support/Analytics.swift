@@ -17,6 +17,7 @@ enum AnalyticsEvent: Equatable, Sendable {
     case onlineStarted(demo: Bool)
     case onlineJoined(demo: Bool)
     case nearbyFinished(result: String, rules: String)
+    case onlineFinished(result: String, rules: String)
     case nearbyDropped(finishedAgainstComputer: Bool)
 
     var name: String {
@@ -33,6 +34,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case .onlineStarted: "online.started"
         case .onlineJoined: "online.joined"
         case .nearbyFinished: "nearby.finished"
+        case .onlineFinished: "online.finished"
         case .nearbyDropped: "nearby.dropped"
         }
     }
@@ -47,7 +49,7 @@ enum AnalyticsEvent: Equatable, Sendable {
         case let .lessonCompleted(rules): ["rules": rules]
         case let .tipPurchased(tier): ["tier": tier]
         case let .nearbyHosted(demo), let .nearbyJoined(demo), let .onlineStarted(demo), let .onlineJoined(demo): ["demo": demo ? "yes" : "no"]
-        case let .nearbyFinished(result, rules): ["result": result, "rules": rules]
+        case let .nearbyFinished(result, rules), let .onlineFinished(result, rules): ["result": result, "rules": rules]
         case let .nearbyDropped(computer): ["then": computer ? "computer" : "left"]
         }
     }

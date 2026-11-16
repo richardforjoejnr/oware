@@ -119,7 +119,7 @@ targets:
         # through prod. These are the stages' own addresses (the deploy prints them); they change
         # only if a stage is destroyed and made again. play.leluoware.com replaces prod's later.
         Debug:
-          RELAY_URL: "wss://e1y2lt3abg.execute-api.us-east-1.amazonaws.com/dev"
+          RELAY_URL: "wss://2z7y92ovwc.execute-api.us-east-1.amazonaws.com/dev"
         Release:
           RELAY_URL: "wss://rcxi7c6ru9.execute-api.us-east-1.amazonaws.com/prod"
   OwareTests:

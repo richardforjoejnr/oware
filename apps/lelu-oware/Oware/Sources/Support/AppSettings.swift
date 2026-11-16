@@ -38,8 +38,9 @@ final class AppSettings {
     /// Settings ▸ Play online: adds Play online to Home while the feature's own switch
     /// (`Feature.online`) is still off. Only in builds that offer it (`offersOnlineSwitch`).
     var onlinePlayOn: Bool {
-        didSet { defaults.set(onlinePlayOn, forKey: "onlinePlaySwitch") }
+        didSet { defaults.set(onlinePlayOn, forKey: Self.onlineSwitchKey) }
     }
+    nonisolated static let onlineSwitchKey = "onlinePlaySwitch"
     /// This build has the Play online switch in Settings: builds from Xcode at once, TestFlight
     /// builds once the App Store has said which kind of build this is. Never an App Store build.
     var offersOnlineSwitch = AppSettings.offersOnlineSwitch(in: .buildTime)
@@ -122,7 +123,7 @@ final class AppSettings {
         hapticsEnabled = defaults.object(forKey: "hapticsEnabled") as? Bool ?? true
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
         showHouseLabels = defaults.object(forKey: "showHouseLabels") as? Bool ?? false
-        onlinePlayOn = defaults.bool(forKey: "onlinePlaySwitch")
+        onlinePlayOn = defaults.bool(forKey: Self.onlineSwitchKey)
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id
