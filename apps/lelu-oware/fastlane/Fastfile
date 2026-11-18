@@ -81,6 +81,23 @@ platform :ios do
     match(type: "appstore", readonly: false)
   end
 
+  desc "On your Mac, after adding a capability to the app: switch it on for the App ID and make the App Store profile again"
+  # CI only reads the profile, so a build with a new entitlement fails until this has run
+  # (./scripts/setup-signing.sh --refresh, with an Admin key). Add new capabilities to the list.
+  lane :refresh_signing do
+    asc_auth
+    type = Spaceship::ConnectAPI::BundleIdCapability::Type
+    app_id = Spaceship::ConnectAPI::BundleId.find(BUNDLE_ID)
+    UI.user_error!("No App ID #{BUNDLE_ID}") unless app_id
+    have = app_id.get_capabilities.map(&:capability_type)
+    [type::PUSH_NOTIFICATIONS, type::ASSOCIATED_DOMAINS].each do |capability|
+      next if have.include?(capability)
+      app_id.create_capability(capability)
+      UI.success("Switched on #{capability} for #{BUNDLE_ID}")
+    end
+    match(type: "appstore", readonly: false, force: true)
+  end
+
   desc "Build and upload to TestFlight (runs on every merge to main that changes the app)"
   lane :beta do
     build_signed

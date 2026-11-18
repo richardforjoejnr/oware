@@ -5,6 +5,10 @@
 # For another app (e.g. Lelu Ludo) once Lelu Oware is set up:  ./scripts/setup-signing.sh --app=lelu-ludo
 #   That only creates the app's own App Store profile in the same certificates repo, with the same
 #   certificate and passphrase. The GitHub secrets are shared, so they are left as they are.
+# After adding a capability to an app (Push Notifications, Associated Domains …), its App Store
+# profile must be made again or the TestFlight build fails with "doesn't include the … capability":
+#   ./scripts/setup-signing.sh --refresh            (or with --app=lelu-ludo)
+#   That switches the capabilities on for the App ID, makes the profile again and stores it.
 # It asks for each value privately, creates the private certificates repo if needed, stores the
 # App Store certificate there with fastlane match, adds every secret to GitHub, and finally turns
 # SIGNING_READY on. No secret is written to this repo or printed back.
@@ -17,10 +21,13 @@ REPO="richardforjoejnr/oware"
 CERTS_REPO="richardforjoejnr/oware-certificates"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APP="lelu-oware"
-for arg in "$@"; do case "$arg" in --app=*) APP="${arg#--app=}" ;; *) echo "Unknown option: $arg"; exit 1 ;; esac; done
+REFRESH=false
+for arg in "$@"; do case "$arg" in --app=*) APP="${arg#--app=}" ;; --refresh) REFRESH=true ;; *) echo "Unknown option: $arg"; exit 1 ;; esac; done
 [ -f "$ROOT/apps/$APP/fastlane/Fastfile" ] || { echo "No fastlane setup in apps/$APP"; exit 1; }
 # Lelu Oware's run sets everything up; any other app only adds its profile.
-PROFILE_ONLY=false; [ "$APP" != "lelu-oware" ] && PROFILE_ONLY=true
+# Making a profile again changes no secret either.
+PROFILE_ONLY=false; { [ "$APP" != "lelu-oware" ] || $REFRESH; } && PROFILE_ONLY=true
+LANE=setup_signing; $REFRESH && LANE=refresh_signing
 export PATH="/opt/homebrew/opt/ruby/bin:$PATH"
 
 ruby -e 'exit(RUBY_VERSION >= "3.0" ? 0 : 1)' || { echo "Needs Ruby 3: brew install ruby"; exit 1; }
@@ -113,7 +120,7 @@ echo "Creating and storing the App Store certificate and profile, using key $ADM
 (cd "$ROOT" && bundle config set --local path vendor/bundle >/dev/null && bundle install --quiet)
 LOG="$(mktemp)"
 if ! (cd "$ROOT/apps/$APP" && ASC_KEY_ID="$ADMIN_KEY_ID" ASC_KEY_CONTENT="$(base64 -i "$ADMIN_P8" | tr -d '\n')" \
-  BUNDLE_GEMFILE="$ROOT/Gemfile" bundle exec fastlane ios setup_signing) 2>&1 | tee "$LOG"; then
+  BUNDLE_GEMFILE="$ROOT/Gemfile" bundle exec fastlane ios "$LANE") 2>&1 | tee "$LOG"; then
   # The two failures people hit, in words (fastlane's own messages are easy to misread).
   if grep -q "forbidden for security reasons\|not allowed to perform this operation" "$LOG"; then
     echo

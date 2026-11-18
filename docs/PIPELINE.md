@@ -74,6 +74,16 @@ Apple only lets **Admin** keys create a distribution certificate, so also create
 (`match-setup`, access Admin) and give it at the script's "Admin Key ID" prompt. It is used once and
 not stored; revoke it afterwards. Done for Lelu Oware on 27 September 2026.
 
+### After adding a capability to an app
+
+A new entitlement (Push Notifications, Associated Domains …) makes the TestFlight build fail with
+`Provisioning profile "match AppStore …" doesn't include the … capability`, because the stored
+profile was made before it and CI only reads profiles. Run `./scripts/setup-signing.sh --refresh`
+(add `--app=lelu-ludo` for Ludo): it switches the capabilities on for the App ID, makes the profile
+again (`fastlane ios refresh_signing`) and stores it. It needs an **Admin** key and the certificates
+passphrase, like the first setup. Then re-run the failed TestFlight run. A capability not yet in
+the lane's list is added there first.
+
 ### B. GitHub side (Settings → Secrets and variables → Actions)
 
 Secrets:
