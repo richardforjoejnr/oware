@@ -1,4 +1,3 @@
-import CoreImage.CIFilterBuiltins
 import SwiftUI
 import UIKit
 import MatchKit
@@ -27,9 +26,14 @@ struct NearbyView: View {
     @State private var showHelp = false
     /// Online: the code being typed.
     @State private var typedCode = ""
+    /// Online: Join with code was tapped, so the code box is showing.
+    @State private var enteringCode = false
     /// Online: Invite a friend was tapped, so the share sheet opens as soon as there is a code.
     @State private var inviting = false
     @State private var invitation: Invitation?
+    @Environment(OnlinePlay.self) private var onlinePlay
+    /// Online: the player about to be blocked, for the question first.
+    @State private var blocking: RecentPlayers.Entry?
 
     /// Play online: the same screen, with a code in place of the games nearby.
     private var online: Bool { lobby.kind == .online }
@@ -61,7 +65,7 @@ struct NearbyView: View {
                             .accessibilityIdentifier("nearby-title")
                             .accessibilityAddTraits(.isHeader)
                         if lobby.phase == .lobby {
-                            Text(online ? "Two phones, anywhere. Start a game and send your friend the code, or enter theirs."
+                            Text(online ? "Two phones, anywhere. Invite a friend with a link; they tap it and they are in."
                                  : "Two phones. One game. No internet needed. Stay close and keep Wi-Fi on.")
                                 .font(Theme.caption(15))
                                 .foregroundStyle(Theme.ivoryDim)
@@ -129,7 +133,8 @@ struct NearbyView: View {
         case .lobby, .playing:
             startGame
             if online {
-                enterCode
+                recentPlayers
+                if enteringCode { enterCode } else { joinWithCode }
             } else {
                 gamesNearby
                 helpLink("How nearby play works")
@@ -292,9 +297,106 @@ struct NearbyView: View {
 
     // MARK: Online: enter a code, and the code to share
 
+    // MARK: Online: recent players
+
+    /// The last few people played online, each with Play again. Nothing here says whether they
+    /// are online now: the app does not know.
+    @ViewBuilder private var recentPlayers: some View {
+        if let invitations = onlinePlay.invitations {
+            let players = invitations.recent.players
+            VStack(alignment: .leading, spacing: 12) {
+                sectionLabel("Recent players")
+                if players.isEmpty {
+                    Text("People you play online are listed here, so you can ask them again without a new link.")
+                        .font(Theme.caption(14))
+                        .foregroundStyle(Theme.ivoryDim)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("recent-empty")
+                }
+                ForEach(players) { player in
+                    recentRow(player, invitations)
+                }
+                if !players.isEmpty {
+                    Text("Play again sends them a notification. It reaches them only if they have turned invitations on; if they do not join, send the link.")
+                        .font(Theme.caption(13))
+                        .foregroundStyle(Theme.ivoryDim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if !invitations.isOn {
+                    Button {
+                        Task { await invitations.turnOn() }
+                    } label: {
+                        Label("Let them ask you too", systemImage: "bell")
+                    }
+                    .buttonStyle(NearbyButtonStyle(.secondary))
+                    .accessibilityIdentifier("btn-invitations-on")
+                    Text(invitations.problem ?? "Turns on notifications for invitations from people you have played. Change it any time in Settings.")
+                        .font(Theme.caption(13))
+                        .foregroundStyle(Theme.ivoryDim)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("invitations-note")
+                }
+            }
+            .confirmationDialog("Block \(blocking?.name ?? "")?", isPresented: Binding(get: { blocking != nil }, set: { if !$0 { blocking = nil } }),
+                                titleVisibility: .visible) {
+                Button("Block", role: .destructive) {
+                    if let player = blocking { Task { await invitations.block(player.id) } }
+                    blocking = nil
+                }
+                Button("Cancel", role: .cancel) { blocking = nil }
+            } message: {
+                Text("They come off this list and can no longer send you invitations. You can undo it in Settings.")
+            }
+        }
+    }
+
+    private func recentRow(_ player: RecentPlayers.Entry, _ invitations: Invitations) -> some View {
+        HStack(spacing: 12) {
+            Text(player.name)
+                .font(Theme.body(19))
+                .foregroundStyle(Theme.ivory)
+                .lineLimit(1)
+                .accessibilityIdentifier("recent-player-\(player.name)")
+            Spacer(minLength: 8)
+            Button("Play again") {
+                onlinePlay.playAgain(player, name: NearbyLobby.myName, rules: rules, pace: settings.effectiveSpeed)
+            }
+            .buttonStyle(NearbyButtonStyle(.small))
+            .disabled(!lobby.canSearch)
+            .accessibilityLabel("Play \(player.name) again")
+            .accessibilityIdentifier("btn-play-again-\(player.name)")
+            Menu {
+                Button("Remove from list") { invitations.recent.remove(player.id) }
+                Button("Block", role: .destructive) { blocking = player }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(Theme.ivoryDim)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("More for \(player.name)")
+            .accessibilityIdentifier("btn-recent-more-\(player.name)")
+        }
+        .padding(.leading, 14)
+        .padding(.vertical, 4)
+        .background(Theme.wood, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.gold.opacity(0.45)))
+    }
+
+    /// The link is how a friend gets in; typing a code is the fallback, one tap away.
+    private var joinWithCode: some View {
+        Button { enteringCode = true } label: {
+            Label("Join with code", systemImage: "number")
+        }
+        .buttonStyle(NearbyButtonStyle(.secondary))
+        .disabled(!lobby.canSearch)
+        .accessibilityIdentifier("btn-join-with-code")
+    }
+
     private var enterCode: some View {
         VStack(alignment: .leading, spacing: 14) {
-            sectionLabel("Join a friend's game")
+            sectionLabel("Join with code")
             Text("If they sent you a link, tap it. Or enter their code, or paste their message here.")
                 .font(Theme.caption(13))
                 .foregroundStyle(Theme.ivoryDim)
@@ -353,22 +455,6 @@ struct NearbyView: View {
                 }
                 .buttonStyle(NearbyButtonStyle(.primary))
                 .accessibilityIdentifier("btn-share-code")
-                if let qr = InvitationQR.image(for: OnlineConfig.joinLink(code)) {
-                    HStack(alignment: .center, spacing: 14) {
-                        Image(uiImage: qr)
-                            .interpolation(.none)
-                            .resizable()
-                            .frame(width: 132, height: 132)
-                            .padding(8)
-                            .background(Color.white, in: RoundedRectangle(cornerRadius: 10))
-                            .accessibilityLabel("QR code for this game")
-                            .accessibilityIdentifier("online-qr")
-                        Text("Sitting together? They can point their camera at this.")
-                            .font(Theme.caption(14))
-                            .foregroundStyle(Theme.ivoryDim)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -378,6 +464,16 @@ struct NearbyView: View {
 
     private var waiting: some View {
         VStack(alignment: .leading, spacing: 18) {
+            if online, let note = onlinePlay.askedNote {
+                Text(note)
+                    .font(Theme.body(17))
+                    .foregroundStyle(Theme.ivory)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.wood, in: RoundedRectangle(cornerRadius: 16))
+                    .accessibilityIdentifier("online-asked")
+            }
             if online { codeToShare }
             HStack(spacing: 12) {
                 WaitingMark()
@@ -626,19 +722,6 @@ private struct ActivityView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
-}
-
-/// The invitation link as a QR code, for a friend in the same room: the iPhone camera reads it
-/// and opens the link.
-enum InvitationQR {
-    static func image(for link: URL) -> UIImage? {
-        let filter = CIFilter.qrCodeGenerator()
-        filter.message = Data(link.absoluteString.utf8)
-        filter.correctionLevel = "M"
-        guard let output = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: 8, y: 8)),
-              let cg = CIContext().createCGImage(output, from: output.extent) else { return nil }
-        return UIImage(cgImage: cg)
-    }
 }
 
 struct NearbyButtonStyle: ButtonStyle {

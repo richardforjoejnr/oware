@@ -22,6 +22,21 @@ enum Feature {
     @MainActor
     static var showsOnlinePlay: Bool { gate().isShown(online) || LaunchOptions.onlinePlay }
 
+    // MARK: Switches for testers
+
+    /// Settings ▸ Play online and Settings ▸ Relay exist only in test builds: TestFlight, and builds
+    /// from Xcode. An App Store build has neither. (App Review's build cannot be told from a
+    /// TestFlight one, `AppChannel.sandbox`, so App Review sees them too.)
+    static func offersTesterSwitches(in channel: AppChannel) -> Bool { channel != .appStore }
+
+    /// The relay stage a build uses. An App Store build is always on prod, whatever was chosen
+    /// when the same phone had a TestFlight build. A test build uses the stage chosen in Settings,
+    /// and until one is chosen its own: prod for TestFlight, dev from Xcode.
+    static func relayStage(in channel: AppChannel, chosen: RelayStage?) -> RelayStage {
+        guard offersTesterSwitches(in: channel) else { return .prod }
+        return chosen ?? (channel == .development ? .dev : .prod)
+    }
+
     /// The app's gate, with a purchase record for every feature that is sold.
     @MainActor
     static func gate(defaults: UserDefaults = .standard) -> FeatureGate {

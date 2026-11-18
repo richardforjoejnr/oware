@@ -69,10 +69,25 @@ protocol NearbyNetwork: AnyObject {
     /// Online: reports the code of the room this phone is in, and anything that stops it getting
     /// into one (a wrong code, no internet), in words for the player.
     func watchRoom(code: @escaping @MainActor (String) -> Void, problem: @escaping @MainActor (String) -> Void)
+    /// Online: this phone's place in its game at the relay, once it has one.
+    var roomSeat: OnlineTransport.Seat? { get }
+    /// Online: a connection back into a saved game, in this phone's own seat.
+    func resume(_ save: OnlineSave) -> (any MatchTransport)?
+    /// Online: told when the relay will not give this phone its seat back (the game has gone).
+    func watchSeat(refused: @escaping @MainActor (RelayEvent.Refusal) -> Void)
+    /// Online: drop the connection without leaving the game, so the seat is kept.
+    func abandon()
+    /// Online: tell the other phone and the relay that the player has left a saved game.
+    func goodbye(_ save: OnlineSave)
 }
 
 extension NearbyNetwork {
     func watchRoom(code: @escaping @MainActor (String) -> Void, problem: @escaping @MainActor (String) -> Void) {}
+    var roomSeat: OnlineTransport.Seat? { nil }
+    func resume(_ save: OnlineSave) -> (any MatchTransport)? { nil }
+    func watchSeat(refused: @escaping @MainActor (RelayEvent.Refusal) -> Void) {}
+    func abandon() {}
+    func goodbye(_ save: OnlineSave) {}
 }
 
 /// Play nearby (NEARBY_PLAY_REDESIGN.md §2): one screen that lists the games nearby by itself, or
@@ -128,6 +143,12 @@ final class NearbyLobby {
     private(set) var isLooking = false
     /// Called once both are ready and the game is on the session.
     @ObservationIgnored var onStart: (() -> Void)?
+    /// Online: this phone's player number, told to the other phone in a game.
+    @ObservationIgnored var myPlayer: String?
+    /// Online: a game with this player has started (their player number and name).
+    @ObservationIgnored var onMet: ((_ player: String, _ name: String) -> Void)?
+    /// Online: called once with the code of the game being started.
+    @ObservationIgnored private var onRoomCode: ((String) -> Void)?
     let session: GameSession
 
     /// What stops this phone looking for games or starting one, shown with how to fix it.
@@ -168,15 +189,79 @@ final class NearbyLobby {
     private var timing: RoomTiming { kind == .online ? .online : .nearby }
     private var via: RemoteGame.Via { kind == .online ? .online : .nearby }
 
-    /// Online: hear the room's code, and whatever stops this phone getting into a room.
+    /// Online: hear the room's code, and whatever stops this phone getting into a room. Once in
+    /// a game, hear if the relay no longer has it.
     private func watchRoom() {
-        network.watchRoom(code: { [weak self] in self?.roomCode = $0 }, problem: { [weak self] in self?.fail($0) })
+        network.watchRoom(code: { [weak self] code in
+            guard let self else { return }
+            self.roomCode = code
+            let tell = self.onRoomCode
+            self.onRoomCode = nil
+            tell?(code)
+        }, problem: { [weak self] in self?.fail($0) })
+        network.watchSeat { [weak self] reason in
+            guard let self, self.phase == .playing, OnlinePlay.rejoinRefused(reason).ended else { return }
+            self.session.onlineGameEnded()
+        }
+    }
+
+    /// Online: the link saves this phone's place at the relay with the game.
+    private func keepsSeat(_ link: MatchLink) {
+        guard kind == .online else { return }
+        link.relaySeat = { [weak self] in self?.network.roomSeat }
+        link.room.player = myPlayer
+        link.room.onPlayer = { [weak self, weak link] _, _ in
+            if let link { self?.met(link) }
+        }
+    }
+
+    /// Online: the other player goes on the Recent players list once a game with them has started
+    /// and their phone has said who it is, whichever comes second.
+    private func met(_ link: MatchLink) {
+        guard kind == .online, link.table?.isStarted == true, let them = link.opponentPlayer else { return }
+        onMet?(them.id, them.name)
+    }
+
+    /// Going back to a saved game, not yet let in by the relay.
+    private var isResuming = false
+
+    /// Online: back into the game saved before the app was closed, in the same seat. `opened`
+    /// once the relay has let this phone in and the game is on the session; `refused` if it will
+    /// not. False if this network cannot go back to a game.
+    @discardableResult
+    func resume(_ save: OnlineSave, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
+                opened: @escaping @MainActor () -> Void, refused: @escaping @MainActor (RelayEvent.Refusal) -> Void) -> Bool {
+        guard kind == .online else { return false }
+        reset()
+        guard let transport = network.resume(save) else { return false }
+        let link = MatchLink(resuming: save, pace: pace, transport: transport, timing: timing)
+        keepsSeat(link)
+        self.link = link
+        isResuming = true
+        network.watchRoom(code: { [weak self] code in
+            guard let self, self.isResuming, self.link === link else { return }
+            self.roomCode = code
+            self.isResuming = false
+            link.startHeartbeat()
+            self.begin(link)
+            opened()
+        }, problem: { _ in })
+        network.watchSeat { [weak self] reason in
+            guard let self, self.link === link else { return }
+            if self.isResuming {
+                self.reset()
+                refused(reason)
+            } else if self.phase == .playing, OnlinePlay.rejoinRefused(reason).ended {
+                self.session.onlineGameEnded()
+            }
+        }
+        return true
     }
 
     /// No game after all: say why, with Back.
     private func fail(_ reason: String) {
         guard phase != .playing else { return }
-        link?.room.stop()
+        link?.stop()
         link = nil
         opponent = nil
         iAmReady = false
@@ -225,9 +310,12 @@ final class NearbyLobby {
 
     /// Start nearby game: whoever starts it moves first (the owner's call, 2026-10-30). `pace`: this
     /// phone's sowing speed; both phones sow at the slower of the two.
-    func start(name: String, rules: RuleSet, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
+    /// `whenCoded`, online: called once, with the code, when the relay has made the game.
+    func start(name: String, rules: RuleSet, pace: Double = AppSettings.AnimationSpeed.normal.rawValue,
+               whenCoded: ((String) -> Void)? = nil) {
         guard canSearch else { return }
         reset()
+        onRoomCode = whenCoded
         let match = OwareMatch(rules: rules, starter: .south)
         // "starter" stays in the listing so a card can say "Kofi starts".
         let info = ["rules": Self.rulesName(rules), "starter": "creator", "game": match.matchID.uuidString, "name": name]
@@ -235,6 +323,7 @@ final class NearbyLobby {
             watchRoom()
             let transport = try network.host(gameName: "\(name)'s game", info: info, status: { [weak self] in self?.status = $0 })
             let link = MatchLink(hosting: match, name: name, pace: pace, transport: transport, timing: timing)
+            keepsSeat(link)
             link.onEvent = { [weak self] in self?.handle($0) }
             self.link = link
             gameNote = "\(Self.rulesName(rules)) · You start"
@@ -259,9 +348,10 @@ final class NearbyLobby {
     func join(_ listing: NearbyListing, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) {
         watchRoom()
         let link = MatchLink(joiningAs: name, pace: pace, transport: network.connect(to: listing), timing: timing)
+        keepsSeat(link)
         link.onEvent = { [weak self] in self?.handle($0) }
         link.rejoin = { [weak self] in self?.network.rejoin(listing) }
-        self.link?.room.stop()
+        self.link?.stop()
         self.link = link
         opponent = Opponent(name: listing.creatorName, isConnected: false, isReady: false)
         gameNote = [listing.rules, listing.creatorStarts.map { Self.startNote(creatorStarts: $0, creatorName: listing.creatorName) }]
@@ -292,12 +382,20 @@ final class NearbyLobby {
     func cancel() { open() }
 
     private func reset() {
+        if isResuming {
+            // Not let back in yet: stop trying, but the seat in the saved game stays this phone's.
+            isResuming = false
+            network.abandon()
+            link?.stop()
+            link = nil
+        }
         network.shutDown()
         if phase != .playing, let link { Task { await link.leave() } }
         link = nil
         opponent = nil
         iAmReady = false
         isLooking = false
+        onRoomCode = nil
         roomCode = nil
         games = []
         status = .working
@@ -322,7 +420,7 @@ final class NearbyLobby {
             }
             link.startHeartbeat()
         case let .refused(refusal):
-            link.room.stop()
+            link.stop()
             self.link = nil
             opponent = nil
             phase = .refused(Self.explain(refusal))
@@ -373,6 +471,7 @@ final class NearbyLobby {
         network.stopFinding()
         phase = .playing
         session.startRemote(link, via: via)
+        met(link)
         onStart?()
     }
 
@@ -669,6 +768,8 @@ final class DemoPlayer {
     }
 
     static let name = "Ama"
+    /// Her player number online, so she is listed under Recent players and can be asked again.
+    static let playerNumber = "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0"
 
     let room: Room<OwareRoomRules>
     /// Her end of the connection. Hosting, a phone that lost her game connects to it again.
@@ -680,6 +781,8 @@ final class DemoPlayer {
     /// Her connection has dropped and she is not back yet.
     private(set) var isAway = false
     private var firstGame: UUID?
+    /// The finished games she has asked for a rematch after.
+    private var askedRematch: Set<UUID> = []
     private var movesIn: [UUID: Int] = [:]
     private var totalMoves = 0
     private var turn: Task<Void, Never>?
@@ -697,6 +800,16 @@ final class DemoPlayer {
         self.transport = transport
         self.script = script
         room = Room(joiningAs: Self.name, rules: OwareRoomRules(), transport: transport, timing: .online)
+        room.player = Self.playerNumber
+        start()
+    }
+
+    /// Online, after the app was closed: she is back in her seat, with the match as it was.
+    init(resuming save: RoomSave, table: OwareTable, transport: OnlineTransport, script: Script) {
+        self.transport = transport
+        self.script = script
+        room = Room(resuming: save, match: table, rules: OwareRoomRules(), transport: transport, timing: .online)
+        room.player = Self.playerNumber
         start()
     }
 
@@ -721,7 +834,7 @@ final class DemoPlayer {
         switch event {
         case let .joinRequest(peer, _):
             Task { await room.accept(peer) }
-        case .seated, .snapshot:
+        case .seated, .snapshot, .back:
             consider()
         default:
             break
@@ -742,7 +855,12 @@ final class DemoPlayer {
         }
         guard table.isStarted else { return }
         if state.isOver {
-            if !table.rematchAsked.contains(me) { act(.game(.rematch)) }
+            // She asks once after a game (told not now, she leaves it there), and says yes when asked.
+            let asked = table.rematchAsked.contains(me.opponent)
+            if !table.rematchAsked.contains(me), asked || !askedRematch.contains(id) {
+                askedRematch.insert(id)
+                act(.game(.rematch))
+            }
             return
         }
         guard state.sideToMove == me else { return }

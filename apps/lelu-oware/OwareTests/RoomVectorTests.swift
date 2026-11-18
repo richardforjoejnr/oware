@@ -41,7 +41,8 @@ final class RoomVectorTests: XCTestCase {
 
     func testEveryExampleIsReadAndWrittenBackTheSame() throws {
         let names = try names
-        XCTAssertEqual(names.count, 17, "an example was added or removed")
+        XCTAssertEqual(names.count, 21, "an example was added or removed")
+        XCTAssertTrue(names.contains("player"), "a phone's player number, told once seated")
         for name in names {
             let example = try data(name)
             let envelope = try JSONDecoder().decode(Envelope<Message>.self, from: example)
@@ -60,6 +61,7 @@ final class RoomVectorTests: XCTestCase {
         XCTAssertEqual(try intent("intent-play"), .game(.play(house: 9)))
         XCTAssertEqual(try intent("intent-resign"), .game(.resign))
         XCTAssertEqual(try intent("intent-rematch"), .game(.rematch))
+        XCTAssertEqual(try intent("intent-decline-rematch"), .declineRematch)
     }
 
     func testSnapshotsSayWhatTheExamplesSay() throws {
@@ -80,6 +82,20 @@ final class RoomVectorTests: XCTestCase {
         resigned.stateHash = "63e16950d99c7d58"
         XCTAssertEqual(try table("oware/snapshot-resigned"), resigned)
 
+        // North said not now to South's request: nobody is asking, and it says who answered.
+        var declined = resigned
+        declined.rematchAsked = []
+        declined.rematchDeclinedBy = .north
+        declined.rematchRound = 1
+        XCTAssertEqual(try table("oware/snapshot-rematch-declined"), declined)
+
+        // South asked again and nobody answered for a minute.
+        var lapsed = resigned
+        lapsed.rematchAsked = []
+        lapsed.rematchLapsedFor = .south
+        lapsed.rematchRound = 2
+        XCTAssertEqual(try table("oware/snapshot-rematch-lapsed"), lapsed)
+
         var outOfStep = OwareTable(match: OwareMatch(rules: .namNam, starter: .north, matchID: id, game: 2))
         outOfStep.isOutOfStep = true
         XCTAssertEqual(try table("oware/snapshot-out-of-step"), outOfStep)
@@ -93,7 +109,7 @@ final class RoomVectorTests: XCTestCase {
     /// The fingerprints in the examples are the engine's own, so another engine (Kotlin) that
     /// replays the same moves must arrive at the same text.
     func testTheFingerprintsInTheExamplesAreTheEnginesOwn() throws {
-        for name in ["snapshot-opening", "snapshot-playing", "snapshot-resigned"] {
+        for name in ["snapshot-opening", "snapshot-playing", "snapshot-resigned", "snapshot-rematch-declined", "snapshot-rematch-lapsed"] {
             let table = try table("oware/" + name)
             XCTAssertEqual(table.stateHash, try table.match.state().fingerprint, name)
         }

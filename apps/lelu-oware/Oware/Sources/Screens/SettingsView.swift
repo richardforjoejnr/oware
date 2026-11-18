@@ -8,6 +8,7 @@ struct SettingsView: View {
     @Environment(TipJar.self) private var tipJar
     @Environment(RiddleReminder.self) private var reminder
     @Environment(PuzzleLibrary.self) private var library
+    @Environment(Invitations.self) private var invitations
     @State private var showTipJar = false
     @State private var channel: AppChannel = .appStore
     @Environment(\.openURL) private var openURL
@@ -125,6 +126,49 @@ struct SettingsView: View {
                         .font(Theme.caption(12))
                         .foregroundStyle(Theme.ivoryDim)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                if settings.onlinePlayOn {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text("Relay")
+                            Spacer()
+                            Picker("Relay", selection: $settings.relayStage) {
+                                ForEach(RelayStage.allCases, id: \.self) { Text($0.label).tag($0) }
+                            }
+                            .pickerStyle(.segmented)
+                            .frame(maxWidth: 180)
+                            .accessibilityIdentifier("setting-relay")
+                        }
+                        Text("The server online games go through: Dev for testing, Prod as released. Both phones must be on the same one. A game being played on the other cannot be rejoined. This build starts on \(OnlineConfig.buildStage.label).")
+                            .font(Theme.caption(12))
+                            .foregroundStyle(Theme.ivoryDim)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+
+            if settings.showsOnlinePlay, invitations.canBeOffered {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Invitations", isOn: Binding(get: { invitations.isOn }, set: { on in
+                        Task { if on { await invitations.turnOn() } else { await invitations.turnOff() } }
+                    }))
+                    .accessibilityIdentifier("setting-invitations")
+                    Text(invitations.problem ?? "People you have played online can ask you for another game with a notification. Off, nobody can.")
+                        .font(Theme.caption(12))
+                        .foregroundStyle(Theme.ivoryDim)
+                        .fixedSize(horizontal: false, vertical: true)
+                    ForEach(invitations.recent.blocked) { player in
+                        HStack {
+                            Text("\(player.name) is blocked")
+                                .font(Theme.body(16))
+                            Spacer()
+                            Button("Unblock") { Task { await invitations.unblock(player.id) } }
+                                .buttonStyle(NearbyButtonStyle(.small))
+                                .accessibilityLabel("Unblock \(player.name)")
+                                .accessibilityIdentifier("btn-unblock-\(player.name)")
+                        }
+                        .padding(.top, 6)
+                    }
                 }
             }
 

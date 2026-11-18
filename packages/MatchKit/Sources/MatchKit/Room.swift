@@ -20,19 +20,44 @@ public struct RoomTiming: Sendable, Equatable {
     public var heartbeatInterval: Double
     /// A seat silent this long is shown as reconnecting.
     public var quietAfter: Double
-    /// A seat silent this long is given up.
+    /// A seat silent this long is given up, or, when seats are kept, the player is asked what to do.
     public var lostAfter: Double
+    /// A seat silent for `lostAfter` stays that player's: it is reported (`seatLost`), and again
+    /// after as long again, and the player decides whether to wait. Online, where a phone can be
+    /// off the network for minutes and the app closed meanwhile (docs/ONLINE_PLAY.md §5).
+    public var keepsSeats: Bool
 
-    public init(heartbeatInterval: Double, quietAfter: Double, lostAfter: Double) {
+    public init(heartbeatInterval: Double, quietAfter: Double, lostAfter: Double, keepsSeats: Bool = false) {
         self.heartbeatInterval = heartbeatInterval
         self.quietAfter = quietAfter
         self.lostAfter = lostAfter
+        self.keepsSeats = keepsSeats
     }
 
     /// 15 s: the owner found a minute too long and 10 s too short.
     public static let nearby = RoomTiming(heartbeatInterval: 2, quietAfter: 4, lostAfter: 15)
     /// docs/ONLINE_PLAY.md §5, Connections.
-    public static let online = RoomTiming(heartbeatInterval: 10, quietAfter: 25, lostAfter: 90)
+    public static let online = RoomTiming(heartbeatInterval: 10, quietAfter: 25, lostAfter: 90, keepsSeats: true)
+}
+
+/// What a phone keeps so its game can carry on after the app was closed (docs/ONLINE_PLAY.md §5):
+/// enough, with the match, to make the room again with `Room(resuming:)`. The tokens are secrets:
+/// whoever holds one is that seat.
+public struct RoomSave: Codable, Sendable, Equatable {
+    /// This phone's seat. Seat 0 is the phone in charge.
+    public var seat: Int
+    public var names: [Int: String]
+    /// The phone in charge: every other seat's token. Any other phone: its own.
+    public var tokens: [Int: UUID]
+    /// The number on this phone's last message.
+    public var sequence: Int
+
+    public init(seat: Int, names: [Int: String], tokens: [Int: UUID], sequence: Int) {
+        self.seat = seat
+        self.names = names
+        self.tokens = tokens
+        self.sequence = sequence
+    }
 }
 
 public enum Refusal: Sendable, Equatable {
@@ -53,13 +78,16 @@ public enum RoomMessage<Match: Codable & Sendable, Intent: Codable & Sendable>: 
     case snapshot(Match)
     case ping
     case bye
+    /// The sender's player number, so the other player can ask for another game later. Sent once
+    /// seated, and only by a phone that has one. An app from before this was added drops it.
+    case player(String)
 }
 
 /// One object with a `type`, and that kind's values beside it:
 /// `{"type": "hello", "name": "Kofi"}`, `{"type": "refused", "reason": "roomFull"}`.
 extension RoomMessage: Codable {
     private enum Key: String, CodingKey {
-        case type, name, rejoin, seat, token, names, snapshot, reason, hostVersion, intent
+        case type, name, rejoin, seat, token, names, snapshot, reason, hostVersion, intent, player
     }
 
     public init(from decoder: Decoder) throws {
@@ -91,6 +119,7 @@ extension RoomMessage: Codable {
         case "snapshot": self = .snapshot(try c.decode(Match.self, forKey: .snapshot))
         case "ping": self = .ping
         case "bye": self = .bye
+        case "player": self = .player(try c.decode(String.self, forKey: .player))
         default: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown message \(type)")
         }
     }
@@ -125,6 +154,9 @@ extension RoomMessage: Codable {
             try c.encode(snapshot, forKey: .snapshot)
         case .ping: try c.encode("ping", forKey: .type)
         case .bye: try c.encode("bye", forKey: .type)
+        case let .player(player):
+            try c.encode("player", forKey: .type)
+            try c.encode(player, forKey: .player)
         }
     }
 }
@@ -140,7 +172,9 @@ public enum RoomEvent<Match: Sendable & Equatable>: Sendable, Equatable {
     /// Nothing heard from that seat for a while.
     case reconnecting(seat: Int)
     case back(seat: Int)
-    /// That seat has gone silent too long. On a guest, seat 0 means the host's phone.
+    /// That seat has gone silent too long. On a guest, seat 0 means the host's phone. Where seats
+    /// are kept (`RoomTiming.keepsSeats`) the seat is still theirs, `back` may follow, and this
+    /// is sent again after each further wait.
     case seatLost(seat: Int)
     /// That seat left on purpose (said goodbye): no point waiting for it.
     case left(seat: Int)
@@ -174,6 +208,12 @@ public final class Room<Rules: RoomRules> {
     /// Host: people waiting for an answer, by peer.
     public private(set) var pending: [PeerID: String] = [:]
     public var onEvent: (@MainActor (RoomEvent<Match>) -> Void)?
+    /// This phone's player number, told to the others once seated. Set before anyone connects.
+    public var player: String?
+    /// The other seats' player numbers, as their phones gave them.
+    public private(set) var players: [Int: String] = [:]
+    /// A seat's player number has arrived.
+    public var onPlayer: (@MainActor (_ seat: Int, _ player: String) -> Void)?
 
     private var transport: any MatchTransport
     private let clock: any RoomClock
@@ -184,6 +224,8 @@ public final class Room<Rules: RoomRules> {
     private var filter = SequenceFilter()
     private var peerForSeat: [Int: PeerID] = [:]
     private var lastHeard: [Int: Double] = [:]
+    /// Seats are kept: when each silent seat was last reported.
+    private var reportedLost: [Int: Double] = [:]
     /// Host: each guest seat's rejoin token.
     private var tokens: [Int: UUID] = [:]
     /// Guest: the host, and the token to take this seat back.
@@ -226,6 +268,48 @@ public final class Room<Rules: RoomRules> {
         listen()
     }
 
+    /// Carries on a game this phone was in before the app closed: the same seat, names and
+    /// tokens, and the match as it was saved. Nobody else has been heard from yet, so every other
+    /// seat starts as reconnecting; a guest asks for its seat back as soon as the host connects.
+    public init(resuming save: RoomSave, match: Match, rules: Rules, transport: any MatchTransport,
+                clock: any RoomClock = SystemClock(), timing: RoomTiming = .online,
+                protocolVersion: Int = MatchKit.protocolVersion) {
+        role = save.seat == 0 ? .host : .guest
+        self.rules = rules
+        name = save.names[save.seat] ?? ""
+        self.match = match
+        self.transport = transport
+        self.clock = clock
+        self.timing = timing
+        self.protocolVersion = protocolVersion
+        mySeat = save.seat
+        seats = save.names.mapValues { Seat(name: $0) }
+        for seat in seats.keys where seat != save.seat {
+            seats[seat]?.isReconnecting = true
+            lastHeard[seat] = clock.now
+        }
+        if role == .host {
+            tokens = save.tokens
+        } else {
+            token = save.tokens[save.seat]
+            awaitingWelcome = true
+        }
+        // A phone that stayed in the game has counted this one's messages: carry on well past
+        // the last it can have heard, or everything from here would be dropped as old.
+        sequence = save.sequence + Self.resumeGap
+        listen()
+    }
+
+    /// More messages than a phone sends between saving and the app closing.
+    static var resumeGap: Int { 1_000_000 }
+
+    /// What to keep so this phone can come back to the game; nil until it has a seat and a match.
+    public var save: RoomSave? {
+        guard let mySeat, match != nil else { return nil }
+        let held = role == .host ? tokens : token.map { [mySeat: $0] } ?? [:]
+        return RoomSave(seat: mySeat, names: names, tokens: held, sequence: sequence)
+    }
+
     // MARK: - Asking
 
     /// Host: seats someone who asked. Anyone else waiting is refused once the room is full.
@@ -241,6 +325,7 @@ public final class Room<Rules: RoomRules> {
         peerForSeat[seat] = peer
         lastHeard[seat] = clock.now
         await post(.welcome(seat: seat, token: seatToken, names: names, snapshot: match), to: peer)
+        await introduce(to: peer)
         onEvent?(.seated(seat: seat, name: guestName))
         if isFull {
             for other in pending.keys {
@@ -314,7 +399,7 @@ public final class Room<Rules: RoomRules> {
         for (seat, heard) in lastHeard where seat != mySeat {
             let silence = now - heard
             if silence >= timing.lostAfter {
-                lose(seat)
+                if timing.keepsSeats { reportLost(seat, now: now) } else { lose(seat) }
             } else if silence >= timing.quietAfter, seats[seat]?.isReconnecting == false {
                 seats[seat]?.isReconnecting = true
                 onEvent?(.reconnecting(seat: seat))
@@ -431,6 +516,7 @@ public final class Room<Rules: RoomRules> {
                 peerForSeat[seat] = peer
                 heard(seat)
                 await post(.welcome(seat: seat, token: rejoin, names: names, snapshot: match), to: peer)
+                await introduce(to: peer)
             } else if isFull {
                 await post(.refused(.roomFull), to: peer)
             } else {
@@ -449,6 +535,8 @@ public final class Room<Rules: RoomRules> {
             }
         case .bye:
             if let seat = seat(of: peer) { lose(seat, left: true) }
+        case let .player(theirs):
+            if let seat = seat(of: peer) { met(seat, theirs) }
         case .snapshot, .welcome, .refused, .ping:
             break   // only the host decides what the match is
         }
@@ -467,13 +555,20 @@ public final class Room<Rules: RoomRules> {
             awaitingWelcome = false
             let held = waiting
             waiting = []
-            if let hostPeer { Task { for intent in held { await post(.intent(intent), to: hostPeer) } } }
+            if let hostPeer {
+                Task {
+                    await introduce(to: hostPeer)
+                    for intent in held { await post(.intent(intent), to: hostPeer) }
+                }
+            }
         case let .refused(refusal):
             onEvent?(.refused(refusal))
         case let .snapshot(snapshot):
             take(snapshot)
         case .bye:
             lose(0, left: true)
+        case let .player(theirs):
+            if mySeat != nil { met(0, theirs) }
         case .hello, .intent, .ping:
             break
         }
@@ -485,6 +580,17 @@ public final class Room<Rules: RoomRules> {
 
     private var names: [Int: String] { seats.mapValues(\.name) }
 
+    /// Tells a phone just seated who this one is, if it has a player number.
+    private func introduce(to peer: PeerID) async {
+        if let player, !player.isEmpty { await post(.player(player), to: peer) }
+    }
+
+    private func met(_ seat: Int, _ theirs: String) {
+        guard !theirs.isEmpty, theirs.count <= 64, players[seat] != theirs else { return }
+        players[seat] = theirs
+        onPlayer?(seat, theirs)
+    }
+
     private func seat(of peer: PeerID) -> Int? {
         role == .guest ? (peer == hostPeer && mySeat != nil ? 0 : nil) : peerForSeat.first { $0.value == peer }?.key
     }
@@ -493,6 +599,7 @@ public final class Room<Rules: RoomRules> {
     @discardableResult
     private func heard(_ seat: Int) -> Bool {
         lastHeard[seat] = clock.now
+        reportedLost[seat] = nil
         guard seats[seat]?.isReconnecting == true else { return false }
         seats[seat]?.isReconnecting = false
         onEvent?(.back(seat: seat))
@@ -507,6 +614,14 @@ public final class Room<Rules: RoomRules> {
         onEvent?(.snapshot(snapshot))
     }
 
+    /// The seat is kept: say it has been silent too long, now and after each further `lostAfter`.
+    private func reportLost(_ seat: Int, now: Double) {
+        if let last = reportedLost[seat], now - last < timing.lostAfter { return }
+        reportedLost[seat] = now
+        seats[seat]?.isReconnecting = true
+        onEvent?(.seatLost(seat: seat))
+    }
+
     private func lose(_ seat: Int, left: Bool = false) {
         guard seats[seat] != nil || (role == .guest && seat == 0) else { return }
         if role == .host {
@@ -517,6 +632,7 @@ public final class Room<Rules: RoomRules> {
             seats[seat] = nil
         }
         lastHeard[seat] = nil
+        reportedLost[seat] = nil
         onEvent?(left ? .left(seat: seat) : .seatLost(seat: seat))
     }
 

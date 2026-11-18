@@ -417,7 +417,7 @@ struct RoomTests {
 struct RoomTimingTests {
     @Test func nearbyKeepsItsTimingsAndOnlineWaitsLonger() {
         #expect(RoomTiming.nearby == RoomTiming(heartbeatInterval: 2, quietAfter: 4, lostAfter: 15))
-        #expect(RoomTiming.online == RoomTiming(heartbeatInterval: 10, quietAfter: 25, lostAfter: 90))
+        #expect(RoomTiming.online == RoomTiming(heartbeatInterval: 10, quietAfter: 25, lostAfter: 90, keepsSeats: true))
     }
 
     @Test func aRoomUsesNearbyTimingsUnlessTold() {

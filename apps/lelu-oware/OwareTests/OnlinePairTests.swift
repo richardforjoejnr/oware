@@ -200,16 +200,10 @@ final class OnlinePairTests: XCTestCase {
         await until("Ama sees Kofi") { ama.opponent?.name == "Kofi" }
     }
 
-    func testTheInvitationSaysTheCodeAndTheQRCodeHoldsTheLink() throws {
+    func testTheInvitationSaysTheCodeAndTheLinkIsOneTheAppOpens() {
         XCTAssertTrue(OnlineConfig.invitation(code: "K7M2QD").contains("K7M2QD"))
         let link = OnlineConfig.joinLink("K7M2QD")
         XCTAssertEqual(RoomCode(link: link)?.text, "K7M2QD", "the link the app shares is one the app opens")
-        let image = try XCTUnwrap(InvitationQR.image(for: link))
-        XCTAssertGreaterThan(image.size.width, 100)
-        // Read it back as a camera would.
-        let detector = try XCTUnwrap(CIDetector(ofType: CIDetectorTypeQRCode, context: nil, options: nil))
-        let found = detector.features(in: CIImage(image: image)!).compactMap { ($0 as? CIQRCodeFeature)?.messageString }
-        XCTAssertEqual(found, [link.absoluteString])
     }
 
     // MARK: The switch in Settings
@@ -232,6 +226,52 @@ final class OnlinePairTests: XCTestCase {
         // The same phone later gets the App Store build: the switch it had on no longer counts.
         settings.offersOnlineSwitch = false
         XCTAssertFalse(settings.showsOnlinePlay)
+    }
+
+    /// Settings ▸ Relay: dev or prod, in the builds that have the Play online switch.
+    func testASettingChoosesTheRelayInBuildsThatOfferIt() {
+        let defaults = TestSupport.defaults()
+        let settings = AppSettings(defaults: defaults, testMode: true)
+        XCTAssertEqual(settings.relayStage, .dev, "a build from Xcode starts on dev")
+        XCTAssertEqual(OnlineConfig.buildStage, .dev)
+        var told: [RelayStage?] = []
+        settings.onRelayStage = { told.append($0) }
+        settings.relayStage = .prod
+        XCTAssertEqual(told, [.prod])
+        XCTAssertEqual(settings.chosenRelayStage, .prod)
+        XCTAssertEqual(AppSettings(defaults: defaults, testMode: true).relayStage, .prod, "remembered")
+
+        // The same phone later gets the App Store build: it uses the build's own relay, whatever was chosen.
+        settings.offersOnlineSwitch = false
+        XCTAssertNil(settings.chosenRelayStage)
+        XCTAssertEqual(told.count, 2)
+        XCTAssertNil(told[1])
+    }
+
+    /// The rule, in the feature flags: a released app is on prod and has no switches; a
+    /// TestFlight build starts on prod and may choose; a build from Xcode starts on dev.
+    func testAReleasedAppIsAlwaysOnProdAndOnlyTestBuildsChoose() {
+        XCTAssertFalse(Feature.offersTesterSwitches(in: .appStore))
+        XCTAssertTrue(Feature.offersTesterSwitches(in: .sandbox))
+        XCTAssertTrue(Feature.offersTesterSwitches(in: .development))
+        XCTAssertEqual(Feature.relayStage(in: .appStore, chosen: nil), .prod)
+        XCTAssertEqual(Feature.relayStage(in: .appStore, chosen: .dev), .prod, "a choice left over from a TestFlight build is ignored")
+        XCTAssertEqual(Feature.relayStage(in: .sandbox, chosen: nil), .prod)
+        XCTAssertEqual(Feature.relayStage(in: .sandbox, chosen: .dev), .dev)
+        XCTAssertEqual(Feature.relayStage(in: .development, chosen: nil), .dev)
+        XCTAssertEqual(Feature.relayStage(in: .development, chosen: .prod), .prod)
+        XCTAssertEqual(Feature.table[Feature.online], .off, "Play online is hidden from everyone else until this is changed")
+    }
+
+    func testTheChosenRelayIsUsedUnlessALaunchArgumentNamesOne() throws {
+        let dev = try XCTUnwrap(OnlineConfig.address(.dev)), prod = try XCTUnwrap(OnlineConfig.address(.prod))
+        XCTAssertTrue(dev.absoluteString.hasSuffix("/dev"), dev.absoluteString)
+        XCTAssertTrue(prod.absoluteString.hasSuffix("/prod"), prod.absoluteString)
+        XCTAssertEqual(OnlineConfig.relayURL(launch: nil, chosen: .prod), prod)
+        XCTAssertEqual(OnlineConfig.relayURL(launch: nil, chosen: .dev), dev)
+        XCTAssertEqual(OnlineConfig.relayURL(launch: nil, chosen: nil), OnlineConfig.relay, "nothing chosen: the build's own")
+        let local = try XCTUnwrap(URL(string: "ws://localhost:8787"))
+        XCTAssertEqual(OnlineConfig.relayURL(launch: local, chosen: .prod), local)
     }
 
     /// Each build knows its relay: dev for builds from Xcode (which is what runs these tests).

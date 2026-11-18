@@ -22,7 +22,7 @@ struct RoomVectorTests {
             if case let .string(reason)? = body["reason"] { kinds.insert("refused." + reason) }
         }
         #expect(kinds == ["hello", "welcome", "refused", "refused.roomFull", "refused.declined", "refused.needsUpdate",
-                          "intent", "snapshot", "ping", "bye"])
+                          "intent", "snapshot", "ping", "bye", "player"])
     }
 
     @Test(arguments: files)
@@ -49,6 +49,7 @@ struct RoomVectorTests {
         #expect(seat == 1)
         #expect(seatToken == token)
         #expect(names == [0: "Ama", 1: "Kofi"])
+        guard case .player("7c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f") = try message("player.json") else { Issue.record("player"); return }
         guard case .refused(.needsUpdate(hostVersion: 2)) = try message("refused-needs-update.json") else {
             Issue.record("refused")
             return

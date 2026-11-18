@@ -72,7 +72,7 @@ def main(app_dir: str) -> int:
     check(all(str(info[k]).strip() for k in usage_keys), "Every permission prompt has a description")
     for ent_path in src.glob("*.entitlements"):
         ents = set(plistlib.loads(ent_path.read_bytes()))
-        allowed = {"com.apple.developer.game-center"}
+        allowed = {"com.apple.developer.game-center", "com.apple.developer.associated-domains", "aps-environment"}
         check(ents <= allowed, f"Entitlements are only the expected ones ({', '.join(sorted(ents)) or 'none'})")
 
     # 3. Version and icon.

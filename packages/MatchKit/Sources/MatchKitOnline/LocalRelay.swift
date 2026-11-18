@@ -56,6 +56,42 @@ public actor LocalRelay {
 
     struct Unreachable: Error {}
 
+    /// A notification the real relay would have sent through Apple.
+    public struct Invitation: Sendable, Equatable {
+        public var code: String
+        /// Who asks: their player number, and the name they play under.
+        public var from: String
+        public var name: String
+        public var to: String
+
+        public init(code: String, from: String, name: String, to: String) {
+            self.code = code
+            self.from = from
+            self.name = name
+            self.to = to
+        }
+    }
+
+    private struct Player {
+        var secret: String
+        var push: RelayRequest.Push?
+    }
+
+    private var players: [String: Player] = [:]
+    /// "blocker>blocked".
+    private var blocks: Set<String> = []
+    /// Every invitation sent, in order.
+    public private(set) var invitations: [Invitation] = []
+    private var onInvitation: (@Sendable (Invitation) -> Void)?
+
+    /// Stands in for the notification arriving on the other phone.
+    public func whenInvited(_ handler: @escaping @Sendable (Invitation) -> Void) { onInvitation = handler }
+
+    /// A player who can be invited, as if their phone had registered (the demo's Ama).
+    public func know(player: String, secret: String, push: RelayRequest.Push?) {
+        players[player] = Player(secret: secret, push: push)
+    }
+
     private var rooms: [String: Room] = [:]
     private var sockets: [Int: Socket] = [:]
     /// Connection → room and seat.
@@ -110,6 +146,16 @@ public actor LocalRelay {
         tell(code, about: seat, .dropped)
     }
 
+    /// A room from before, with nobody connected: `tokens` are its seats' tokens in order, the
+    /// creator's first. For a relay that starts empty with the app (the demo), so a saved game
+    /// can be rejoined. Does nothing if the room is there already.
+    public func restore(code: String, game: RelayRequest.Game, tokens: [String]) {
+        guard rooms[code] == nil, (2...4).contains(tokens.count) else { return }
+        codes.removeAll { $0 == code }
+        let seats = Dictionary(uniqueKeysWithValues: tokens.enumerated().map { ($0.offset, Seat(token: $0.element, connection: nil)) })
+        rooms[code] = Room(game: game, seatCount: tokens.count, seats: seats)
+    }
+
     public func hasRoom(_ code: String) -> Bool { rooms[code].map { !$0.isClosed } ?? false }
 
     // MARK: - Connections
@@ -152,7 +198,8 @@ public actor LocalRelay {
             count("join")
             guard !paused else { return send(.refused(.paused), to: id) }
             guard places[id] == nil else { return send(.refused(.invalid), to: id) }
-            guard let room = rooms[code], !room.isClosed else { return send(.refused(.notFound), to: id) }
+            guard let room = rooms[code] else { return send(.refused(.notFound), to: id) }
+            guard !room.isClosed else { return send(.refused(.ended), to: id) }
             guard room.game == game else { return send(.refused(.needsUpdate), to: id) }
             guard let seat = (1..<room.seatCount).first(where: { room.seats[$0] == nil }) else {
                 return send(.refused(.full), to: id)
@@ -165,7 +212,9 @@ public actor LocalRelay {
         case let .rejoin(code, token):
             count("rejoin")
             guard places[id] == nil else { return send(.refused(.invalid), to: id) }
-            guard let room = rooms[code], !room.isClosed, let seat = room.seats.first(where: { $0.value.token == token })?.key else {
+            guard let room = rooms[code] else { return send(.refused(.notFound), to: id) }
+            guard !room.isClosed else { return send(.refused(.ended), to: id) }
+            guard let seat = room.seats.first(where: { $0.value.token == token })?.key else {
                 return send(.refused(.notFound), to: id)
             }
             // The old connection may not have been noticed dead yet: this one takes the seat over.
@@ -211,6 +260,34 @@ public actor LocalRelay {
         case .roll:
             count("roll")
             send(.refused(.invalid), to: id)
+        case let .register(_, player, secret, push):
+            count("register")
+            // The first phone to register a player number owns it.
+            if let known = players[player], known.secret != secret { return send(.refused(.invalid), to: id) }
+            players[player] = Player(secret: secret, push: push)
+            send(.registered, to: id)
+        case let .invite(player, secret, to, name):
+            count("invite")
+            // Only into the room this connection made.
+            guard let place = places[id], place.seat == 0, to != player, players[player]?.secret == secret else {
+                return send(.refused(.invalid), to: id)
+            }
+            guard rooms[place.code]?.isClosed == false else { return send(.refused(.ended), to: id) }
+            // One answer for unknown, notifications off and blocked.
+            guard players[to]?.push != nil, !blocks.contains("\(to)>\(player)") else { return send(.refused(.unreachable), to: id) }
+            let invitation = Invitation(code: place.code, from: player, name: name, to: to)
+            invitations.append(invitation)
+            send(.invited(to: to), to: id)
+            onInvitation?(invitation)
+        case let .block(_, player, secret, who, on):
+            count("block")
+            guard players[player]?.secret == secret else { return send(.refused(.invalid), to: id) }
+            if on { blocks.insert("\(player)>\(who)") } else { blocks.remove("\(player)>\(who)") }
+            send(.blocked(who: who, on: on), to: id)
+        case let .decline(code, player):
+            count("decline")
+            guard let room = rooms[code], !room.isClosed, let creator = room.seats[0]?.connection else { return }
+            send(.declined(player: player), to: creator)
         }
     }
 
