@@ -14,6 +14,7 @@ struct OwareApp: App {
     @State private var reminder = RiddleReminder()
     @State private var lobby: NearbyLobby
     @State private var online: OnlinePlay
+    @State private var health: OnlineHealth
 
     init() {
         LaunchClock.appStarted()
@@ -44,6 +45,11 @@ struct OwareApp: App {
         let invitations = Invitations.shared
         _invitations = State(initialValue: invitations)
         _online = State(initialValue: OnlinePlay(session: session, saves: .shared, invitations: invitations))
+        // Test launches and the demo never ask the relay: `--relay-down` shows Home as if it were down.
+        let fixedHealth: OnlineHealth.State? = LaunchOptions.relayDown ? .unreachable
+            : (LaunchOptions.onlineDemo || LaunchOptions.fastAnimations ? .up : nil)
+        let health = OnlineHealth(fixed: fixedHealth)
+        _health = State(initialValue: health)
         // Every tip is counted, including ones the App Store delivers later (Ask to Buy).
         // `--tips-unavailable` (Debug only): the App Store returns nothing, to test the Try again path.
         let noTips: TipJar.ProductLoader = { _ in [] }
@@ -54,16 +60,19 @@ struct OwareApp: App {
         _settings = State(initialValue: settings)
         // Settings ▸ Relay: from the next connection on, and the new relay is told who this phone is.
         OnlineConfig.chosen = settings.chosenRelayStage
-        settings.onRelayStage = { [weak invitations] stage in
+        settings.onRelayStage = { [weak invitations, weak health] stage in
             guard OnlineConfig.chosen != stage else { return }
             OnlineConfig.chosen = stage
-            Task { await invitations?.started() }
+            Task {
+                await health?.check(force: true)   // the other relay may be up when this one is not
+                await invitations?.started()
+            }
         }
         // An invitation is not put over a game being played, nor shown while Play online is hidden:
         // the phone's own banner shows it instead.
         invitations.isPlaying = { [weak session, weak settings] in
             guard let session, let settings, settings.showsOnlinePlay else { return true }
-            return session.remoteGame != nil && session.isStarted && !session.state.isOver
+            return session.isPlayingWithSomeone
         }
         // Analytics and Game Center stay silent in test launches.
         Analytics.shared.configure(enabled: settings.effectiveUsageStats)
@@ -82,6 +91,7 @@ struct OwareApp: App {
                 .environment(reminder)
                 .environment(lobby)
                 .environment(online)
+                .environment(health)
                 .environment(invitations)
                 .preferredColorScheme(.dark)
         }
@@ -162,6 +172,8 @@ enum LaunchOptions {
     /// `--online`: show Play online for this launch whatever Settings says (tests). To try it on
     /// a phone, `-onlinePlay YES` turns on Settings ▸ Play online instead (`keepOnlineSwitches`).
     static var onlinePlay: Bool { flag("--online") || onlineDemo }
+    /// `--relay-down`: Home shows Play online as it is when the relay cannot be reached.
+    static var relayDown: Bool { flag("--relay-down") }
     /// `--online-demo` / `-onlineDemo YES`: Play online runs against a relay inside the app, and
     /// the demo player, Ama, joins your game (UI tests).
     static var onlineDemo: Bool { flag("--online-demo", defaultsKey: "onlineDemo") }

@@ -133,53 +133,57 @@ final class OnlineUITests: XCTestCase {
         XCTAssertTrue(app.buttons["btn-start-online"].waitForExistence(timeout: 5))
     }
 
-    /// Settings ▸ Play online puts Play online on Home, with nothing passed in at launch.
-    func testTheSwitchInSettingsPutsPlayOnlineOnHome() {
+    /// Play online is on Home for everyone, first under More, with nothing passed in at launch.
+    /// A test build's switch in Settings takes it off, and that is remembered.
+    func testPlayOnlineLeadsMoreAndATestBuildsSwitchTakesItOff() {
         app.launchArguments = ["--reset-state", "--fast-animations"]
         app.launch()
         let more = app.buttons["btn-more"]
         XCTAssertTrue(more.waitForExistence(timeout: 10))
-        if !app.buttons["btn-settings"].waitForExistence(timeout: 5) { more.tap() }
+        let online = app.buttons["btn-online"], passPlay = app.buttons["btn-pass-play"]
+        if !online.waitForExistence(timeout: 5) { more.tap() }
+        XCTAssertTrue(online.waitForExistence(timeout: 6))
+        XCTAssertTrue(passPlay.waitForExistence(timeout: 6))
+        XCTAssertLessThan(online.frame.minY, passPlay.frame.minY, "Play online comes first")
+
         let settings = app.buttons["btn-settings"]
-        XCTAssertTrue(settings.waitForExistence(timeout: 6))
-        if !settings.isHittable { app.swipeUp() }
+        for _ in 0..<3 where !settings.isHittable { app.swipeUp() }
         settings.tap()
         let toggle = app.switches["setting-online-play"]
         for _ in 0..<4 where !toggle.exists || !toggle.isHittable { app.swipeUp() }
         XCTAssertTrue(toggle.waitForExistence(timeout: 5))
-        XCTAssertEqual(toggle.value as? String, "0", "off until asked for")
+        XCTAssertEqual(toggle.value as? String, "1", "on until a tester turns it off")
         // A SwiftUI Toggle is one element with its label: tap the switch itself, at its right end.
         if toggle.switches.firstMatch.exists {
             toggle.switches.firstMatch.tap()
         } else {
             toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         }
-        XCTAssertEqual(toggle.value as? String, "1")
+        XCTAssertEqual(toggle.value as? String, "0")
         app.terminate()
 
-        // Still there on the next launch, from the icon.
+        // Still off on the next launch, from the icon.
         app.launchArguments = ["--fast-animations"]
         app.launch()
         XCTAssertTrue(more.waitForExistence(timeout: 10))
-        let online = app.buttons["btn-online"]
-        for _ in 0..<2 where !online.exists {
-            if !more.isHittable { app.swipeUp() }
-            more.tap()
-            if online.waitForExistence(timeout: 6) { break }
-        }
-        XCTAssertTrue(online.exists)
+        if !passPlay.waitForExistence(timeout: 5) { more.tap() }
+        XCTAssertTrue(passPlay.waitForExistence(timeout: 6))
+        XCTAssertFalse(online.exists)
     }
 
-    /// Play online is hidden until its switch is on.
-    func testPlayOnlineIsNotOnHomeWithoutTheSwitch() {
-        app.launchArguments = ["--reset-state", "--fast-animations"]
+    /// The relay cannot be reached as the app opens: Play online is still listed, says so, and
+    /// does not open.
+    func testPlayOnlineSaysWhenTheRelayIsDown() {
+        app.launchArguments = ["--reset-state", "--fast-animations", "--relay-down"]
         app.launch()
-        let more = app.buttons["btn-more"]
+        let more = app.buttons["btn-more"], online = app.buttons["btn-online"]
         XCTAssertTrue(more.waitForExistence(timeout: 10))
-        if !more.isHittable { app.swipeUp() }
-        more.tap()
-        XCTAssertTrue(app.buttons["btn-pass-play"].waitForExistence(timeout: 6))
-        XCTAssertFalse(app.buttons["btn-online"].exists)
+        if !online.waitForExistence(timeout: 5) { more.tap() }
+        XCTAssertTrue(online.waitForExistence(timeout: 6))
+        XCTAssertTrue(online.label.contains("can't be reached"), online.label)
+        online.tap()
+        XCTAssertFalse(app.staticTexts["nearby-title"].waitForExistence(timeout: 3), "it does not open")
+        XCTAssertTrue(online.exists)
     }
 
     // MARK: A game that survives the app closing, and Not now to a rematch

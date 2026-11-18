@@ -421,6 +421,43 @@ struct OnlineTransportTests {
         await eventually("the room is closed") { await !relay.hasRoom("K7M2QD") }
     }
 
+    /// The room's own goodbye can be lost (it races the relay's `leave`): the relay's word that a
+    /// phone left on purpose is enough. Nobody is left watching "Reconnecting".
+    @Test func aCreatorWhoLeftIsSeenToLeaveThoughItsGoodbyeWasLost() async {
+        let table = await seated()
+        table.host.stop()   // the relay is told; the room says nothing
+        await eventually("Kofi is told she left") { table.guestLog.events.contains(.left(seat: 0)) }
+        #expect(!table.guestLog.events.contains(.reconnecting(seat: 0)))
+    }
+
+    @Test func aGuestWhoLeftIsSeenToLeaveThoughItsGoodbyeWasLost() async {
+        let table = await seated()
+        table.guest.stop()
+        await eventually("Ama is told he left") { table.hostLog.events.contains(.left(seat: 1)) }
+        #expect(!table.hostLog.events.contains(.reconnecting(seat: 1)))
+    }
+
+    /// Someone who leaves before the game and comes straight back holds the same place at the
+    /// relay: they are heard as someone new, not ignored as the one who left.
+    @Test func aGuestWhoLeftCanComeStraightBack() async {
+        let table = await seated()
+        await table.guest.leave()
+        await eventually("Ama is told") { table.hostLog.events.contains(.left(seat: 1)) }
+        let again = join()
+        let guest = SumRoom(joiningAs: "Kofi", rules: SumRules(), transport: again, clock: clock, timing: .online)
+        await eventually("Kofi asks again") { !table.host.pending.isEmpty }
+        await table.host.accept(table.host.pending.keys.first!)
+        await eventually("and is seated") { guest.mySeat == 1 }
+    }
+
+    @Test func leavingIsToldOnceWhenBothGoodbyesArrive() async {
+        let table = await seated()
+        await table.host.leave()
+        await eventually("Kofi is told") { table.guestLog.events.contains(.left(seat: 0)) }
+        await settle()
+        #expect(table.guestLog.events.filter { $0 == .left(seat: 0) }.count == 1)
+    }
+
     @Test func whenTheGuestLeavesTheCreatorIsTold() async {
         let table = await seated()
         await table.guest.leave()
@@ -448,11 +485,24 @@ struct OnlineTransportTests {
         listening.cancel()
         for event in heardByYaw {
             switch event {
-            case let .connected(peer), let .disconnected(peer), let .received(_, peer):
+            case let .connected(peer), let .disconnected(peer), let .left(peer), let .received(_, peer):
                 #expect(peer == Relay.creator)
             }
         }
         [host, kofi, yaw, esi].forEach { $0.close() }
+    }
+
+    // MARK: Is it there
+
+    /// What an app asks when it opens: is online play there, and is this game open?
+    @Test func theRelaySaysWhetherAGameIsOpen() async {
+        #expect(await RelayCall.ask(.health(game: "oware"), dial: relay.dial) == .health(open: true))
+        await relay.setPaused(true)
+        #expect(await RelayCall.ask(.health(game: "oware"), dial: relay.dial) == .health(open: false))
+        await relay.setPaused(false)
+        await relay.setReachable(false)
+        #expect(await RelayCall.ask(.health(game: "oware"), dial: relay.dial, wait: 0.2) == nil, "down: no answer")
+        await relay.setReachable(true)
     }
 
     // MARK: Limits

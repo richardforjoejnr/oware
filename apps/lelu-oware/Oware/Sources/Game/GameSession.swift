@@ -355,6 +355,8 @@ final class GameSession {
             // The host's phone decides. On the host that is at once. On the joining phone the
             // answer takes a moment (longer online), so the move is sown here now and the host's
             // snapshot confirms it; the engine on this phone has already found it legal.
+            // The turn the move is for, so a copy that arrives late is not played as another move.
+            let ply = (latestMatch ?? link.table?.match)?.houses.count
             if !link.isHost, aheadMatch == nil, var ahead = shownMatch, ahead == latestMatch {
                 ahead.houses.append(house)
                 aheadMatch = ahead
@@ -362,7 +364,7 @@ final class GameSession {
                 sync()
                 waitForAnswer(to: ahead)
             }
-            Task { await link.send(.play(house: house)) }
+            Task { await link.send(.play(house: house, ply: ply)) }
             return
         }
         if let puzzle = currentPuzzle {
@@ -719,6 +721,12 @@ final class GameSession {
         keepOnlineGame()
     }
 
+    /// A game on two phones is under way and the other player is there: not one to walk out of
+    /// unasked. Reconnecting, gone, finished or not yet started, there is nobody to interrupt.
+    var isPlayingWithSomeone: Bool {
+        link != nil && isStarted && !state.isOver && !isReconnecting && !opponentGone
+    }
+
     /// Asks for another game once this one is over; it starts when both have asked.
     func requestRematch() {
         guard let link, case .remote = mode, state.isOver else { return }
@@ -908,13 +916,13 @@ final class GameSession {
 
     /// The host is back and still has the game before this phone's move: the move was lost with
     /// the connection. Send it again; the board already shows it. If the host had it after all,
-    /// the second asking is refused by the rules and changes nothing.
+    /// the second asking is for a turn already played (`ply`) and is refused.
     private func sendAgainIfLost() {
         guard askAgain, let link, let ahead = aheadMatch, let house = ahead.houses.last,
               let hostMatch, hostMatch.matchID == ahead.matchID, hostMatch.houses.count == ahead.houses.count - 1 else { return }
         askAgain = false
         waitForAnswer(to: ahead)
-        Task { await link.send(.play(house: house)) }
+        Task { await link.send(.play(house: house, ply: ahead.houses.count - 1)) }
     }
 
     private func settleAhead() {

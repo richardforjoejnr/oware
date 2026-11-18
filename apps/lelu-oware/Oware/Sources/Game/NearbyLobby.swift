@@ -533,6 +533,13 @@ final class NearbyLobby {
         theirs == mine ? "\(theirs) · \(side == .south ? "gold" : "red")" : theirs
     }
 
+    /// A name as this phone shows it. Someone called "Me" or "You" would read as this phone's
+    /// own player ("Me's turn" beside "You"), so they are Friend here.
+    static func shown(_ name: String) -> String {
+        let plain = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return ["me", "you", "i", "myself", "yourself"].contains(plain) ? "Friend" : name
+    }
+
     static func savedName(_ defaults: UserDefaults = .standard) -> String? {
         defaults.string(forKey: nameKey).flatMap { $0.isEmpty ? nil : $0 }
     }

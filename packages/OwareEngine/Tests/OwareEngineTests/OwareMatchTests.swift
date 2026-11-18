@@ -244,4 +244,23 @@ struct OwareMatchTests {
         #expect(rematch.supersedes(resigned))
         #expect(!two.supersedes(rematch))
     }
+
+    /// A move says which turn it is for. On a bad connection a move can be sent twice; the copy
+    /// that arrives after the other player has answered is for a turn already played, and is
+    /// refused rather than played as a move nobody made.
+    @Test func aMoveForATurnAlreadyPlayedIsRefused() throws {
+        var match = OwareMatch(rules: .abapa, starter: .south)
+        match = try match.applying(.play(house: 2, ply: 0), from: .south)
+        match = try match.applying(.play(house: 9, ply: 1), from: .north)
+        match = try match.applying(.play(house: 3, ply: 2), from: .south)
+        // North's first move again, late. House 10 has seeds and it is North's turn: without the
+        // turn it would be played.
+        #expect(throws: OwareMatch.Failure.notThisTurn(expected: 3, got: 1)) {
+            try match.applying(.play(house: 10, ply: 1), from: .north)
+        }
+        #expect(match.houses == [2, 9, 3])
+        // An older app says no turn: taken as before.
+        match = try match.applying(.play(house: 10), from: .north)
+        #expect(match.houses == [2, 9, 3, 10])
+    }
 }

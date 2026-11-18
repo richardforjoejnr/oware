@@ -35,8 +35,9 @@ final class AppSettings {
     var showHouseLabels: Bool {
         didSet { defaults.set(showHouseLabels, forKey: "showHouseLabels") }
     }
-    /// Settings ▸ Play online: adds Play online to Home while the feature's own switch
-    /// (`Feature.online`) is still off. Only in builds that offer it (`offersOnlineSwitch`).
+    /// Settings ▸ Play online, only in builds that offer it (`offersOnlineSwitch`): a tester can
+    /// take Play online off Home, or have it while `Feature.online` is off. Until it is touched it
+    /// follows the feature.
     var onlinePlayOn: Bool {
         didSet { defaults.set(onlinePlayOn, forKey: Self.onlineSwitchKey) }
     }
@@ -60,8 +61,10 @@ final class AppSettings {
     var chosenRelayStage: RelayStage? { offersOnlineSwitch ? relayStage : nil }
     /// Told whenever `chosenRelayStage` may have changed.
     @ObservationIgnored var onRelayStage: ((RelayStage?) -> Void)?
-    /// Play online is on Home: the feature is on for everyone, or switched on here.
-    var showsOnlinePlay: Bool { Feature.showsOnlinePlay || (offersOnlineSwitch && onlinePlayOn) }
+    /// Play online is on Home: the feature is on (a released app), or this test build's switch is.
+    var showsOnlinePlay: Bool {
+        Feature.showsOnlinePlay(testerSwitches: offersOnlineSwitch, switchedOn: onlinePlayOn, featureOn: Feature.showsOnlinePlay)
+    }
 
     /// TestFlight builds cannot be told from App Review's (`AppChannel.sandbox`), so App Review
     /// sees the switch too.
@@ -139,7 +142,7 @@ final class AppSettings {
         hapticsEnabled = defaults.object(forKey: "hapticsEnabled") as? Bool ?? true
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
         showHouseLabels = defaults.object(forKey: "showHouseLabels") as? Bool ?? false
-        onlinePlayOn = defaults.bool(forKey: Self.onlineSwitchKey)
+        onlinePlayOn = defaults.object(forKey: Self.onlineSwitchKey) as? Bool ?? Feature.showsOnlinePlay
         relayStage = RelayStage(rawValue: defaults.string(forKey: Self.relayStageKey) ?? "") ?? OnlineConfig.buildStage
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam

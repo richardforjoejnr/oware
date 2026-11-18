@@ -6,7 +6,9 @@ public typealias OnlineMatch = OwareMatch
 /// What a phone asks the host to do. The host applies it to its `OwareMatch` and, if the rules
 /// allow it, sends everyone the new match.
 public enum OwareIntent: Sendable, Codable, Hashable {
-    case play(house: Int)
+    /// `ply` is the turn the move is for: how many moves the game had when it was made. The host
+    /// refuses a move for any other turn (a copy that arrived late). Nil from an older app: not checked.
+    case play(house: Int, ply: Int? = nil)
     case resign
     /// Both players have asked for another game.
     case rematch
@@ -28,6 +30,8 @@ public struct OwareMatch: Sendable, Codable, Hashable {
         case tooLarge
         case gameIsOver
         case notYourTurn
+        /// The move was made for another turn than the one the game is at.
+        case notThisTurn(expected: Int, got: Int)
         /// A rematch was asked for before the game ended.
         case gameNotOver
     }
@@ -126,7 +130,8 @@ public struct OwareMatch: Sendable, Codable, Hashable {
     /// The match after `player` asks for `intent`, or the reason the host refuses it.
     public func applying(_ intent: OwareIntent, from player: Player) throws -> OwareMatch {
         switch intent {
-        case let .play(house):
+        case let .play(house, ply):
+            if let ply, ply != houses.count { throw Failure.notThisTurn(expected: houses.count, got: ply) }
             guard let mover = try playerToMove() else { throw Failure.gameIsOver }
             guard mover == player else { throw Failure.notYourTurn }
             return try playing(house)

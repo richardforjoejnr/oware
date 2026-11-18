@@ -458,6 +458,7 @@ public final class Room<Rules: RoomRules> {
     private func handle(_ event: TransportEvent) async {
         switch event {
         case let .connected(peer):
+            goodbyes.remove(peer)   // someone new may hold this place at the carrier
             switch role {
             case .guest:
                 // The first connection, or the same host on a fresh one (online, after either
@@ -482,8 +483,22 @@ public final class Room<Rules: RoomRules> {
                     onEvent?(.reconnecting(seat: seat))
                 }
             }
+        case let .left(peer):
+            // Whoever next holds this place at the carrier starts afresh.
+            pending[peer] = nil
+            filter.forget(peer)
+            farewell(from: peer)
         case let .received(data, peer):
             await receive(data, from: peer)
+        }
+    }
+
+    /// A phone has gone for good: by its own goodbye, or the carrier's word. Told once.
+    private func farewell(from peer: PeerID) {
+        guard goodbyes.insert(peer).inserted else { return }
+        switch role {
+        case .host: if let seat = seat(of: peer) { lose(seat, left: true) }
+        case .guest: if hostPeer == nil || peer == hostPeer { lose(0, left: true) }
         }
     }
 
@@ -534,7 +549,7 @@ public final class Room<Rules: RoomRules> {
                 await post(.snapshot(current), to: peer)
             }
         case .bye:
-            if let seat = seat(of: peer) { lose(seat, left: true) }
+            farewell(from: peer)
         case let .player(theirs):
             if let seat = seat(of: peer) { met(seat, theirs) }
         case .snapshot, .welcome, .refused, .ping:
@@ -566,7 +581,7 @@ public final class Room<Rules: RoomRules> {
         case let .snapshot(snapshot):
             take(snapshot)
         case .bye:
-            lose(0, left: true)
+            if let hostPeer { farewell(from: hostPeer) } else { lose(0, left: true) }
         case let .player(theirs):
             if mySeat != nil { met(0, theirs) }
         case .hello, .intent, .ping:
@@ -621,6 +636,9 @@ public final class Room<Rules: RoomRules> {
         seats[seat]?.isReconnecting = true
         onEvent?(.seatLost(seat: seat))
     }
+
+    /// Peers whose leaving has been told.
+    private var goodbyes: Set<PeerID> = []
 
     private func lose(_ seat: Int, left: Bool = false) {
         guard seats[seat] != nil || (role == .guest && seat == 0) else { return }

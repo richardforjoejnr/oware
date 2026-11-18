@@ -101,16 +101,17 @@ extension OwareTable: Codable {
     }
 }
 
-/// One object with a `type`: `play` (`house`), `resign`, `rematch`, `declineRematch`, `pace` (`pace`),
+/// One object with a `type`: `play` (`house`, and `ply`: the turn it is for), `resign`, `rematch`, `declineRematch`, `pace` (`pace`),
 /// `ready` (`stateHash`).
 extension TableIntent: Codable {
-    private enum Key: String, CodingKey { case type, house, pace, stateHash }
+    private enum Key: String, CodingKey { case type, house, ply, pace, stateHash }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: Key.self)
         let type = try c.decode(String.self, forKey: .type)
         switch type {
-        case "play": self = .game(.play(house: try c.decode(Int.self, forKey: .house)))
+        case "play":
+            self = .game(.play(house: try c.decode(Int.self, forKey: .house), ply: try c.decodeIfPresent(Int.self, forKey: .ply)))
         case "resign": self = .game(.resign)
         case "rematch": self = .game(.rematch)
         case "declineRematch": self = .declineRematch
@@ -123,9 +124,10 @@ extension TableIntent: Codable {
     func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: Key.self)
         switch self {
-        case let .game(.play(house)):
+        case let .game(.play(house, ply)):
             try c.encode("play", forKey: .type)
             try c.encode(house, forKey: .house)
+            try c.encodeIfPresent(ply, forKey: .ply)
         case .game(.resign): try c.encode("resign", forKey: .type)
         case .game(.rematch): try c.encode("rematch", forKey: .type)
         case .declineRematch: try c.encode("declineRematch", forKey: .type)
@@ -256,14 +258,14 @@ final class MatchLink {
         let theirSeat = room.mySeat == 0 ? 1 : 0
         guard let theirs = room.seats[theirSeat]?.name else { return nil }
         let mine = room.mySeat.flatMap { room.seats[$0]?.name } ?? myName
-        return NearbyLobby.tellApart(theirs, from: mine, side: OwareRoomRules.player(seat: theirSeat))
+        return NearbyLobby.tellApart(NearbyLobby.shown(theirs), from: mine, side: OwareRoomRules.player(seat: theirSeat))
     }
     /// The other player's player number and name, once their phone has said who it is.
     var opponentPlayer: (id: String, name: String)? {
         guard let mine = room.mySeat else { return nil }
         let theirs = mine == 0 ? 1 : 0
         guard let id = room.players[theirs], let name = room.seats[theirs]?.name else { return nil }
-        return (id, name)
+        return (id, NearbyLobby.shown(name))
     }
     /// Whether this phone has pressed Ready (and the host has it).
     var iAmReady: Bool { mySide.map { table?.ready.contains($0) ?? false } ?? false }

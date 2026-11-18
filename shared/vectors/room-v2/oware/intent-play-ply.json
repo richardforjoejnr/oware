@@ -1,0 +1,12 @@
+{
+  "body": {
+    "intent": {
+      "house": 9,
+      "ply": 1,
+      "type": "play"
+    },
+    "type": "intent"
+  },
+  "protocolVersion": 2,
+  "sequence": 9
+}

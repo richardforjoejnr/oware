@@ -254,6 +254,9 @@ public actor LocalRelay {
                 rooms[place.code]?.seats[place.seat] = nil
             }
             tell(place.code, about: place.seat, .left)
+        case .health:
+            count("health")
+            send(.health(open: !paused), to: id)
         case .ping:
             count("ping")
             send(.pong, to: id)

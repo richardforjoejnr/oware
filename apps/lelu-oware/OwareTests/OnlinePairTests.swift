@@ -106,6 +106,24 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(p.ama.link?.table?.stateHash, p.kofi.link?.table?.stateHash, "the same position on both phones")
     }
 
+    /// Found by `testAGameOnWiFi5G4GAnd3G` (2026-11-19): a move sent again after a break arrived
+    /// once Ama had answered, and was played as Kofi's next move. Each move now says its turn.
+    func testAMoveSentTwiceIsNotPlayedAsTheNextMove() async {
+        let p = await playing()
+        p.ama.session.play(house: 2)
+        await until("Kofi sees her move") { houses(p.kofi) == [2] }
+        p.kofi.session.play(house: 9)
+        await until("Ama sees his") { houses(p.ama) == [2, 9] }
+        p.ama.session.play(house: 3)
+        await until("Kofi sees her second") { houses(p.kofi) == [2, 9, 3] }
+        // Kofi's first move again, as a late copy would arrive: for turn 1, now that it is turn 3.
+        await p.kofi.link?.send(.play(house: 10, ply: 1))
+        await settle()
+        XCTAssertEqual(houses(p.ama), [2, 9, 3], "not played")
+        p.kofi.session.play(house: 10)
+        await until("the move he does make is played") { houses(p.ama) == [2, 9, 3, 10] }
+    }
+
     // MARK: Which rules
 
     /// The owner's two phones were set to different rules, and a game started on the Abapa one
@@ -188,6 +206,80 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(kofi.lobby.session.remoteGame?.opponentName, "Ama")
     }
 
+    /// Ama, Kofi (with all of Play online) and Yaw: Ama and Kofi are playing, Yaw has a game waiting.
+    private func threePhones() async -> (relay: LocalRelay, ama: NearbyLobby, kofi: OnlinePlay, yaw: NearbyLobby) {
+        let relay = LocalRelay(codes: ["K7M2QD", "ABCDEF"])
+        let ama = phone(relay, install: "ama"), kofi = play(relay, install: "kofi"), yaw = phone(relay, install: "yaw")
+        ama.start(name: "Ama", rules: .abapa)
+        await until("a code") { ama.roomCode != nil }
+        XCTAssertTrue(kofi.open(link: OnlineConfig.joinLink(ama.roomCode ?? ""), name: "Kofi"))
+        await until("Ama sees Kofi") { ama.opponent?.name == "Kofi" }
+        await until("Kofi is in") { kofi.lobby.opponent?.isConnected == true }
+        await kofi.lobby.ready()
+        await ama.ready()
+        await until("playing") { kofi.lobby.phase == .playing && kofi.lobby.session.isStarted && ama.session.isStarted }
+        yaw.start(name: "Yaw", rules: .abapa)
+        await until("another game") { yaw.roomCode != nil }
+        return (relay, ama, kofi, yaw)
+    }
+
+    /// The owner's report (2026-11-18): waiting on "Reconnecting to Ama…", Kofi tapped a link to
+    /// another game and nothing happened. With nobody there to play, the link is followed.
+    func testALinkTappedWhileTheOtherPlayerIsReconnectingLeavesThatGameForTheNewOne() async {
+        let p = await threePhones()
+        (p.ama.network as? OnlineNetwork)?.abandon()   // her app is closed
+        await until("Kofi sees her reconnecting") { p.kofi.lobby.session.isReconnecting }
+        let link = OnlineConfig.joinLink(p.yaw.roomCode ?? "")
+        XCTAssertFalse(p.kofi.interrupts(link: link), "nobody is there to interrupt")
+        XCTAssertTrue(p.kofi.open(link: link, name: "Kofi"))
+        await until("Yaw sees Kofi") { p.yaw.opponent?.name == "Kofi" }
+        await until("Kofi is in Yaw's game") { p.kofi.lobby.opponent?.name == "Yaw" }
+        XCTAssertFalse(p.kofi.lobby.session.isReconnecting)
+    }
+
+    /// The other player left the game: a link takes this phone on to the next one.
+    func testALinkTappedAfterTheOtherPlayerLeftJoinsTheNewGame() async {
+        let p = await threePhones()
+        p.ama.session.leaveNearbyGame()
+        await until("Kofi sees she left") { p.kofi.lobby.session.opponentLeft }
+        XCTAssertFalse(p.kofi.lobby.session.isReconnecting)
+        XCTAssertTrue(p.kofi.open(link: OnlineConfig.joinLink(p.yaw.roomCode ?? ""), name: "Kofi"))
+        await until("Yaw sees Kofi") { p.yaw.opponent?.name == "Kofi" }
+    }
+
+    /// In the middle of a game with someone who is there, the link is not followed until the
+    /// player says so; then the other player is told Kofi left.
+    func testALinkTappedMidGameIsFollowedOnceThePlayerAgreesToLeave() async {
+        let p = await threePhones()
+        let link = OnlineConfig.joinLink(p.yaw.roomCode ?? "")
+        XCTAssertTrue(p.kofi.interrupts(link: link))
+        XCTAssertFalse(p.kofi.open(link: link, name: "Kofi"))
+        XCTAssertTrue(p.kofi.open(link: link, name: "Kofi", leaving: true))
+        await until("Ama is told he left") { p.ama.session.opponentLeft }
+        await until("Yaw sees Kofi") { p.yaw.opponent?.name == "Kofi" }
+        XCTAssertFalse(p.kofi.interrupts(link: URL(string: "https://example.com/")!), "not an invitation")
+    }
+
+    /// A finished game still on the board is left behind when a link is followed: the other
+    /// player sees that, not "Reconnecting".
+    func testFollowingALinkFromAFinishedGameTellsTheOtherPlayer() async {
+        let p = await threePhones()
+        await p.ama.link?.send(.resign)
+        await until("over") { p.kofi.lobby.session.state.isOver && p.ama.session.state.isOver }
+        XCTAssertTrue(p.kofi.open(link: OnlineConfig.joinLink(p.yaw.roomCode ?? ""), name: "Kofi"))
+        await until("Ama sees he has gone") { p.ama.session.opponentGone }
+        XCTAssertFalse(p.ama.session.isReconnecting)
+    }
+
+    /// Someone who named themselves "Me" or "You" would read as this phone's own player.
+    func testANameThatReadsAsThisPlayerIsShownAsFriend() {
+        XCTAssertEqual(NearbyLobby.shown("Me"), "Friend")
+        XCTAssertEqual(NearbyLobby.shown(" you "), "Friend")
+        XCTAssertEqual(NearbyLobby.shown("I"), "Friend")
+        XCTAssertEqual(NearbyLobby.shown("Ama"), "Ama")
+        XCTAssertEqual(NearbyLobby.shown("Meera"), "Meera")
+    }
+
     /// A pasted message or link works where a code is asked for.
     func testAPastedInvitationJoinsLikeACode() async {
         let relay = LocalRelay()
@@ -214,18 +306,34 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertFalse(AppSettings.offersOnlineSwitch(in: .appStore))
     }
 
-    func testPlayOnlineShowsOnlyWhenSwitchedOnInABuildThatOffersIt() {
+    /// Released to everyone on 2026-11-18. A test build's switch can still take it off Home.
+    func testPlayOnlineIsOnUnlessATestBuildSwitchesItOff() {
         let defaults = TestSupport.defaults()
         let settings = AppSettings(defaults: defaults, testMode: true)
-        XCTAssertFalse(settings.onlinePlayOn, "off until asked for")
-        XCTAssertFalse(settings.showsOnlinePlay)
-        settings.onlinePlayOn = true
+        XCTAssertTrue(settings.onlinePlayOn, "on until a tester turns it off")
         XCTAssertTrue(settings.showsOnlinePlay)
-        XCTAssertTrue(AppSettings(defaults: defaults, testMode: true).onlinePlayOn, "remembered")
-
-        // The same phone later gets the App Store build: the switch it had on no longer counts.
-        settings.offersOnlineSwitch = false
+        settings.onlinePlayOn = false
         XCTAssertFalse(settings.showsOnlinePlay)
+        XCTAssertFalse(AppSettings(defaults: defaults, testMode: true).onlinePlayOn, "remembered")
+
+        // The same phone later gets the App Store build: it has no switch, and Play online is there.
+        settings.offersOnlineSwitch = false
+        XCTAssertTrue(settings.showsOnlinePlay)
+    }
+
+    /// The rule on its own: a released app follows the feature; a test build follows its switch.
+    func testAReleasedAppShowsPlayOnlineWheneverTheFeatureIsOn() {
+        XCTAssertTrue(Feature.showsOnlinePlay(testerSwitches: false, switchedOn: false, featureOn: true))
+        XCTAssertTrue(Feature.showsOnlinePlay(testerSwitches: false, switchedOn: nil, featureOn: true))
+        XCTAssertFalse(Feature.showsOnlinePlay(testerSwitches: false, switchedOn: true, featureOn: false))
+        XCTAssertTrue(Feature.showsOnlinePlay(testerSwitches: true, switchedOn: nil, featureOn: true))
+        XCTAssertFalse(Feature.showsOnlinePlay(testerSwitches: true, switchedOn: false, featureOn: true))
+        XCTAssertTrue(Feature.showsOnlinePlay(testerSwitches: true, switchedOn: true, featureOn: false))
+    }
+
+    func testPlayOnlineLeadsTheMoreList() {
+        XCTAssertEqual(HomeView.moreSubtitle(online: true, nearby: true), "online, two players, rules")
+        XCTAssertEqual(HomeView.moreSubtitle(online: false, nearby: true), "two players, nearby, rules")
     }
 
     /// Settings ▸ Relay: dev or prod, in the builds that have the Play online switch.
@@ -260,7 +368,7 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(Feature.relayStage(in: .sandbox, chosen: .dev), .dev)
         XCTAssertEqual(Feature.relayStage(in: .development, chosen: nil), .dev)
         XCTAssertEqual(Feature.relayStage(in: .development, chosen: .prod), .prod)
-        XCTAssertEqual(Feature.table[Feature.online], .off, "Play online is hidden from everyone else until this is changed")
+        XCTAssertEqual(Feature.table[Feature.online], .free, "a released app has Play online, on prod, with no switches")
     }
 
     func testTheChosenRelayIsUsedUnlessALaunchArgumentNamesOne() throws {

@@ -41,7 +41,7 @@ final class RoomVectorTests: XCTestCase {
 
     func testEveryExampleIsReadAndWrittenBackTheSame() throws {
         let names = try names
-        XCTAssertEqual(names.count, 21, "an example was added or removed")
+        XCTAssertEqual(names.count, 22, "an example was added or removed")
         XCTAssertTrue(names.contains("player"), "a phone's player number, told once seated")
         for name in names {
             let example = try data(name)
@@ -59,6 +59,7 @@ final class RoomVectorTests: XCTestCase {
         XCTAssertEqual(try intent("intent-pace"), .pace(0.6))
         XCTAssertEqual(try intent("intent-ready"), .ready(stateHash: "2de35c20d63699b4"))
         XCTAssertEqual(try intent("intent-play"), .game(.play(house: 9)))
+        XCTAssertEqual(try intent("intent-play-ply"), .game(.play(house: 9, ply: 1)))
         XCTAssertEqual(try intent("intent-resign"), .game(.resign))
         XCTAssertEqual(try intent("intent-rematch"), .game(.rematch))
         XCTAssertEqual(try intent("intent-decline-rematch"), .declineRematch)

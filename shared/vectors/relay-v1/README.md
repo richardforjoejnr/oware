@@ -11,13 +11,16 @@ Each message is one JSON object with a `type`. Swift: `RelayRequest` and `RelayE
 | `rejoin {v, code, token}` | `data {from, data}` |
 | `data {to?, data}` | `rolled {n, value}` (Ludo) |
 | `roll` (Ludo) | `refused {reason}` |
-| `leave` | `pong` |
-| `ping` | |
+| `leave` | |
+| `ping {game?}` | `pong {open?}` |
 | `register {v, game, player, secret, push?}` | `registered` |
 | `invite {v, player, secret, to, name}` | `invited {to}` |
 | `block {v, game, player, secret, who, on}` | `blocked {who, on}` |
 | `decline {v, code, player}` | `declined {player}` (to the phone waiting in that room) |
 
+- `ping` with a `game` is the health check an app makes when it opens: `pong` comes back with
+  `open`, false while that game is paused by the off switch. A phone that hears nothing takes the
+  relay to be down. Without `game`, a plain `pong` (an older relay answers every `ping` so).
 - `v` is this format's version, sent with the first message on a connection.
 - `game` is `oware` or `ludo`; `protocol` is the room protocol version (now 2: [room-v2](../room-v2/README.md));
   `format` is the game's match format version. A phone that joins a room made with other numbers

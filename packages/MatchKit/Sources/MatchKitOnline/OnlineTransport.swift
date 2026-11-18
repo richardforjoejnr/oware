@@ -304,7 +304,14 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
                 set(.open(mine))
                 for other in peers where shows(other) { tell(other, isHere: true) }
             case let .peer(peer, state):
-                if shows(peer) { tell(peer, isHere: state == .joined) }
+                guard shows(peer) else { break }
+                if state == .left {
+                    // On purpose: nothing to wait for, so not "reconnecting".
+                    lock.sync { _ = present.remove(peer) }
+                    eventsOut.yield(.left(peer))
+                } else {
+                    tell(peer, isHere: state == .joined)
+                }
             case let .data(text, from):
                 if shows(from) { eventsOut.yield(.received(Data(text.utf8), from: from)) }
             case let .refused(reason):
@@ -321,7 +328,7 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
                 answered(event)
             case let .declined(player):
                 declinesOut.yield(player)
-            case .rolled, .pong, .unknown:
+            case .rolled, .pong, .health, .unknown:
                 break
             }
         }
