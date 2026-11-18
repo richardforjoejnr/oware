@@ -1,8 +1,10 @@
 # Playing online: plan
 
 How two to four phones in different places play one game, for every app in this repository, with
-a small backend on AWS. This is a **plan for the owner to review (2026-11-15). Nothing is built
-and nothing is deployed.** It builds on [MULTIPLAYER.md](MULTIPLAYER.md) (the layers, MatchKit,
+a small backend on AWS. Planned 2026-11-15; what is built and deployed since is in
+[Lelu Oware's STATUS.md](../apps/lelu-oware/docs/STATUS.md) ▸ Online play, and the owner's
+decisions of 2026-11-18 (links first, rematch, play again, Quick Match put off) are in §12 and
+§14. It builds on [MULTIPLAYER.md](MULTIPLAYER.md) (the layers, MatchKit,
 feature switches) and on the nearby play work in
 [Lelu Oware](../apps/lelu-oware/docs/NEARBY_PLAY_REDESIGN.md). Per-app notes:
 [Lelu Oware](../apps/lelu-oware/docs/ONLINE_PLAY.md), [Lelu Ludo](../apps/lelu-ludo/docs/ONLINE_PLAY.md).
@@ -295,6 +297,40 @@ paid. So the paid path is built and tested now and left switched off:
   phone sends its signed StoreKit transaction with `create` and the relay checks the signature.
 - **If bots turn up:** App Attest (iOS) and Play Integrity (Android) let the relay refuse anything
   that is not the real app. Both are free. Not in the first version.
+
+### Players who can be invited again (2026-11-18)
+
+**Play again** needs to reach a phone that is not in a room, so three things were added. None is
+an account: there is still no sign-in, email or name on the server.
+
+- A **player ID**: a second random number made on the phone (Keychain), separate from the install
+  ID. Unlike the install ID it is shown to the phones you play with, in the room's `player`
+  message once seated (`shared/vectors/room-v2`), so that one of them can ask for you again. It
+  names an installed app, not a person. A phone with no Keychain has none, and is never listed.
+- A **player secret**: also random, also in the Keychain, shown only to the relay. The relay keeps
+  a hash. The first phone to register an ID owns it, so knowing someone's ID does not let you act
+  as them.
+- The phone's **push token**, if the player allowed notifications. The relay keeps it with the
+  player ID for 180 days after the phone last registered, and uses it only to deliver an
+  invitation. **Settings ▸ Invitations** is off until the player turns it on (there, or with *Let
+  them ask you too* under Recent players); turning it off tells the relay to forget the token.
+
+As built: `PlayerIdentity`, `Invitations`, `RecentPlayers` and `OnlinePlay.playAgain` in the app;
+`OnlineTransport.invite` and `RelayCall` in `MatchKitOnline`; `register`, `invite`, `block` and
+`decline` in the relay (`shared/vectors/relay-v1`). A player is listed once a game with them has
+started. An invitation arriving while the app is open is shown in the app (*Ama wants to play* ·
+Join · Not now); Not now tells the phone that is waiting. The link opened is always made on the
+phone from the code, never taken from the notification.
+
+What this cannot do, and the app says so where it matters:
+
+| Case | What happens |
+|---|---|
+| The app is deleted and installed again on the same phone | The Keychain usually survives, so the player ID does, and friends' lists still reach you. Your own Recent players list (kept with the app's data) is empty again. |
+| A new phone, or a phone restored without its Keychain | A new player ID. Friends' old entries for you say *cannot be reached*; a link fixes it, and the next game puts the new ID in their list. |
+| Notifications not allowed | You can still invite others. Nobody can invite you except by link. |
+| Someone keeps asking | **Block** on their row. The relay then answers them `unreachable`, the same as for notifications off, so a block is not given away. Invitations are limited to 3 an hour to the same player and 20 an hour in all. |
+| Is my friend online? | Not shown. The relay keeps no record of who has the app open, and a guess would be wrong often enough to mislead. |
 
 ## 7. Who checks the moves
 
@@ -606,8 +642,21 @@ Decided while building (2026-11-15):
 |---|---|
 | Tidy the room messages before online play depends on them? | **Yes: room protocol version 2**, plain JSON, in `shared/vectors/room-v2`. A phone refuses every version but its own, so a phone on the first nearby play and one on this cannot play nearby together; each is told which to update. |
 | The invitation link | `https://leluoware.com/lelu-oware/join?c=<code>`: the code as a query, so the join page is one static page. The app also opens `/join/<code>` and its own `leluoware://join?c=<code>`. Where this plan writes `/join/K7M2QD`, read the query form. |
-| How a friend is invited | **Invite a friend** makes the game and opens the share sheet in one tap. The waiting screen shows the code and a QR code of the link. The code box takes a pasted link or message. |
+| How a friend is invited | **Invite a friend** makes the game and opens the share sheet in one tap. The waiting screen shows the code. The code box takes a pasted link or message. (A QR code of the link was shown at first; removed 2026-11-18, below.) |
 | The joining phone's own move | Sown the moment it is tapped; the host's snapshot confirms it, and a move the host never got is taken back after 8 s. |
+
+Decided by the owner on 2026-11-18 (the brief "Multiplayer invitation and replay improvements"):
+
+| Question | Decision |
+|---|---|
+| Link, code or QR | **The link is the way in.** No QR code ("the link will do"). The code stays as the fallback: **Join with code** is a secondary button that opens the code box. |
+| How long an unanswered invitation lasts | A waiting room is kept **2 hours** (was 30 minutes), so a link read late still works while the creator is waiting. |
+| A game that is over | The relay answers `ended` for a room that was there and is closed or expired, and `notFound` only for a code nobody has. The app says which. |
+| Rematch | Stays in the same room, both must agree. Added: **Not now**, and a request nobody answers lapses after 60 seconds. |
+| Recent players, and **Play again** | The last five people played online are kept **on the phone**. Play again makes a room and the relay sends that player a **notification** (Apple's push service; free). This is the one place the relay keeps something for longer than a day: §6, *Players who can be invited again*. No online or offline indicator: the relay does not know who is in the app. |
+| Limits, alarms and the off switch (stage 3) | Built with the above, before online play is switched on for anyone. |
+| Quick Match | **Investigated, not built.** §14. |
+| Four players | Oware is a game for two. The relay seats two to four and Ludo will use that; nothing in the Oware app is for four. |
 
 Still open. Each has a proposal, and the work goes ahead on the proposal unless the owner says
 otherwise:
@@ -645,3 +694,72 @@ otherwise:
   text was not read. If its folder names differ, follow that plan's.
 - **Which AWS account the AWS repo deploys to.** Not looked up, so that no account number is
   copied here.
+
+## 14. Quick Match: investigated 2026-11-18, not built
+
+The owner asked whether **Play online ▸ Quick Match** (find anyone, no link, no code) is worth
+building now. **No: wait.** This section is the finding, kept here so it need not be done twice.
+It is stage 10 in §11 and still depends on stages 8 and 9.
+
+### Can the relay do it?
+
+Yes, with what is there. Nothing new to run, no new service, no always-on connection beyond the
+one a waiting phone already holds.
+
+| Piece | How |
+|---|---|
+| The queue | One item per waiting phone in the same DynamoDB table (`QUEUE#<game>#<seats>#<rules>`), with the connection and a few minutes' expiry. A new request `match {game, seats, rules}`: if someone compatible is waiting, the relay makes a room and seats both (the existing `room` answer); if not, it adds this phone to the queue. `$disconnect` and `leave` take it out. |
+| Two and four seats | The queue key carries the seat count. A Ludo table of four fills as phones arrive and starts with computer seats after a wait. Oware is always two. |
+| Who is in charge | Today the creator's phone. Between strangers that is not acceptable (a stranger's phone could stall or cheat), so the server referee (stage 8) comes first. |
+| Names | Seen by strangers, so they become content the app is answerable for (App Review 1.2): fixed or filtered names, report, block, a published contact, and someone to read reports. |
+
+### Game Center instead?
+
+`GKMatchmaker` would do the pairing for nothing, and Apple carries the queue. Against it: Apple
+only (an Android app is planned, §2); every player must be signed in to Game Center, which the
+owner has ruled out (§12, 2026-11-15); and its matches would still need our room on top, or a
+second way of playing a game. It would save a few days of queue code and cost the Android half of
+the audience. **Not worth it.**
+
+### What it would cost to run
+
+AWS prices as checked for §8 on 15 November 2026 (not checked again for this section); free-tier
+allowances not counted. Assumptions, all guesses until there are real players: each daily player
+searches twice a day; a search waits two minutes on average, pinging every 10 seconds; half the
+searches end in a game.
+
+| Daily players | Searches a month | **Added by Quick Match** (waiting and the queue) | Games it starts (already costed in §8 at about US$0.001 each) | Together |
+|---|---|---|---|---|
+| 10 | 600 | under US$0.05 | 150: US$0.15 | about US$0.20 |
+| 100 | 6,000 | about US$0.20 | 1,500: US$1.50 | about US$2 |
+| 1,000 | 60,000 | about US$2 | 15,000: US$15 | about US$17 |
+| 10,000 | 600,000 | about US$20 | 150,000: US$150 | about US$170 |
+
+A search costs about US$0.00003: 24 pings and answers (US$1.00 a million messages), 12 short Lambda
+runs, a handful of DynamoDB writes, and two connection minutes (US$0.25 a million). Notifications
+("someone is looking for a game") go through Apple and cost nothing. There is no third-party
+service, no extra database and no fixed monthly charge: an empty queue costs US$0. The existing
+relay is the same cost with or without it.
+
+The cost that matters is not on the AWS bill: the server referee (1–2 weeks, §11 stage 8), names
+and report-and-block (part of stage 10's 2–3 weeks), and reading reports for as long as it is on.
+
+### When only one person is looking
+
+With few players this is nearly every search, so it decides whether the feature reads as working.
+
+| Option | Verdict |
+|---|---|
+| A waiting screen with a count-up | Needed, but alone it is the "empty room" §3 warns of. Cap it at about 30 seconds. |
+| **Offer the computer after the wait** | **Yes.** "Nobody is looking right now. Play Kofi while you wait?" The Journey's opponents are already there. |
+| **Invite a friend from the waiting screen** | **Yes.** It is the same room; one button. |
+| Keep looking while using the rest of the app | Only while the app is open: iOS ends the connection in the background. Worth doing once the queue exists; small. |
+| Tell me when someone is looking | Later. It needs notification permission and, to be any use, enough players that it fires. At 10 daily players it would be silence or spam. |
+
+### Recommendation
+
+**Wait.** Online play is not switched on for anyone yet, so there are no players to match. Build
+order stays as §11: friends by link, rematch and play again (done or in hand), then the referee,
+then Quick Match. Look again when online games with friends pass about **100 a day**, the point
+at which two strangers looking in the same minute stops being luck; the relay's logs
+(`room.created` per day) give that number for free.
