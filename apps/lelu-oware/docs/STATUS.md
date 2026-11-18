@@ -28,6 +28,11 @@
   `TransportEvent.left`); the Reconnecting banner has a **Leave** button; an invitation link
   followed from a game nobody is at (reconnecting, left, or over) leaves it and joins, and from a
   game with someone there asks first; a friend named "Me" or "You" is shown as *Friend*.
+- **A move sent twice** (2026-11-19, found by `testAGameOnWiFi5G4GAnd3G` failing in CI): after a
+  break the joining phone sends its move again; when the first copy had arrived after all and the
+  other player had answered, the second was played as the joiner's next move. Each move now says
+  its turn (`ply`) and the phone in charge refuses one for another turn.
+- **App Review** gets the notes (`fastlane/review_notes.md`) and the video with each release.
 - **Is the relay there?** (2026-11-18) As the app opens and each time it comes to the front (at
   most every 30 s) it asks the relay (`OnlineHealth`: `ping {game}` → `pong {open}`). With no
   answer, or the game paused by the relay's off switch, Play online on Home is greyed out and says

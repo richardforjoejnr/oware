@@ -106,6 +106,24 @@ final class OnlinePairTests: XCTestCase {
         XCTAssertEqual(p.ama.link?.table?.stateHash, p.kofi.link?.table?.stateHash, "the same position on both phones")
     }
 
+    /// Found by `testAGameOnWiFi5G4GAnd3G` (2026-11-19): a move sent again after a break arrived
+    /// once Ama had answered, and was played as Kofi's next move. Each move now says its turn.
+    func testAMoveSentTwiceIsNotPlayedAsTheNextMove() async {
+        let p = await playing()
+        p.ama.session.play(house: 2)
+        await until("Kofi sees her move") { houses(p.kofi) == [2] }
+        p.kofi.session.play(house: 9)
+        await until("Ama sees his") { houses(p.ama) == [2, 9] }
+        p.ama.session.play(house: 3)
+        await until("Kofi sees her second") { houses(p.kofi) == [2, 9, 3] }
+        // Kofi's first move again, as a late copy would arrive: for turn 1, now that it is turn 3.
+        await p.kofi.link?.send(.play(house: 10, ply: 1))
+        await settle()
+        XCTAssertEqual(houses(p.ama), [2, 9, 3], "not played")
+        p.kofi.session.play(house: 10)
+        await until("the move he does make is played") { houses(p.ama) == [2, 9, 3, 10] }
+    }
+
     // MARK: Which rules
 
     /// The owner's two phones were set to different rules, and a game started on the Abapa one

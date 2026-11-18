@@ -30,6 +30,9 @@ Every message is an envelope:
   `rematchDeclinedBy`, `rematchLapsedFor`).
 - Tokens and match ids are UUIDs. Swift writes capitals and reads either case.
 - Key order is free.
+- A `play` intent says its turn in `ply` (added 2026-11-19): how many moves the game had when
+  it was made. The phone in charge refuses a move for any other turn, so a copy that arrives
+  late is not played as another move. Without `ply` (an older app) the turn is not checked.
 - `player` was added to version 2 on 2026-11-18. A phone that does not know it drops the message
   and plays on (as TestFlight builds 1.0.10 to 1.0.12 do); neither phone then lists the other
   under Recent players.

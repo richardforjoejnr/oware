@@ -120,6 +120,8 @@ platform :ios do
     # For App Review: online play between two phones (made by scripts/film-online.sh). It goes
     # with the metadata, so with every update that has notes; it replaces the one sent before.
     video = File.expand_path("review/online-play.mp4", __dir__)
+    # The notes App Review reads, from review_notes.md (without its comment for us at the top).
+    review_notes = File.read(File.expand_path("review_notes.md", __dir__)).sub(/\A<!--.*?-->\s*/m, "").strip
     upload_to_app_store(
       app_version: ENV.fetch("APP_VERSION"),
       build_number: ENV.fetch("BUILD_NUMBER"),
@@ -129,6 +131,7 @@ platform :ios do
       # App Store Connect. "default" fills it for every language the listing has.
       skip_metadata: notes.empty?,
       app_review_attachment_file: File.exist?(video) ? video : nil,
+      app_review_information: { notes: review_notes },
       # The listing's language by name: with no metadata folder, fastlane maps "default" onto no
       # language at all, and Apple then refuses the submission for a missing "What's New".
       release_notes: notes.empty? ? nil : { "en-GB" => notes },
