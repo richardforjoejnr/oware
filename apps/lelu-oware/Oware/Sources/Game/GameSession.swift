@@ -719,6 +719,12 @@ final class GameSession {
         keepOnlineGame()
     }
 
+    /// A game on two phones is under way and the other player is there: not one to walk out of
+    /// unasked. Reconnecting, gone, finished or not yet started, there is nobody to interrupt.
+    var isPlayingWithSomeone: Bool {
+        link != nil && isStarted && !state.isOver && !isReconnecting && !opponentGone
+    }
+
     /// Asks for another game once this one is over; it starts when both have asked.
     func requestRematch() {
         guard let link, case .remote = mode, state.isOver else { return }

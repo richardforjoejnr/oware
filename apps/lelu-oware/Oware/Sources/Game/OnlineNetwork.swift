@@ -168,15 +168,22 @@ final class OnlinePlay {
         return saved.code == code.text
     }
 
+    /// Following the link would take this phone out of a game with someone who is there: ask first.
+    func interrupts(link: URL) -> Bool {
+        RoomCode(link: link) != nil && !rejoins(link: link) && lobby.session.isPlayingWithSomeone
+    }
+
     /// An invitation link was tapped: join that game. False when it is not an invitation, or a
-    /// game with another phone is already being played here (the link does not end it).
+    /// game is being played here with someone who is there and the player has not agreed to leave
+    /// it (`leaving`). A game nobody is at (the other player reconnecting, gone, or it is over)
+    /// is left for the new one, and the other player told.
     @discardableResult
-    func open(link: URL, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue) -> Bool {
+    func open(link: URL, name: String, pace: Double = AppSettings.AnimationSpeed.normal.rawValue, leaving: Bool = false) -> Bool {
         // The game this phone is already in: back to its own seat, not in as someone new.
         if rejoins(link: link) { return rejoin(pace: pace) }
         let session = lobby.session
-        let playing = session.link != nil && session.isStarted && !session.state.isOver
-        guard let code = RoomCode(link: link), !playing else { return false }
+        guard let code = RoomCode(link: link), leaving || !session.isPlayingWithSomeone else { return false }
+        if session.link != nil { session.leaveNearbyGame() }
         lobby.prepare(demo: lobby.isDemo)
         return lobby.join(code: code.text, name: name, pace: pace)
     }

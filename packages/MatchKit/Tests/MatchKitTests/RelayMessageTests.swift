@@ -49,6 +49,7 @@ struct RelayMessageTests {
         #expect(try request("roll") == .roll)
         #expect(try request("leave") == .leave)
         #expect(try request("ping") == .ping)
+        #expect(try request("ping-game") == .health(game: "oware"))
         // Players who may be invited again: a player number, and a secret only the relay is told.
         let player = "7c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f", kofi = "1a2b3c4d5e6f708192a3b4c5d6e7f809"
         let secret = "Wq8nZ2rT5yLk3vB7xM1cP9dG4hJ6sF0a"
@@ -58,7 +59,7 @@ struct RelayMessageTests {
         #expect(try request("invite") == .invite(player: player, secret: secret, to: kofi, name: "Ama"))
         #expect(try request("block") == .block(game: "oware", player: player, secret: secret, who: kofi, on: true))
         #expect(try request("decline") == .decline(code: "K7M2QD", player: kofi))
-        #expect(Self.toRelay.count == 15, "an example was added: say here what it means")
+        #expect(Self.toRelay.count == 16, "an example was added: say here what it means")
     }
 
     @Test func eventsSayWhatTheExamplesSay() throws {
@@ -72,6 +73,8 @@ struct RelayMessageTests {
         #expect(try event("data") == .data(#"{"body":{"ping":{}},"protocolVersion":1,"sequence":16}"#, from: PeerID("p0")))
         #expect(try event("rolled") == .rolled(n: 3, value: 6))
         #expect(try event("pong") == .pong)
+        #expect(try event("pong-open") == .health(open: true))
+        #expect(try event("pong-resting") == .health(open: false))
         // `.other` stands for a reason this app does not know, so the relay never sends it.
         let reasons = RelayEvent.Refusal.allCases.filter { $0 != .other }
         for reason in reasons {
@@ -83,7 +86,7 @@ struct RelayMessageTests {
         #expect(try event("blocked") == .blocked(who: kofi, on: true))
         #expect(try event("declined") == .declined(player: kofi))
         #expect(reasons.contains(.ended) && reasons.contains(.unreachable))
-        #expect(Self.fromRelay.count == 12 + reasons.count, "an example was added: say here what it means")
+        #expect(Self.fromRelay.count == 14 + reasons.count, "an example was added: say here what it means")
     }
 
     /// A newer relay may say things this app has never heard of. They are passed over, not a crash

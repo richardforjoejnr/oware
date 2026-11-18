@@ -10,8 +10,9 @@ enum Feature {
     static let table: [String: Access] = [
         // On for everyone (the owner's call, 2026-10-31; docs/NEARBY_PLAY.md step 6).
         nearbyPlay: .free,
+        // On for everyone (the owner's call, 2026-11-18; docs/ONLINE_PLAY.md stage 6).
         // Later: .unlock(productID: OnlineProduct.id, hostPays: true, foundingIncluded: false).
-        online: .off,
+        online: .free,
     ]
 
     /// Play nearby on Home: when its switch is on, or with `--nearby` in a Debug build.
@@ -25,7 +26,7 @@ enum Feature {
     // MARK: Switches for testers
 
     /// Settings ▸ Play online and Settings ▸ Relay exist only in test builds: TestFlight, and builds
-    /// from Xcode. An App Store build has neither. (App Review's build cannot be told from a
+    /// from Xcode. An App Store build has neither: Play online is simply there, on prod. (App Review's build cannot be told from a
     /// TestFlight one, `AppChannel.sandbox`, so App Review sees them too.)
     static func offersTesterSwitches(in channel: AppChannel) -> Bool { channel != .appStore }
 
@@ -35,6 +36,12 @@ enum Feature {
     static func relayStage(in channel: AppChannel, chosen: RelayStage?) -> RelayStage {
         guard offersTesterSwitches(in: channel) else { return .prod }
         return chosen ?? (channel == .development ? .dev : .prod)
+    }
+
+    /// Play online on Home. A released app: whenever the feature is on. A test build: its switch
+    /// decides (`switchedOn`; nil until the tester has touched it, which follows the feature).
+    static func showsOnlinePlay(testerSwitches: Bool, switchedOn: Bool?, featureOn: Bool) -> Bool {
+        testerSwitches ? (switchedOn ?? featureOn) : featureOn
     }
 
     /// The app's gate, with a purchase record for every feature that is sold.

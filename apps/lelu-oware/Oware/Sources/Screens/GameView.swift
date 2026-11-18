@@ -579,9 +579,17 @@ struct GameView: View {
                         .font(Theme.serifText(15, weight: .medium, relativeTo: .subheadline))
                         .foregroundStyle(Theme.ivory)
                         .accessibilityIdentifier("reconnect-banner")
+                    // The way out, said here: the back button alone was easy to miss.
+                    Button("Leave") { if session.isGameOver { leaveGame() } else { confirmLeave = true } }
+                        .font(Theme.serifText(15, weight: .semibold, relativeTo: .subheadline))
+                        .foregroundStyle(Theme.gold)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                        .accessibilityLabel("Leave the game")
+                        .accessibilityIdentifier("btn-leave-reconnecting")
                 }
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.vertical, 2)
                 .hudChrome(Capsule())
                 .padding(.top, 58)
                 Spacer()

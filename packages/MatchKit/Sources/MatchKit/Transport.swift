@@ -12,6 +12,9 @@ public enum TransportEvent: Sendable {
     /// reconnect): messages in between may have been lost, so the room catches up.
     case connected(PeerID)
     case disconnected(PeerID)
+    /// A peer left for good, as the carrier itself knows (the relay's `left`). The room's own
+    /// goodbye says the same; either is enough, and it may be lost.
+    case left(PeerID)
     case received(Data, from: PeerID)
 }
 

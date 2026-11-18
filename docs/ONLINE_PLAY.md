@@ -612,7 +612,7 @@ stage 6. Effort is rough, for one person.
 | 3 | AWS | `feat(lelu-play): limits, alarms and an off switch` — throttles, caps, limits, budget, alarms, pause, the `requireProof` setting (off), `play.leluoware.com` in the website's account | 2 days | Confirm the alarm email |
 | 4 | here | `feat(matchkit): an online transport` — `MatchKitOnline`, reconnect and rejoin, the saved game a phone rejoins from after a relaunch, tests on a fake socket | 4 days | — |
 | 5 | here | `feat(oware): play online with a friend (hidden)` — lobby, code and Share, Enter code, Ready, reconnect wording, the Rejoin card on Home after the app was closed, *Start game* tested both free and paid, links, `--online-demo`, analytics; website: `apple-app-site-association` and the join page | 6–8 days | Turn on Associated Domains for the App ID. Try it on two phones, one on mobile data (`-onlinePlay YES`) |
-| 6 | both | `feat(oware): turn on online play` — deploy `prod`; privacy page, label, review notes and video, What's New; `online` to `.free` | 2 days, then review | Privacy label and review notes in App Store Connect |
+| 6 | both | `feat(oware): turn on online play` — deploy `prod`; privacy page, label, review notes and video, What's New; `online` to `.free` | done 2026-11-18, then review | Privacy label and review notes in App Store Connect |
 | 7 | both | Ludo with friends — after Ludo nearby steps 1–3. `feat(lelu-play): dice for Ludo`; `feat(ludo): play online with friends` (2–4 seats, computer seats, server dice for every seat checked in `LudoMatch`) | 1–2 days + 5–7 days | Four devices for a real game |
 | 8 | both | The server referees — a spike first (Swift on Lambda: build, size, cold start); the server passes `shared/vectors`; `OwareTable` and `OwareRoomRules` into a package; no phone in charge | 1–2 weeks | Decide Swift or TypeScript after the spike |
 | 9 | both | Games that last days, "your turn" notifications | 1–2 weeks | Push capability, an APNs key |
@@ -621,6 +621,16 @@ stage 6. Effort is rough, for one person.
 Stages 1–6 are **about four weeks** of work for Oware with a friend. Stages 1–3 can go
 ahead while nearby play's redesign steps 3–4 finish: the Connection lost sheet and Rejoin card they
 add are the same views online needs.
+
+### Colours on the two phones (decided 2026-11-18)
+
+Each side keeps one colour on both phones: the player who made the game is gold, the one who
+joined is red, and each phone puts its own player at the bottom. Showing every player as gold on
+their own phone was considered and not done: houses change hands in Nam-Nam and are drawn in the
+owner's colour, so the same house would be gold on one phone and red on the other, two friends
+talking about "the red houses" (or sharing a screenshot) would mean opposite things, and two
+players with the same name are told apart by colour ("Oware Player · red"). The plates beside
+the board say *You* on this phone's side.
 
 ## 12. Decisions and open questions
 

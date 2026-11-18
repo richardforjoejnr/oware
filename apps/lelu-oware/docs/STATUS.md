@@ -17,7 +17,24 @@
 - **Repo hygiene:** build output never goes in git (`apps/*/build*/` is ignored); delete
   `packages/*/.swiftpm` after `swift test`; run `make project` after pulling.
 
-## Online play (2026-11-15, hidden: `Feature.online` is `.off`)
+## Online play (released to everyone 2026-11-18: `Feature.online` is `.free`)
+
+- **Released** (2026-11-18, plan stage 6): Play online is first under More in every build. An App
+  Store build has no switches and is always on prod; Settings ▸ Play online and Settings ▸ Relay
+  stay in TestFlight and Xcode builds only (the switch, on until a tester turns it off, takes Play
+  online off Home). Settings ▸ Invitations is in every build, off by default.
+- **Found playing with friends, fixed 2026-11-18:** a player who left was shown as *Reconnecting*
+  (the room's goodbye raced the relay's `leave` and was lost: the relay's own `left` now counts,
+  `TransportEvent.left`); the Reconnecting banner has a **Leave** button; an invitation link
+  followed from a game nobody is at (reconnecting, left, or over) leaves it and joins, and from a
+  game with someone there asks first; a friend named "Me" or "You" is shown as *Friend*.
+- **Is the relay there?** (2026-11-18) As the app opens and each time it comes to the front (at
+  most every 30 s) it asks the relay (`OnlineHealth`: `ping {game}` → `pong {open}`). With no
+  answer, or the game paused by the relay's off switch, Play online on Home is greyed out and says
+  so; a tap asks again. Invitation links and Rejoin still try. Test launches never ask.
+- **A video of it:** `./scripts/film-online.sh` plays a game between two simulators through the
+  dev relay and joins the recordings side by side.
+
 
 Two phones anywhere, through a small relay on AWS. Plan: `../../docs/ONLINE_PLAY.md` (PR #113).
 Built so far, in the plan's stages:

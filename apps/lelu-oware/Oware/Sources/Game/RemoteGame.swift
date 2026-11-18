@@ -256,14 +256,14 @@ final class MatchLink {
         let theirSeat = room.mySeat == 0 ? 1 : 0
         guard let theirs = room.seats[theirSeat]?.name else { return nil }
         let mine = room.mySeat.flatMap { room.seats[$0]?.name } ?? myName
-        return NearbyLobby.tellApart(theirs, from: mine, side: OwareRoomRules.player(seat: theirSeat))
+        return NearbyLobby.tellApart(NearbyLobby.shown(theirs), from: mine, side: OwareRoomRules.player(seat: theirSeat))
     }
     /// The other player's player number and name, once their phone has said who it is.
     var opponentPlayer: (id: String, name: String)? {
         guard let mine = room.mySeat else { return nil }
         let theirs = mine == 0 ? 1 : 0
         guard let id = room.players[theirs], let name = room.seats[theirs]?.name else { return nil }
-        return (id, name)
+        return (id, NearbyLobby.shown(name))
     }
     /// Whether this phone has pressed Ready (and the host has it).
     var iAmReady: Bool { mySide.map { table?.ready.contains($0) ?? false } ?? false }

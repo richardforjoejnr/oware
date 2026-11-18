@@ -9,8 +9,9 @@ final class FeatureTableTests: XCTestCase {
         XCTAssertEqual(Feature.table, [
             // On for everyone (the owner's call, 2026-10-31, NEARBY_PLAY.md step 6).
             Feature.nearbyPlay: .free,
+            // On for everyone (the owner's call, 2026-11-18, ONLINE_PLAY.md stage 6).
             // Later: .unlock(productID: OnlineProduct.id, hostPays: true, foundingIncluded: false).
-            Feature.online: .off,
+            Feature.online: .free,
         ])
     }
 
@@ -23,6 +24,7 @@ final class FeatureTableTests: XCTestCase {
     func testTheAppGateFollowsTheTable() {
         let gate = Feature.gate(defaults: TestSupport.defaults())
         XCTAssertTrue(gate.isShown(Feature.nearbyPlay))
-        XCTAssertFalse(gate.isShown(Feature.online))
+        XCTAssertTrue(gate.isShown(Feature.online))
+        XCTAssertTrue(gate.canUse(Feature.online), "free: nothing to buy")
     }
 }

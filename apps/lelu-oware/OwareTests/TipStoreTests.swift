@@ -32,8 +32,8 @@ final class TipStoreTests: XCTestCase {
         XCTAssertTrue(products.allSatisfy { $0["type"] as? String == "Consumable" }, "tips unlock nothing")
     }
 
-    func testOnlinePlayIsSwitchedOff() {
-        XCTAssertEqual(Feature.table[Feature.online], .off)
+    func testOnlinePlayIsFreeForNow() {
+        XCTAssertEqual(Feature.table[Feature.online], .free)
     }
 
     /// The local test store. On some simulators (the CI runner's) it gives back no products at

@@ -169,6 +169,22 @@ final class NearbyUITests: XCTestCase {
         playAndWaitForReply()
     }
 
+    /// The way out of waiting is on the banner itself (the back button alone was easy to miss).
+    @MainActor
+    func testTheReconnectingBannerOffersLeave() throws {
+        app.launchArguments += ["--demo-drop-after=1", "--demo-away=60"]
+        startAndPressReady()
+        playAndWaitForReply()
+        let leave = app.buttons["btn-leave-reconnecting"]
+        XCTAssertTrue(leave.waitForExistence(timeout: 10))
+        leave.tap()
+        // The same question as the back button asks in the middle of a game.
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Leave' AND identifier != 'btn-leave-reconnecting'")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+        XCTAssertTrue(app.buttons["btn-more"].waitForExistence(timeout: 10), "back on Home")
+    }
+
     /// The joining phone loses Ama's game (her phone dropped the connection): it finds the game
     /// again by itself and carries on.
     @MainActor

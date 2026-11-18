@@ -20,11 +20,14 @@ struct RootView: View {
     @Environment(NearbyLobby.self) private var lobby
     @Environment(OnlinePlay.self) private var online
     @Environment(Invitations.self) private var invitations
+    @Environment(OnlineHealth.self) private var health
     @Environment(\.scenePhase) private var scenePhase
     /// Nearby with the demo player (Settings ▸ Try nearby play) rather than real phones.
     @State private var nearbyDemo = false
     @State private var screen: Screen = .home
     @State private var showSettings = false
+    /// An invitation followed in the middle of a game with someone: joined once the player agrees.
+    @State private var invitationToConfirm: URL?
     /// The carved-map opening; skipped for test launches so suites are not slowed.
     @State private var showSplash = RootView.splashThisLaunch != nil
     /// Decided once per launch (a static is created once), and never in test launches, which skip the splash.
@@ -41,7 +44,7 @@ struct RootView: View {
     }
 
     /// Straight to Ready to play in the game the link is for. Ignored while Play online is hidden.
-    private func openInvitation(_ url: URL) {
+    private func openInvitation(_ url: URL, leaving: Bool = false) {
         guard settings.showsOnlinePlay else { return }
         // The game saved on this phone: the same as Rejoin on Home, where it says how it goes.
         if online.rejoins(link: url) {
@@ -51,7 +54,13 @@ struct RootView: View {
             screen = .home
             return
         }
-        guard online.open(link: url, name: NearbyLobby.myName, pace: settings.effectiveSpeed) else { return }
+        // In a game with someone who is there: ask before walking out of it.
+        if !leaving, online.interrupts(link: url) {
+            showSettings = false
+            invitationToConfirm = url
+            return
+        }
+        guard online.open(link: url, name: NearbyLobby.myName, pace: settings.effectiveSpeed, leaving: leaving) else { return }
         showSettings = false
         showSplash = false
         screen = .online
@@ -114,6 +123,17 @@ struct RootView: View {
                 .presentationDetents([.large])
                 .presentationBackground(Theme.ember)
         }
+        .confirmationDialog("Leave this game to join the other one?",
+                            isPresented: Binding(get: { invitationToConfirm != nil }, set: { if !$0 { invitationToConfirm = nil } }),
+                            titleVisibility: .visible) {
+            Button("Leave and join", role: .destructive) {
+                if let link = invitationToConfirm { openInvitation(link, leaving: true) }
+                invitationToConfirm = nil
+            }
+            Button("Keep playing", role: .cancel) { invitationToConfirm = nil }
+        } message: {
+            Text("\(session.opponentName) will see that you have left. This game can't be picked up again later.")
+        }
         .statusBarHidden(true)
         // Text grows with the reader's setting, up to a size the layouts still hold.
         .dynamicTypeSize(...DynamicTypeSize.accessibility3)
@@ -122,6 +142,7 @@ struct RootView: View {
         // The reminder is rescheduled each time the app comes forward, so it skips a day already done.
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            if settings.showsOnlinePlay { Task { await health.check() } }
             Task { await reminder.reschedule(solvedToday: library.dailySolved, streak: library.currentStreak()) }
         }
         // An invitation to an online game: tapped in a message (a universal link), or the join
@@ -147,7 +168,12 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: invitations.incoming)
         // Each launch: with invitations on, Apple is asked for the phone's token again.
         // (A TestFlight build learns a moment after launch that it offers Play online.)
-        .task(id: settings.showsOnlinePlay) { if settings.showsOnlinePlay { await invitations.started() } }
+        .task(id: settings.showsOnlinePlay) {
+            guard settings.showsOnlinePlay else { return }
+            // Is online play there? Home greys it out when it is not.
+            await health.check()
+            await invitations.started()
+        }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
             if let url = activity.webpageURL { openInvitation(url) }
         }

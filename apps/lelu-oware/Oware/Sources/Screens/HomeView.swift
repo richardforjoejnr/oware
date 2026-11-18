@@ -10,6 +10,7 @@ struct HomeView: View {
     @Environment(PuzzleLibrary.self) private var library
     @Environment(JourneyProgress.self) private var progress
     @Environment(AppSettings.self) private var settings
+    @Environment(OnlineHealth.self) private var health
     @Environment(TipJar.self) private var tipJar
     @Environment(OnlinePlay.self) private var online
     let startGame: () -> Void
@@ -357,14 +358,30 @@ struct HomeView: View {
                 }
                 .accessibilityIdentifier("btn-learn")
             }
-            WoodTile(title: showMore ? "Less" : "More", subtitle: showMore ? "" : (Feature.showsNearbyPlay ? "two players, nearby, rules" : "two players, riddles, rules"), glyph: "more") { showMore.toggle() }
+            WoodTile(title: showMore ? "Less" : "More", subtitle: showMore ? "" : Self.moreSubtitle(online: settings.showsOnlinePlay, nearby: Feature.showsNearbyPlay), glyph: "more") { showMore.toggle() }
                 .accessibilityIdentifier("btn-more")
                 .accessibilityLabel(showMore ? "Fewer options" : "More options")
         }
     }
 
+    /// What More holds, in the order it lists them.
+    static func moreSubtitle(online: Bool, nearby: Bool) -> String {
+        if online { return "online, two players, rules" }
+        return nearby ? "two players, nearby, rules" : "two players, riddles, rules"
+    }
+
     private var moreList: some View {
         VStack(spacing: 8) {
+            if settings.showsOnlinePlay {
+                // Down or paused at the relay: greyed out, and a tap asks again instead of opening.
+                WoodPlank(title: "Play online", subtitle: health.note ?? "a friend, anywhere", glyph: "people", height: 56) {
+                    guard health.isDown else { return openOnline() }
+                    Task { if await health.check(force: true) == .up { openOnline() } }
+                }
+                .opacity(health.isDown ? 0.55 : 1)
+                .accessibilityIdentifier("btn-online")
+                .accessibilityHint(health.isDown ? "Online play is not available just now. Double tap to check again." : "")
+            }
             WoodPlank(title: "Pass & Play", subtitle: "two players, one board", glyph: "people", height: 56) {
                 session.newGame(.passAndPlay, rules: settings.rules)
                 startGame()
@@ -373,10 +390,6 @@ struct HomeView: View {
             if Feature.showsNearbyPlay {
                 WoodPlank(title: "Play nearby", subtitle: "two phones, one game", glyph: "people", height: 56) { openNearby() }
                     .accessibilityIdentifier("btn-nearby")
-            }
-            if settings.showsOnlinePlay {
-                WoodPlank(title: "Play online", subtitle: "a friend, anywhere", glyph: "people", height: 56) { openOnline() }
-                    .accessibilityIdentifier("btn-online")
             }
             if session.hasResumableGame {
                 WoodPlank(title: "Riddles", subtitle: library.dailySolved ? "today's solved · \(library.solvedIDs.count) of \(library.puzzles.count)" : "a new one every day", glyph: "knot", height: 56) { openPuzzles() }
