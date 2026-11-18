@@ -4,6 +4,8 @@ import SupportKit
 
 @main
 struct OwareApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var invitations: Invitations
     @State private var session: GameSession
     @State private var settings: AppSettings
     @State private var library = PuzzleLibrary()
@@ -20,6 +22,8 @@ struct OwareApp: App {
         // `--fast-animations` / `-fastAnimations YES` make everything instant and silent.
         if LaunchOptions.resetState {
             GameStore.shared.clear()
+            OnlineSaves.shared.clear()
+            if LaunchOptions.onlineDemo { DemoSecrets().remove(PlayerIdentity.key) }
             if let domain = Bundle.main.bundleIdentifier {
                 // Key by key as well: reading the launch options has already loaded the settings,
                 // and removing the domain alone can leave them cached for this launch.
@@ -37,7 +41,9 @@ struct OwareApp: App {
         _progress = State(initialValue: progress)
         let network: any NearbyNetwork = LaunchOptions.nearbyDemo ? DemoNetwork() : LiveNearbyNetwork()
         _lobby = State(initialValue: NearbyLobby(session: session, network: network))
-        _online = State(initialValue: OnlinePlay(session: session))
+        let invitations = Invitations.shared
+        _invitations = State(initialValue: invitations)
+        _online = State(initialValue: OnlinePlay(session: session, saves: .shared, invitations: invitations))
         // Every tip is counted, including ones the App Store delivers later (Ask to Buy).
         // `--tips-unavailable` (Debug only): the App Store returns nothing, to test the Try again path.
         let noTips: TipJar.ProductLoader = { _ in [] }
@@ -46,6 +52,19 @@ struct OwareApp: App {
         _tipJar = State(initialValue: tipJar)
         let settings = AppSettings()
         _settings = State(initialValue: settings)
+        // Settings ▸ Relay: from the next connection on, and the new relay is told who this phone is.
+        OnlineConfig.chosen = settings.chosenRelayStage
+        settings.onRelayStage = { [weak invitations] stage in
+            guard OnlineConfig.chosen != stage else { return }
+            OnlineConfig.chosen = stage
+            Task { await invitations?.started() }
+        }
+        // An invitation is not put over a game being played, nor shown while Play online is hidden:
+        // the phone's own banner shows it instead.
+        invitations.isPlaying = { [weak session, weak settings] in
+            guard let session, let settings, settings.showsOnlinePlay else { return true }
+            return session.remoteGame != nil && session.isStarted && !session.state.isOver
+        }
         // Analytics and Game Center stay silent in test launches.
         Analytics.shared.configure(enabled: settings.effectiveUsageStats)
         Analytics.shared.track(.appLaunched)
@@ -63,6 +82,7 @@ struct OwareApp: App {
                 .environment(reminder)
                 .environment(lobby)
                 .environment(online)
+                .environment(invitations)
                 .preferredColorScheme(.dark)
         }
     }

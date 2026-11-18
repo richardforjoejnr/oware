@@ -121,7 +121,7 @@ final class OnlineThoroughTests: XCTestCase {
         // The old invitation no longer works; the new one does.
         let kofi = phone(relay, "kofi")
         XCTAssertTrue(kofi.lobby.join(code: "K7M2QD", name: "Kofi"))
-        await until("the old code is refused") { kofi.lobby.phase == .refused(OnlineNetwork.explain(.notFound)) }
+        await until("the old code is refused") { kofi.lobby.phase == .refused(OnlineNetwork.explain(.ended)) }
         kofi.lobby.cancel()
         XCTAssertTrue(kofi.lobby.join(code: "ABCDEF", name: "Kofi"))
         await until("the new one joins") { ama.lobby.opponent?.name == "Kofi" }
@@ -175,7 +175,8 @@ final class OnlineThoroughTests: XCTestCase {
         ama.lobby.cancel()
         await until("gone") { await !relay.hasRoom(RoomCode(link: link)?.text ?? "") }
         XCTAssertTrue(kofi.play.open(link: link, name: "Kofi"))
-        await until("told") { kofi.lobby.phase == .refused(OnlineNetwork.explain(.notFound)) }
+        await until("told") { kofi.lobby.phase == .refused(OnlineNetwork.explain(.ended)) }
+        XCTAssertEqual(OnlineNetwork.explain(.ended), "That game has ended. Ask your friend to start a new one.")
     }
 
     /// A second invitation tapped while looking at the first one's Ready screen: the first is

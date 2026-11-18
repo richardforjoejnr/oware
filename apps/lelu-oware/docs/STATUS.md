@@ -28,31 +28,70 @@ Built so far, in the plan's stages:
 - **Stages 4–5, enough to try it** (PR #115): `MatchKitOnline` (`OnlineTransport`, `LocalRelay`); Play
   online is the nearby lobby and screen with `kind == .online` and `OnlineNetwork`. **Invite a friend**
   shares `leluoware.com/lelu-oware/join?c=CODE` (the query form, not the plan's `/join/CODE`; the app
-  opens both, and `leluoware://join?c=CODE`). The waiting screen shows the code and a QR code; the code
-  box takes a pasted message. The joining phone sows its own move at once, on nearby play too.
+  opens both, and `leluoware://join?c=CODE`). The waiting screen shows the code and **Send the
+  invitation** (no QR code since 2026-11-18: the link does that job); typing a code is behind **Join
+  with code**, and its box takes a pasted message. The joining phone sows its own move at once, on nearby play too.
+- **A game that survives the app closing** (2026-11-18, plan §5): each phone saves the online game
+  after every snapshot (`OnlineSaves`: the code, seat, match and other player's name in
+  `online-game.json`, the seat tokens in the Keychain). Home shows a **Rejoin** card (*Your game with
+  Kofi* · Rejoin · Leave game); Rejoin, or the game's own invitation link, sends `rejoin(code, token)`
+  and carries on from the saved match, for the creator (in charge again, `Room(resuming:)`) and the
+  guest. The save goes when the game ends, the player leaves, the other player leaves, or the relay
+  no longer has the game (*That game has ended.*). Online, 90 s of silence no longer ends a game:
+  the seat is kept (`RoomTiming.keepsSeats`) and the sheet asks **Keep waiting / Play the computer /
+  Leave**, again every 90 s. The install ID is in the Keychain too (one from an earlier build moves
+  there). Not built: comparing both phones' saved matches when both were closed (the creator's
+  save is the one used; it is never behind the guest's), and telling "left" from "lost" when the
+  other player went while this phone was away.
+- **Rematch: Not now, and a minute to answer** (2026-11-18, nearby and online): asked by the other
+  player you see *Kofi wants a rematch* with **Rematch** and **Not now**; Not now tells them (*Kofi
+  said not now*) and they may ask again. A request nobody answers lapses after 60 s
+  (`MatchLink.rematchWait`, timed on the phone in charge). No Rematch while the other player is
+  reconnecting or gone. On the wire: intent `declineRematch` and three optional table values
+  (`../../shared/vectors/room-v2` ▸ Rematch), added to version 2, which no App Store build has
+  spoken; TestFlight builds 1.0.10–1.0.12 play on with newer ones but know nothing of Not now.
+- **Recent players and Play again** (2026-11-18, plan §6 ▸ *Players who can be invited again*): the
+  last five people played online are listed under Play online (`RecentPlayers`, on the phone only),
+  each with **Play again**, **Remove from list** and **Block**. Play again starts a game and the
+  relay notifies that player (`OnlinePlay.playAgain` → `OnlineTransport.invite`); the waiting screen
+  says what is known (*Kofi has been asked…*, *could not be reached. Send them the link instead.*,
+  *said not now.*) and never whether they are online. Being asked is off until the player turns on
+  **Settings ▸ Invitations** (or *Let them ask you too*), which asks for notifications and registers
+  the phone's player number and push token with the relay (`Invitations`, `PlayerIdentity` in the
+  Keychain). An invitation arriving with the app open shows *Ama wants to play* · Join · Not now.
+  Phones learn each other's player number from a new room message, `player` (still version 2; an
+  older app drops it and is simply not listed). **Not proven on a phone:** a real notification end
+  to end. It needs the APNs key on the relay and Push switched on for the App ID (below); the tests
+  use the relay inside the app, which records the notification instead of sending it.
 
 Try it: **Settings ▸ Play online**, a switch in builds from Xcode and TestFlight builds, never in
 an App Store build (`AppSettings.offersOnlineSwitch`). App Review's builds cannot be told from
 TestFlight's, so a reviewer sees the switch too: before a build with it is submitted, the privacy
 page and review notes for online play (stage 6) must be in, or the switch limited to Xcode builds.
 A build knows its relay (`RELAY_URL` in `project.yml`): the relay's `dev` stage from Xcode, `prod`
-for TestFlight. Debug builds can also take `-onlinePlay YES -relayURL <address>` (kept between
+for TestFlight and the App Store. **Settings ▸ Relay** (Dev / Prod, under the Play online switch)
+changes it in the same test builds, from the next game on; an App Store build has neither switch
+and is always on prod (`Feature.offersTesterSwitches`, `Feature.relayStage`). Debug builds can also take `-onlinePlay YES -relayURL <address>` (kept between
 launches) or `--online-demo` for Ama with no network; a relay on the Mac is `npm run dev` in the
 AWS repo's `apps/lelu-play` (`ws://localhost:8787`).
 
 For the owner:
-- **Associated Domains** for the App ID (developer portal), so a tapped link opens the app. Then add
-  `com.apple.developer.associated-domains: [applinks:leluoware.com]` to `entitlements` in `project.yml`
-  and to the allowed list in `../../scripts/release_readiness.py`, and refresh the signing profiles.
-  Until then no build carries it; the join page's button and pasting the message still work.
+- **Associated Domains and Push Notifications** for the App ID (developer portal), then refresh the
+  signing profiles (`fastlane match`). Both entitlements are in `project.yml` since 2026-11-18
+  (`com.apple.developer.associated-domains: [applinks:leluoware.com]` and `aps-environment`), so **a
+  signed build fails until this is done**. Unsigned simulator builds and the tests are not affected.
+- **An APNs key** (developer portal ▸ Keys ▸ Apple Push Notifications service), put into the relay's
+  parameter `/lelu-play/<stage>/apns` as the AWS repo's `apps/lelu-play/README.md` ▸ *Play again*
+  says. Without it every Play again answers *could not be reached*.
 - The relay's `dev` and `prod` stages are deployed (2026-11-15). Deploy or destroy either from the
   AWS repo: Actions ▸ *Lelu Play — Deploy* / *Destroy*. A destroyed stage gets a new address when it
   is made again: put it in `RELAY_URL`.
 
-Still to build before it is turned on: the relay's limits, alarms, off switch and `play.leluoware.com`
-(stage 3); a game that survives the app closing (saved game, Rejoin card, the seat kept past 90 s);
-the install ID in the Keychain; the paid path's tests; the privacy page, App Privacy label and review
-notes (stage 6).
+The relay's limits, alarms and off switch (stage 3) are built and on its `dev` stage (2026-11-18);
+`prod` still runs the first relay until the AWS branch is merged. The privacy page has its Play
+online section. Still to do before it is turned on: `play.leluoware.com`; the paid path's tests;
+the App Privacy label (now also a device ID and a push token, not linked to identity) and review
+notes; Quick Match is investigated and not built (plan §14).
 ## Android (planned 2026-11-15)
 
 A native Android app (Kotlin, Jetpack Compose), Lelu Oware first. The rules are ported to Kotlin

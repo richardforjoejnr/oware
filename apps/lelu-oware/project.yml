@@ -73,12 +73,22 @@ targets:
       path: Oware/Oware.entitlements
       properties:
         com.apple.developer.game-center: true
+        # An invitation link (https://leluoware.com/lelu-oware/join?c=<code>) opens the app.
+        # Needs Associated Domains switched on for the App ID, and the profiles made again.
+        com.apple.developer.associated-domains: ["applinks:leluoware.com"]
+        # An invitation to play again arrives as a notification (docs/ONLINE_PLAY.md §6). Needs
+        # Push Notifications switched on for the App ID, and the profiles made again. Xcode
+        # writes "production" into TestFlight and App Store builds when it exports them.
+        aps-environment: development
     info:
       path: Oware/Info.plist
       properties:
         CFBundleDisplayName: Lelu Oware
         # The relay for online play (the AWS repo's apps/lelu-play): RELAY_URL, per configuration below.
         RelayURL: $(RELAY_URL)
+        # Both stages, for Settings ▸ Relay (builds from Xcode and TestFlight builds only).
+        RelayURLDev: $(RELAY_URL_DEV)
+        RelayURLProd: $(RELAY_URL_PROD)
         # leluoware://join?c=<code>: the join page's "Open in Lelu Oware" button, for when an
         # invitation link was opened in a browser instead of the app.
         CFBundleURLTypes:
@@ -114,14 +124,18 @@ targets:
         # CI overrides these with manual match signing via xcargs in fastlane/Fastfile.
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: "Apple Development"
+        # The relay's two stages. These are the stages' own addresses (the deploy prints them);
+        # they change only if a stage is destroyed and made again. play.leluoware.com replaces
+        # prod's later.
+        RELAY_URL_DEV: "wss://2z7y92ovwc.execute-api.us-east-1.amazonaws.com/dev"
+        RELAY_URL_PROD: "wss://rcxi7c6ru9.execute-api.us-east-1.amazonaws.com/prod"
       configs:
         # Builds from Xcode play through the relay's dev stage; TestFlight and App Store builds
-        # through prod. These are the stages' own addresses (the deploy prints them); they change
-        # only if a stage is destroyed and made again. play.leluoware.com replaces prod's later.
+        # through prod. Settings ▸ Relay changes it in the builds that have the Play online switch.
         Debug:
-          RELAY_URL: "wss://2z7y92ovwc.execute-api.us-east-1.amazonaws.com/dev"
+          RELAY_URL: "$(RELAY_URL_DEV)"
         Release:
-          RELAY_URL: "wss://rcxi7c6ru9.execute-api.us-east-1.amazonaws.com/prod"
+          RELAY_URL: "$(RELAY_URL_PROD)"
   OwareTests:
     type: bundle.unit-test
     platform: iOS

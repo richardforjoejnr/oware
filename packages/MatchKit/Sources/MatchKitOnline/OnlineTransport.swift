@@ -10,6 +10,21 @@ public protocol RelaySocket: Sendable {
     func close()
 }
 
+/// Who a phone is to the relay when it asks someone for another game, or may be asked: its
+/// player number, which other phones are given, and the secret that goes only to the relay.
+public struct RelayPlayer: Sendable, Equatable {
+    public var id: String
+    public var secret: String
+    /// The relay's name for the game: `oware`.
+    public var game: String
+
+    public init(id: String, secret: String, game: String) {
+        self.id = id
+        self.secret = secret
+        self.game = game
+    }
+}
+
 /// Phones in one game over the internet: a `MatchTransport` that talks to the relay
 /// (docs/ONLINE_PLAY.md §5).
 ///
@@ -56,12 +71,30 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
         case closed
     }
 
+    /// What came of asking someone played before to join this game.
+    public enum InviteAnswer: Sendable, Equatable {
+        /// The notification is on its way.
+        case sent
+        /// `unreachable`: they cannot be notified. Any other reason: the relay would not send it.
+        case refused(RelayEvent.Refusal)
+        /// No connection, or the relay said nothing in time.
+        case noAnswer
+    }
+
     public let events: AsyncStream<TransportEvent>
+    /// Players who said "Not now" to an invitation to this game, by player number.
+    public let declines: AsyncStream<String>
     /// Every change of `status`, for the lobby.
     public let statuses: AsyncStream<Status>
 
     private let eventsOut: AsyncStream<TransportEvent>.Continuation
     private let statusOut: AsyncStream<Status>.Continuation
+    private let declinesOut: AsyncStream<String>.Continuation
+    /// The one question the relay has not answered yet (`ask`).
+    private var asking: (id: Int, answer: CheckedContinuation<RelayEvent?, Never>)?
+    private var askCount = 0
+    /// How long the relay has to answer a question, in seconds.
+    public var answerWait: Double = 10
     private let entry: Entry
     private let install: String
     private let dial: Dial
@@ -91,6 +124,7 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
         if case let .rejoin(seat) = entry { currentSeat = seat }
         (events, eventsOut) = AsyncStream.makeStream()
         (statuses, statusOut) = AsyncStream.makeStream()
+        (declines, declinesOut) = AsyncStream.makeStream()
         runner = Task { [weak self] in await self?.run() }
     }
 
@@ -115,6 +149,51 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
         }
     }
 
+    /// Asks someone played before to join this game: the relay sends their phone a notification
+    /// with the code. Only the phone that made the game can. `me` is registered first (with
+    /// `push`, where this phone's own notifications go), so the relay knows who asks.
+    public func invite(_ to: String, name: String, from me: RelayPlayer, push: RelayRequest.Push?) async -> InviteAnswer {
+        switch await ask(.register(game: me.game, player: me.id, secret: me.secret, push: push)) {
+        case .registered: break
+        case let .refused(reason): return .refused(reason)
+        default: return .noAnswer
+        }
+        switch await ask(.invite(player: me.id, secret: me.secret, to: to, name: name)) {
+        case .invited: return .sent
+        case let .refused(reason): return .refused(reason)
+        default: return .noAnswer
+        }
+    }
+
+    /// One question to the relay on this game's connection, and its answer; nil with no
+    /// connection or no answer in time. One at a time: a second question ends the first.
+    private func ask(_ request: RelayRequest) async -> RelayEvent? {
+        guard let text = try? Self.encode(request), let live = lock.sync({ isOpen && !isClosed ? socket : nil }) else { return nil }
+        let wait = UInt64(max(answerWait, 0) * 1_000_000_000)
+        return await withCheckedContinuation { continuation in
+            let (id, earlier): (Int, CheckedContinuation<RelayEvent?, Never>?) = lock.sync {
+                askCount += 1
+                defer { asking = (askCount, continuation) }
+                return (askCount, asking?.answer)
+            }
+            earlier?.resume(returning: nil)
+            Task { [weak self] in
+                if (try? await live.send(text)) != nil { try? await Task.sleep(nanoseconds: wait) }
+                self?.answered(nil, only: id)
+            }
+        }
+    }
+
+    /// The relay answered (or, with `only`, that question ran out of time).
+    private func answered(_ event: RelayEvent?, only id: Int? = nil) {
+        let waiting: CheckedContinuation<RelayEvent?, Never>? = lock.sync {
+            guard let asking, id == nil || asking.id == id else { return nil }
+            self.asking = nil
+            return asking.answer
+        }
+        waiting?.resume(returning: event)
+    }
+
     /// Leaves the room for good and stops.
     public func close() {
         let (live, wasOpen): ((any RelaySocket)?, Bool) = lock.sync {
@@ -126,6 +205,8 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
         set(.closed)
         eventsOut.finish()
         statusOut.finish()
+        declinesOut.finish()
+        answered(nil)
         let runner = runner
         guard let live else {
             runner?.cancel()
@@ -137,6 +218,24 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
             live.close()
             runner?.cancel()
         }
+    }
+
+    /// Stops without leaving the room, as when the app is closed: no goodbye to the relay, so the
+    /// seat is kept and the token takes it back later (`Entry.rejoin`).
+    public func abandon() {
+        let live: (any RelaySocket)? = lock.sync {
+            guard !isClosed else { return nil }
+            isClosed = true
+            defer { socket = nil }
+            return socket
+        }
+        set(.closed)
+        eventsOut.finish()
+        statusOut.finish()
+        declinesOut.finish()
+        answered(nil)
+        live?.close()
+        runner?.cancel()
     }
 
     /// Breaks the connection without leaving the room, as losing signal does (tests, the demo).
@@ -186,6 +285,7 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
                 return present
             }
             live.close()
+            answered(nil)
             // This phone's own link is down: to the room, everyone else has gone quiet.
             for peer in gone.sorted(by: { $0.raw < $1.raw }) { eventsOut.yield(.disconnected(peer)) }
         }
@@ -212,11 +312,15 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
                     // The relay no longer has this connection in the room, though it is open (it
                     // was wrongly told the phone had gone): take the seat back on a new one.
                     // Any other refusal is about one message (too large, say), not the seat.
-                    if reason == .notFound { live.close() }
+                    if reason == .notFound { live.close() } else { answered(event) }
                     break
                 }
                 finish(.refused(reason))
                 return .final
+            case .registered, .invited, .blocked:
+                answered(event)
+            case let .declined(player):
+                declinesOut.yield(player)
             case .rolled, .pong, .unknown:
                 break
             }
@@ -258,10 +362,40 @@ public final class OnlineTransport: MatchTransport, @unchecked Sendable {
         set(status)
         eventsOut.finish()
         statusOut.finish()
+        declinesOut.finish()
     }
 
     private static func encode(_ request: RelayRequest) throws -> String {
         String(decoding: try JSONEncoder().encode(request), as: UTF8.self)
+    }
+}
+
+/// One message to the relay on a connection of its own, for a phone that is not in a game:
+/// registering so it can be invited, blocking someone, saying "Not now".
+public enum RelayCall {
+    /// Sends `request` and gives back the relay's first answer; nil if the relay could not be
+    /// reached or said nothing within `wait` seconds.
+    public static func ask(_ request: RelayRequest, dial: OnlineTransport.Dial, wait: Double = 10) async -> RelayEvent? {
+        guard let text = try? JSONEncoder().encode(request), let socket = try? await dial() else { return nil }
+        defer { socket.close() }
+        guard (try? await socket.send(String(decoding: text, as: UTF8.self))) != nil else { return nil }
+        let timer = Task {
+            try? await Task.sleep(nanoseconds: UInt64(max(wait, 0) * 1_000_000_000))
+            if !Task.isCancelled { socket.close() }
+        }
+        defer { timer.cancel() }
+        for await text in socket.incoming {
+            if let event = try? JSONDecoder().decode(RelayEvent.self, from: Data(text.utf8)) { return event }
+        }
+        return nil
+    }
+
+    /// Sends `request` where the relay says nothing back (`decline`). False if it did not go.
+    @discardableResult
+    public static func tell(_ request: RelayRequest, dial: OnlineTransport.Dial) async -> Bool {
+        guard let text = try? JSONEncoder().encode(request), let socket = try? await dial() else { return false }
+        defer { socket.close() }
+        return (try? await socket.send(String(decoding: text, as: UTF8.self))) != nil
     }
 }
 

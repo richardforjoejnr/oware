@@ -11,8 +11,10 @@ description: Tap to join my game in Lelu Oware.
 <div id="invited" hidden>
   <p>You have been invited to a game in <strong>Lelu Oware</strong>.</p>
   <p><a id="open" class="join-button" href="#">Open in Lelu Oware</a></p>
-  <p>Or open Lelu Oware, choose <strong>More ▸ Play online</strong> and enter this code:</p>
+  <p>Or open Lelu Oware, choose <strong>More ▸ Play online ▸ Join with code</strong> and enter this code:</p>
   <p id="code" class="join-code" aria-live="polite"></p>
+  <p><button id="copy" class="join-copy" type="button" hidden>Copy the code</button>
+    <span id="copied" role="status"></span></p>
   <h2>Don't have Lelu Oware yet?</h2>
   <p><a href="https://apps.apple.com/app/id6816694006">Get it free on the App Store</a>, then come back to
     the message your friend sent and <strong>tap the link again</strong>. It will open the game.</p>
@@ -25,7 +27,7 @@ description: Tap to join my game in Lelu Oware.
 </div>
 
 <noscript>
-  <p>Open Lelu Oware, choose <strong>More ▸ Play online</strong> and enter the code at the end of the
+  <p>Open Lelu Oware, choose <strong>More ▸ Play online ▸ Join with code</strong> and enter the code at the end of the
     link your friend sent.</p>
 </noscript>
 
@@ -33,6 +35,8 @@ description: Tap to join my game in Lelu Oware.
   .join-code { font: 700 2.2rem ui-monospace, Menlo, monospace; letter-spacing: 0.3em; }
   .join-button { display: inline-block; padding: 0.7em 1.2em; border-radius: 0.6em; background: #8a5a1c;
     color: #fff; font-weight: 700; text-decoration: none; }
+  .join-copy { padding: 0.5em 1em; border-radius: 0.6em; border: 1px solid #8a5a1c; background: none;
+    color: inherit; font: inherit; }
 </style>
 <script>
   (function () {
@@ -45,5 +49,15 @@ description: Tap to join my game in Lelu Oware.
     document.getElementById('code').setAttribute('aria-label', 'Code: ' + code.split('').join(' '));
     document.getElementById('open').href = 'leluoware://join?c=' + code;
     document.getElementById('invited').hidden = false;
+    // For someone who installs the app first: the code box in the app has a Paste button.
+    var copy = document.getElementById('copy');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      copy.hidden = false;
+      copy.addEventListener('click', function () {
+        navigator.clipboard.writeText(code).then(function () {
+          document.getElementById('copied').textContent = 'Copied. Paste it in Lelu Oware.';
+        });
+      });
+    }
   })();
 </script>

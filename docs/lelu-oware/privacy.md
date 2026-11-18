@@ -4,10 +4,10 @@ title: Lelu Oware — Privacy Policy
 
 # Lelu Oware — Privacy Policy
 
-_Last updated: 31 October 2026_
+_Last updated: 18 November 2026_
 
-Lelu Oware is an Oware game for iPhone and iPad: play the computer, a friend on the same device or
-on a phone nearby, the Journey, daily riddles and a short lesson.
+Lelu Oware is an Oware game for iPhone and iPad: play the computer, a friend on the same device, on
+a phone nearby or online, the Journey, daily riddles and a short lesson.
 
 ## The short version
 
@@ -18,6 +18,10 @@ on a phone nearby, the Journey, daily riddles and a short lesson.
 - Leaderboards and achievements use Apple's Game Center, if you choose to sign in to it.
 - Play nearby connects two phones directly over your local network. The name you choose is shown
   to the other player; nothing about the game goes to us.
+- Play online passes your moves and the name you choose to the friend you invited, through a small
+  relay service we run. The relay does not read or keep them. It keeps a game's room for a day at
+  most. If you let friends invite you again, it keeps a random number for your app and where to
+  send the notification, for up to 180 days.
 
 ## Anonymous usage statistics
 
@@ -73,6 +77,46 @@ that name go only from one phone to the other. They are not sent to us or to any
 cannot see or keep them. Your chosen name is saved only on your device so you need not type it
 again.
 
+## Play online
+
+Play online lets two people in different places play one game. There is still no account and no
+sign-in. One player starts a game and sends a link; the friend who taps it joins.
+
+**What leaves your phone.** The game's six-character code, your moves, and the name you type (up to
+24 letters) go to the other player through a relay: a small service we run on Amazon Web Services
+in the United States (N. Virginia). Like any internet connection, it also shows the relay your
+network (IP) address. Your phone also sends two random numbers it made for itself: one so the relay
+can limit how many games a single phone starts, and one, your player number, described below.
+
+**What the relay keeps, and for how long.**
+
+- A game's room: which game, how many seats, and when it was last used. No names and no moves:
+  they pass through and are not read, kept or logged. A room that nobody joins is kept for 2
+  hours, a game for 24 hours after its last move (so you can come back to it), then it is deleted.
+- Counts used to stop misuse (too many games or wrong codes from one phone or one network), kept
+  for at most 2 hours against a scrambled form (a hash) of the random number or the network
+  address, not the address itself.
+- Logs of what happened (a game was started, joined, dropped or refused, and why), with no names,
+  codes or addresses, kept for a month at most.
+
+**Recent players and "Play again".** The last five people you played online are listed **on your
+phone only**, by the name they chose. To let one of you ask the other for another game without a
+new link, each phone gives the other its *player number*: a random number that stands for your copy
+of the app, not for you. If you allow notifications for invitations, the relay keeps your player
+number together with the address Apple uses to deliver notifications to your phone (a push token),
+for up to 180 days after you last used the app with invitations on, and uses it only to send you
+an invitation when someone you have played asks. If you use Play again or block someone without
+turning invitations on, the relay keeps your player number without that address. The inviter's name passes through Apple's notification service
+to your phone and is not kept by us. If you block a player, the relay keeps the two player numbers
+so it can refuse their invitations.
+
+**Your choices.** Invitations are off until you turn them on. You can remove someone from Recent
+players, block them, or switch invitations off in **Settings ▸ Invitations**, which removes the
+notification address from the relay. Turning notifications off in iPhone's own settings stops them
+being shown. Deleting the app ends it too: the record expires
+by itself. To have a record deleted sooner, write to the address under Contact. Playing online
+needs none of this: a link always works.
+
 ## Newsletter
 
 The app never asks for your email. If you sign up for news on our
@@ -90,9 +134,11 @@ and used only to send Lelu Oware news. Every email has an unsubscribe link.
 
 ## Children
 
-The game is suitable for all ages. It collects no personal data from anyone; the anonymous usage
-statistics above are sent only if someone agrees, contain nothing that identifies a person, and
-can be switched off in Settings.
+The game is suitable for all ages. It asks nobody for a name, an email address or an account. The
+anonymous usage statistics above are sent only if someone agrees, contain nothing that identifies
+a person, and can be switched off in Settings. Online, a player meets only someone who was sent
+the link or whom they have played before; there are no strangers and no chat, and the only words
+another player sees are the name typed on the Play online screen.
 
 ## Contact
 

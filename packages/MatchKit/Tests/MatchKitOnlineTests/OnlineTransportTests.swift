@@ -211,6 +211,207 @@ struct OnlineTransportTests {
         await eventually("refused") { link.status == .refused(.notFound) }
     }
 
+    // MARK: The app is closed and opened again
+
+    /// What a phone keeps: its place at the relay, its room, and the match.
+    private struct Kept {
+        let seat: OnlineTransport.Seat
+        let room: RoomSave
+        let match: Sum
+    }
+
+    /// The app is closed: the connection goes, with no goodbye to the relay or the room.
+    private func closeApp(_ room: SumRoom, _ link: OnlineTransport) throws -> Kept {
+        let kept = Kept(seat: try #require(link.seat), room: try #require(room.save), match: try #require(room.match))
+        link.abandon()
+        room.stop()
+        return kept
+    }
+
+    private func openApp(_ kept: Kept) -> (SumRoom, OnlineTransport, Log) {
+        let link = OnlineTransport(entry: .rejoin(kept.seat), install: "x", dial: relay.dial, sleep: Self.noSleep)
+        let room = SumRoom(resuming: kept.room, match: kept.match, rules: SumRules(), transport: link, clock: clock, timing: .online)
+        let log = Log()
+        room.onEvent = { log.events.append($0) }
+        return (room, link, log)
+    }
+
+    @Test func closingTheAppDoesNotLeaveTheRoom() async throws {
+        let table = await seated()
+        _ = try closeApp(table.guest, table.guestLink)
+        await eventually("Ama sees him reconnecting") { table.hostLog.events.contains(.reconnecting(seat: 1)) }
+        await settle()
+        #expect(!table.hostLog.events.contains(.left(seat: 1)), "he has not left")
+        let leaves = await relay.received["leave"]
+        #expect(leaves == nil, "the relay was not told he left")
+    }
+
+    @Test func theGuestClosesTheAppAndComesBackToTheSameGame() async throws {
+        let table = await seated()
+        try await table.host.send(4)
+        await eventually("first move") { table.guest.match?.numbers == [4] }
+        let kept = try closeApp(table.guest, table.guestLink)
+        await eventually("Ama sees him reconnecting") { table.hostLog.events.contains(.reconnecting(seat: 1)) }
+
+        let (guest, link, log) = openApp(kept)
+        await eventually("his seat at the relay") { isOpen(link) }
+        #expect(link.me == PeerID("p1"))
+        await eventually("Ama has him back") { table.hostLog.events.contains(.back(seat: 1)) }
+        await eventually("and he has her") { log.events.contains(.back(seat: 0)) }
+        try await guest.send(7)
+        await eventually("play goes on") { table.host.match?.numbers == [4, 7] }
+    }
+
+    @Test func theCreatorClosesTheAppAndIsInChargeAgain() async throws {
+        let table = await seated()
+        try await table.host.send(4)
+        await eventually("first move") { table.guest.match?.numbers == [4] }
+        let kept = try closeApp(table.host, table.hostLink)
+        await eventually("Kofi sees her reconnecting") { table.guestLog.events.contains(.reconnecting(seat: 0)) }
+        // He plays while she is away: held until she is back.
+        try await table.guest.send(7)
+
+        let (host, link, log) = openApp(kept)
+        await eventually("her seat at the relay") { isOpen(link) }
+        #expect(link.me == Relay.creator)
+        await eventually("Kofi is back in his seat") { log.events.contains(.back(seat: 1)) }
+        await eventually("his move reaches her") { host.match?.numbers == [4, 7] }
+        try await host.send(9)
+        await eventually("and hers reaches him") { table.guest.match?.numbers == [4, 7, 9] }
+    }
+
+    @Test func bothCloseTheAppAndTheGameGoesOnWhenBothAreBack() async throws {
+        let table = await seated()
+        try await table.host.send(4)
+        await eventually("first move") { table.guest.match?.numbers == [4] }
+        let hers = try closeApp(table.host, table.hostLink), his = try closeApp(table.guest, table.guestLink)
+
+        // He is back first, and waits in the room.
+        let (guest, guestLink, guestLog) = openApp(his)
+        await eventually("his seat at the relay") { isOpen(guestLink) }
+        #expect(guest.seats[0]?.isReconnecting == true)
+        let (host, _, hostLog) = openApp(hers)
+        await eventually("she has him") { hostLog.events.contains(.back(seat: 1)) }
+        await eventually("he has her") { guestLog.events.contains(.back(seat: 0)) }
+        try await guest.send(7)
+        await eventually("play goes on") { host.match?.numbers == [4, 7] && guest.match?.numbers == [4, 7] }
+    }
+
+    /// The relay inside the app is new each time the app starts: it is given the room again.
+    @Test func theRelayInTheAppCanBeGivenARoomAgain() async throws {
+        let fresh = LocalRelay()
+        await fresh.restore(code: "K7M2QD", game: Self.game, tokens: ["mine", "hers"])
+        let exists = await fresh.hasRoom("K7M2QD")
+        #expect(exists)
+        let seat = OnlineTransport.Seat(code: "K7M2QD", peer: Relay.creator, token: "mine")
+        let link = OnlineTransport(entry: .rejoin(seat), install: "x", dial: fresh.dial, sleep: Self.noSleep)
+        await eventually("in") { isOpen(link) }
+        let other = OnlineTransport(entry: .rejoin(.init(code: "K7M2QD", peer: PeerID("p1"), token: "hers")), install: "y",
+                                    dial: fresh.dial, sleep: Self.noSleep)
+        await eventually("the other too") { isOpen(other) }
+        #expect(other.me == PeerID("p1"))
+        // Giving it again changes nothing for phones already in it.
+        await fresh.restore(code: "K7M2QD", game: Self.game, tokens: ["mine", "hers"])
+        #expect(isOpen(link))
+    }
+
+    // MARK: Asking someone played before
+
+    static let ama = RelayPlayer(id: "7c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f", secret: "amas-secret", game: "sum")
+    static let kofi = RelayPlayer(id: "1a2b3c4d5e6f708192a3b4c5d6e7f809", secret: "kofis-secret", game: "sum")
+    static let push = RelayRequest.Push(token: "9f1c2a7b3d4e5f60", env: .sandbox)
+
+    /// Kofi's phone can be notified: it has told the relay who it is and where notifications go.
+    private func kofiRegisters(push: RelayRequest.Push? = push) async {
+        let answer = await RelayCall.ask(.register(game: "sum", player: Self.kofi.id, secret: Self.kofi.secret, push: push), dial: relay.dial)
+        #expect(answer == .registered)
+    }
+
+    @Test func someonePlayedBeforeIsInvitedToTheGameJustStarted() async {
+        await kofiRegisters()
+        let link = create()
+        await eventually("open") { isOpen(link) }
+        let answer = await link.invite(Self.kofi.id, name: "Ama", from: Self.ama, push: nil)
+        #expect(answer == .sent)
+        let sent = await relay.invitations
+        #expect(sent == [.init(code: "K7M2QD", from: Self.ama.id, name: "Ama", to: Self.kofi.id)],
+                "his phone is given the code, and who asks")
+        link.close()
+    }
+
+    @Test func someoneWhoCannotBeNotifiedIsUnreachable() async {
+        let link = create()
+        await eventually("open") { isOpen(link) }
+        // Never heard of.
+        var answer = await link.invite(Self.kofi.id, name: "Ama", from: Self.ama, push: nil)
+        #expect(answer == .refused(.unreachable))
+        // Known, but notifications are off on his phone.
+        await kofiRegisters(push: nil)
+        answer = await link.invite(Self.kofi.id, name: "Ama", from: Self.ama, push: nil)
+        #expect(answer == .refused(.unreachable))
+        let sent = await relay.invitations
+        #expect(sent.isEmpty)
+        link.close()
+    }
+
+    @Test func aBlockedPlayerIsToldOnlyThatTheOtherCannotBeReached() async {
+        await kofiRegisters()
+        let blocked = await RelayCall.ask(.block(game: "sum", player: Self.kofi.id, secret: Self.kofi.secret, who: Self.ama.id, on: true),
+                                          dial: relay.dial)
+        #expect(blocked == .blocked(who: Self.ama.id, on: true))
+        let link = create()
+        await eventually("open") { isOpen(link) }
+        var answer = await link.invite(Self.kofi.id, name: "Ama", from: Self.ama, push: nil)
+        #expect(answer == .refused(.unreachable), "the same answer as for someone never heard of")
+
+        // He changes his mind.
+        _ = await RelayCall.ask(.block(game: "sum", player: Self.kofi.id, secret: Self.kofi.secret, who: Self.ama.id, on: false), dial: relay.dial)
+        answer = await link.invite(Self.kofi.id, name: "Ama", from: Self.ama, push: nil)
+        #expect(answer == .sent)
+        link.close()
+    }
+
+    @Test func aBlockNeedsThePlayersOwnSecret() async {
+        await kofiRegisters()
+        let answer = await RelayCall.ask(.block(game: "sum", player: Self.kofi.id, secret: "a guess", who: Self.ama.id, on: true), dial: relay.dial)
+        #expect(answer == .refused(.invalid))
+        // Nor can someone else take his player number.
+        let taken = await RelayCall.ask(.register(game: "sum", player: Self.kofi.id, secret: "a guess", push: Self.push), dial: relay.dial)
+        #expect(taken == .refused(.invalid))
+    }
+
+    @Test func onlyThePhoneThatMadeTheGameInvitesToIt() async {
+        await kofiRegisters()
+        let table = await seated()
+        let answer = await table.guestLink.invite(Self.kofi.id, name: "Kofi", from: Self.ama, push: nil)
+        #expect(answer == .refused(.invalid))
+        // And nobody is invited before there is a game.
+        let early = create()
+        early.close()
+        let none = await early.invite(Self.kofi.id, name: "Ama", from: Self.ama, push: nil)
+        #expect(none == .noAnswer)
+    }
+
+    @Test func notNowReachesThePhoneThatIsWaiting() async {
+        await kofiRegisters()
+        let link = create()
+        await eventually("open") { isOpen(link) }
+        _ = await link.invite(Self.kofi.id, name: "Ama", from: Self.ama, push: nil)
+        var declines = link.declines.makeAsyncIterator()
+        await RelayCall.tell(.decline(code: "K7M2QD", player: Self.kofi.id), dial: relay.dial)
+        let who = await declines.next()
+        #expect(who == Self.kofi.id)
+        link.close()
+    }
+
+    @Test func aGameThatHasClosedHasEndedAndIsNotAWrongCode() async {
+        let table = await seated()
+        await table.host.leave()
+        await eventually("the room is closed") { await !relay.hasRoom("K7M2QD") }
+        let late = join(install: "yaw")
+        await eventually("refused") { late.status == .refused(.ended) }
+    }
+
     // MARK: Leaving
 
     @Test func whenTheCreatorLeavesTheOtherIsToldAndTheRoomCloses() async {

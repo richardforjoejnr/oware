@@ -43,13 +43,29 @@ final class AppSettings {
     nonisolated static let onlineSwitchKey = "onlinePlaySwitch"
     /// This build has the Play online switch in Settings: builds from Xcode at once, TestFlight
     /// builds once the App Store has said which kind of build this is. Never an App Store build.
-    var offersOnlineSwitch = AppSettings.offersOnlineSwitch(in: .buildTime)
+    var offersOnlineSwitch = AppSettings.offersOnlineSwitch(in: .buildTime) {
+        didSet { onRelayStage?(chosenRelayStage) }
+    }
+    /// Settings ▸ Relay: which of the relay's stages online games go through. A build starts on
+    /// its own (dev from Xcode, prod from TestFlight). Only in builds with the Play online switch.
+    var relayStage: RelayStage {
+        didSet {
+            defaults.set(relayStage.rawValue, forKey: Self.relayStageKey)
+            onRelayStage?(chosenRelayStage)
+        }
+    }
+    nonisolated static let relayStageKey = "relayStage"
+    /// The stage to use in place of the build's own; nil in a build without the switch (an App
+    /// Store build ignores a choice made when the same phone had a TestFlight one).
+    var chosenRelayStage: RelayStage? { offersOnlineSwitch ? relayStage : nil }
+    /// Told whenever `chosenRelayStage` may have changed.
+    @ObservationIgnored var onRelayStage: ((RelayStage?) -> Void)?
     /// Play online is on Home: the feature is on for everyone, or switched on here.
     var showsOnlinePlay: Bool { Feature.showsOnlinePlay || (offersOnlineSwitch && onlinePlayOn) }
 
     /// TestFlight builds cannot be told from App Review's (`AppChannel.sandbox`), so App Review
     /// sees the switch too.
-    static func offersOnlineSwitch(in channel: AppChannel) -> Bool { channel != .appStore }
+    static func offersOnlineSwitch(in channel: AppChannel) -> Bool { Feature.offersTesterSwitches(in: channel) }
 
     /// Whether the board labels its houses: the setting, or always in lessons and riddles.
     /// A house label (its name, or its count) shows when switched on, or when the screen needs it.
@@ -124,6 +140,7 @@ final class AppSettings {
         soundEnabled = defaults.object(forKey: "soundEnabled") as? Bool ?? true
         showHouseLabels = defaults.object(forKey: "showHouseLabels") as? Bool ?? false
         onlinePlayOn = defaults.bool(forKey: Self.onlineSwitchKey)
+        relayStage = RelayStage(rawValue: defaults.string(forKey: Self.relayStageKey) ?? "") ?? OnlineConfig.buildStage
         grandSlamRule = RuleSet.GrandSlamRule(rawValue: defaults.string(forKey: "grandSlamRule") ?? "") ?? .forfeitCapture
         variant = RuleSet.Variant(rawValue: defaults.string(forKey: "rulesVariant") ?? "") ?? .namNam
         boardThemeID = defaults.string(forKey: "boardTheme") ?? BoardTheme.heritage.id

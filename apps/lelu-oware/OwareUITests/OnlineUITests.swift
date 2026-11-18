@@ -33,8 +33,11 @@ final class OnlineUITests: XCTestCase {
     func testStartAGameShareTheCodeAndPlay() {
         openOnline()
         XCTAssertFalse(app.buttons["btn-look-nearby"].exists, "no games nearby to look for online")
-        XCTAssertTrue(app.textFields["online-code-field"].exists, "a friend's code can be entered")
         XCTAssertEqual(app.buttons["btn-start-online"].label, "Invite a friend")
+        // The link is the way in; a code is the fallback, one tap away.
+        XCTAssertFalse(app.textFields["online-code-field"].exists, "the code box stays out of the way")
+        app.buttons["btn-join-with-code"].tap()
+        XCTAssertTrue(app.textFields["online-code-field"].waitForExistence(timeout: 3), "a friend's code can be entered")
         XCTAssertTrue(app.buttons["btn-paste-code"].exists, "a pasted invitation is taken too")
         app.buttons["btn-start-online"].tap()
 
@@ -44,7 +47,7 @@ final class OnlineUITests: XCTestCase {
         if code.waitForExistence(timeout: 5) {
             XCTAssertEqual(code.label, "Your code: K 7 M 2 Q D", "read out letter by letter")
             XCTAssertTrue(app.buttons["btn-share-code"].exists || ready.exists, "the invitation can be sent")
-            XCTAssertTrue(app.images["online-qr"].exists || ready.exists, "and scanned by a friend in the room")
+            XCTAssertFalse(app.images["online-qr"].exists, "no QR code: the link does the job")
         }
         XCTAssertTrue(ready.waitForExistence(timeout: 10), "Ama joins: Ready to play")
         let ama = app.descendants(matching: .any)["nearby-player-other"]
@@ -104,6 +107,7 @@ final class OnlineUITests: XCTestCase {
     /// A code that is not six of the letters and numbers used cannot be sent.
     func testJoinIsOfferedOnlyForSomethingThatCouldBeACode() {
         openOnline()
+        app.buttons["btn-join-with-code"].tap()
         let field = app.textFields["online-code-field"]
         let join = app.buttons["btn-join-online"]
         XCTAssertFalse(join.isEnabled)
@@ -117,6 +121,7 @@ final class OnlineUITests: XCTestCase {
     /// A code nobody has: a plain message, and Back to try again.
     func testAWrongCodeSaysSo() {
         openOnline()
+        app.buttons["btn-join-with-code"].tap()
         let field = app.textFields["online-code-field"]
         field.tap()
         field.typeText("ZZZZZZ")
@@ -175,5 +180,164 @@ final class OnlineUITests: XCTestCase {
         more.tap()
         XCTAssertTrue(app.buttons["btn-pass-play"].waitForExistence(timeout: 6))
         XCTAssertFalse(app.buttons["btn-online"].exists)
+    }
+
+    // MARK: A game that survives the app closing, and Not now to a rematch
+
+    private func wait(for element: XCUIElement, label: String, timeout: TimeInterval = 20) {
+        let shown = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", label), object: element)
+        XCTAssertEqual(XCTWaiter().wait(for: [shown], timeout: timeout), .completed,
+                       "\(element) never read \"\(label)\" (it reads \"\(element.label)\")")
+    }
+
+    /// Invite, Ama joins, both Ready: the game is on and it is your turn.
+    private func startAGameWithAma() {
+        openOnline()
+        app.buttons["btn-start-online"].tap()
+        let ready = app.buttons["btn-ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 10), "Ama joins: Ready to play")
+        let ama = app.descendants(matching: .any)["nearby-player-other"]
+        let amaReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == 'Ama, red side, Ready'"), object: ama)
+        XCTAssertEqual(XCTWaiter().wait(for: [amaReady], timeout: 10), .completed)
+        ready.tap()
+        let turn = app.staticTexts["turn-indicator"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 10))
+        wait(for: turn, label: "Your turn")
+    }
+
+    /// Sows your first house with seeds and waits until the turn has passed.
+    private func play() {
+        let houses = (1...6).map { app.buttons["house-A\($0)"] }
+        guard let house = houses.first(where: { $0.value as? String != "0 seeds" }) else { return XCTFail("no seeds to sow") }
+        house.tap()
+        let turn = app.staticTexts["turn-indicator"]
+        let passed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "Your turn"), object: turn)
+        XCTAssertEqual(XCTWaiter().wait(for: [passed], timeout: 15), .completed, "the turn never passed to Ama")
+    }
+
+    /// The app is closed in the middle of a game and opened again: Home offers the game, Rejoin
+    /// goes back to the same board, and play carries on. Then Leave game takes the card away.
+    func testAGameIsStillThereAfterTheAppIsClosed() {
+        startAGameWithAma()
+        play()
+        let turn = app.staticTexts["turn-indicator"]
+        wait(for: turn, label: "Your turn")
+        XCTAssertEqual(app.buttons["house-A1"].value as? String, "0 seeds", "A1 was sown")
+        app.terminate()
+
+        // Opened again from the icon: nothing is reset.
+        app.launchArguments = ["--fast-animations", "--rules=abapa", "--online-demo"]
+        app.launch()
+        let rejoin = app.buttons["btn-rejoin"]
+        XCTAssertTrue(rejoin.waitForExistence(timeout: 10), "Home offers the game")
+        XCTAssertTrue(rejoin.label.contains("Your game with Ama"), rejoin.label)
+        XCTAssertTrue(app.buttons["btn-leave-saved"].exists)
+        rejoin.tap()
+
+        XCTAssertTrue(turn.waitForExistence(timeout: 15), "the board opens")
+        XCTAssertEqual(app.buttons["house-A1"].value as? String, "0 seeds", "the game as it was, not a new one")
+        wait(for: turn, label: "Your turn")
+        play()
+        wait(for: turn, label: "Your turn")   // Ama is there and answers
+
+        // Closed again, and this time the game is left for good.
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(rejoin.waitForExistence(timeout: 10))
+        app.buttons["btn-leave-saved"].tap()
+        // Asked first: the dialog's own Leave game, not the one on the card.
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Leave game' AND identifier != 'btn-leave-saved'")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "leaving for good is confirmed")
+        confirm.tap()
+        XCTAssertTrue(rejoin.waitForNonExistence(timeout: 5), "nothing to rejoin")
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["btn-more"].waitForExistence(timeout: 10))
+        XCTAssertFalse(rejoin.exists, "and it stays gone")
+    }
+
+    /// After a game with Ama she is under Recent players, and Play again asks her to a new game
+    /// with no link sent. Remove takes her off the list.
+    func testSomeonePlayedIsListedAndPlayAgainAsksThem() {
+        openOnline()
+        XCTAssertTrue(app.staticTexts["recent-empty"].exists, "nobody played yet")
+        XCTAssertTrue(app.buttons["btn-invitations-on"].exists, "invitations are off until asked for")
+        app.buttons["btn-start-online"].tap()
+        let ready = app.buttons["btn-ready"]
+        XCTAssertTrue(ready.waitForExistence(timeout: 10), "Ama joins: Ready to play")
+        ready.tap()
+        let turn = app.staticTexts["turn-indicator"]
+        XCTAssertTrue(turn.waitForExistence(timeout: 15))
+        wait(for: turn, label: "Your turn")
+        app.terminate()
+
+        // Opened again: the game is left, and Ama is remembered.
+        app.launchArguments = ["--fast-animations", "--rules=abapa", "--online-demo"]
+        app.launch()
+        let leave = app.buttons["btn-leave-saved"]
+        XCTAssertTrue(leave.waitForExistence(timeout: 10))
+        leave.tap()
+        let confirm = app.buttons.matching(NSPredicate(format: "label == 'Leave game' AND identifier != 'btn-leave-saved'")).firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        confirm.tap()
+        XCTAssertTrue(leave.waitForNonExistence(timeout: 5))
+
+        let more = app.buttons["btn-more"], online = app.buttons["btn-online"]
+        for _ in 0..<2 where !online.exists {
+            if !more.isHittable { app.swipeUp() }
+            more.tap()
+            if online.waitForExistence(timeout: 6) { break }
+        }
+        if !online.isHittable { app.swipeUp() }
+        online.tap()
+        let again = app.buttons["btn-play-again-Ama"]
+        XCTAssertTrue(again.waitForExistence(timeout: 5), "Ama is under Recent players")
+        XCTAssertEqual(again.label, "Play Ama again")
+        XCTAssertFalse(app.staticTexts["recent-empty"].exists)
+        again.tap()
+        XCTAssertTrue(ready.waitForExistence(timeout: 15), "she was asked and joined: Ready to play")
+        let ama = app.descendants(matching: .any)["nearby-player-other"]
+        XCTAssertTrue(ama.label.hasPrefix("Ama, red side"), ama.label)
+
+        // Back out, and take her off the list.
+        app.buttons["btn-cancel"].firstMatch.tap()
+        let menu = app.buttons["btn-recent-more-Ama"]
+        XCTAssertTrue(menu.waitForExistence(timeout: 5))
+        menu.tap()
+        app.buttons["Remove from list"].tap()
+        XCTAssertTrue(again.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["recent-empty"].exists)
+    }
+
+    /// Ama asks for a rematch: you see who asked, and can say Not now. She does not ask again;
+    /// you may ask later, and then the next game starts.
+    func testNotNowToARematchAndAskingLater() {
+        app.launchArguments += ["--demo-resign-after=1"]
+        startAGameWithAma()
+        play()
+        let turn = app.staticTexts["turn-indicator"]
+        wait(for: turn, label: "Your turn")
+        play()   // Ama resigns on her second turn
+
+        let title = app.staticTexts["game-over-title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 15))
+        let request = app.staticTexts["rematch-request"]
+        XCTAssertTrue(request.waitForExistence(timeout: 10), "Ama asks")
+        XCTAssertEqual(request.label, "Ama wants a rematch")
+        XCTAssertTrue(app.buttons["btn-rematch"].exists)
+        let notNow = app.buttons["btn-rematch-not-now"]
+        XCTAssertEqual(notNow.label, "Not now")
+        notNow.tap()
+
+        XCTAssertTrue(request.waitForNonExistence(timeout: 5), "the request is gone")
+        XCTAssertFalse(notNow.exists, "nothing left to answer")
+        // Longer than she takes to think: she does not ask again, and no game starts by itself.
+        XCTAssertFalse(request.waitForExistence(timeout: 4), "Ama asked again after Not now")
+        XCTAssertTrue(title.exists, "the finished game is still showing")
+
+        let rematch = app.buttons["btn-rematch"]
+        XCTAssertTrue(rematch.exists, "you may ask later")
+        rematch.tap()
+        XCTAssertTrue(title.waitForNonExistence(timeout: 10), "Ama agrees, and the next game starts")
     }
 }

@@ -49,7 +49,16 @@ struct RelayMessageTests {
         #expect(try request("roll") == .roll)
         #expect(try request("leave") == .leave)
         #expect(try request("ping") == .ping)
-        #expect(Self.toRelay.count == 10, "an example was added: say here what it means")
+        // Players who may be invited again: a player number, and a secret only the relay is told.
+        let player = "7c1d0e9f8a7b6c5d4e3f2a1b0c9d8e7f", kofi = "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+        let secret = "Wq8nZ2rT5yLk3vB7xM1cP9dG4hJ6sF0a"
+        let push = RelayRequest.Push(token: "9f1c2a7b3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5061728394a5b6c7d8e", env: .production)
+        #expect(try request("register") == .register(game: "oware", player: player, secret: secret, push: push))
+        #expect(try request("register-without-push") == .register(game: "oware", player: player, secret: secret, push: nil))
+        #expect(try request("invite") == .invite(player: player, secret: secret, to: kofi, name: "Ama"))
+        #expect(try request("block") == .block(game: "oware", player: player, secret: secret, who: kofi, on: true))
+        #expect(try request("decline") == .decline(code: "K7M2QD", player: kofi))
+        #expect(Self.toRelay.count == 15, "an example was added: say here what it means")
     }
 
     @Test func eventsSayWhatTheExamplesSay() throws {
@@ -68,7 +77,13 @@ struct RelayMessageTests {
         for reason in reasons {
             #expect(try event("refused-\(reason.rawValue)") == .refused(reason))
         }
-        #expect(Self.fromRelay.count == 8 + reasons.count, "an example was added: say here what it means")
+        let kofi = "1a2b3c4d5e6f708192a3b4c5d6e7f809"
+        #expect(try event("registered") == .registered)
+        #expect(try event("invited") == .invited(to: kofi))
+        #expect(try event("blocked") == .blocked(who: kofi, on: true))
+        #expect(try event("declined") == .declined(player: kofi))
+        #expect(reasons.contains(.ended) && reasons.contains(.unreachable))
+        #expect(Self.fromRelay.count == 12 + reasons.count, "an example was added: say here what it means")
     }
 
     /// A newer relay may say things this app has never heard of. They are passed over, not a crash

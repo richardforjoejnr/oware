@@ -74,6 +74,14 @@ final class GameSession {
     private(set) var isOutOfStep = false
     /// Who has asked for another game after this one.
     private(set) var rematchAsked: Set<Player> = []
+    /// Who said not now to the last request, and whose request lapsed unanswered.
+    private(set) var rematchDeclinedBy: Player?
+    private(set) var rematchLapsedFor: Player?
+    /// Online: the game is kept here after every snapshot, so it survives the app closing
+    /// (docs/ONLINE_PLAY.md §5). Nil for nearby play, and in tests that do not ask for it.
+    var onlineSaves: OnlineSaves?
+    /// Online: the game is no longer there to go back to (it expired, or was closed).
+    private(set) var gameEnded = false
     /// The speed both phones sow at (the slower of the two); nil when this phone plays alone.
     private(set) var sharedPace: Double?
     /// Guest: why the host's phone said no.
@@ -99,8 +107,32 @@ final class GameSession {
     /// The game on two phones is over and this phone has not yet asked for another.
     var canAskRematch: Bool {
         guard link != nil, let game = remoteGame, state.isOver, !isAnimating else { return false }
-        return !opponentGone && !rematchAsked.contains(game.mySide)
+        return !opponentGone && !isReconnecting && !rematchAsked.contains(game.mySide)
     }
+    /// The other player has asked for another game and is still there: Rematch or Not now.
+    var canAnswerRematch: Bool {
+        guard canAskRematch, let game = remoteGame else { return false }
+        return rematchAsked.contains(game.mySide.opponent)
+    }
+    /// "Kofi wants a rematch", while there is a request to answer.
+    var rematchRequest: String? {
+        canAnswerRematch ? "\(opponentName) wants a rematch" : nil
+    }
+    /// What became of this phone's last request for a rematch, for the player who made it.
+    var rematchNote: String? {
+        guard let game = remoteGame, state.isOver, rematchAsked.isEmpty else { return nil }
+        return Self.rematchNote(declinedBy: rematchDeclinedBy, lapsedFor: rematchLapsedFor, mySide: game.mySide, opponentName: opponentName)
+    }
+
+    static func rematchNote(declinedBy: Player?, lapsedFor: Player?, mySide: Player, opponentName: String) -> String? {
+        if declinedBy == mySide.opponent { return "\(opponentName) said not now" }
+        if lapsedFor == mySide { return "\(opponentName) did not answer. You can ask again." }
+        return nil
+    }
+    /// Online, after a long silence: the other player's seat is kept, so waiting on is a choice.
+    var keepsSeatWhileWaiting: Bool { link?.room.timing.keepsSeats ?? false }
+    /// Asked what to do about the silence, Keep waiting is one of the answers.
+    var canKeepWaiting: Bool { offersComputer && keepsSeatWhileWaiting && !opponentLeft && !gameEnded }
 
     init(store: GameStore = .shared) {
         self.store = store
@@ -667,17 +699,24 @@ final class GameSession {
         resultRecorded = false
         previewMove = nil
         roundMessage = nil
-        isReconnecting = false
+        // Back in a saved game, the other phone has not been heard from yet.
+        let theirSeat = link.room.mySeat == 0 ? 1 : 0
+        isReconnecting = link.room.seats[theirSeat]?.isReconnecting ?? false
         offersComputer = false
         opponentGone = false
         opponentLeft = false
+        gameEnded = false
         isStarted = link.table?.isStarted ?? false
         isOutOfStep = link.table?.isOutOfStep ?? false
-        rematchAsked = []
+        rematchAsked = link.table?.rematchAsked ?? []
+        rematchDeclinedBy = link.table?.rematchDeclinedBy
+        rematchLapsedFor = link.table?.rematchLapsedFor
         sharedPace = link.table?.sharedPace
         refusal = nil
         link.onEvent = { [weak self] in self?.handle($0) }
         animator?.render(state)
+        // The snapshot that started the game came before this session had the link.
+        keepOnlineGame()
     }
 
     /// Asks for another game once this one is over; it starts when both have asked.
@@ -686,12 +725,52 @@ final class GameSession {
         Task { await link.send(.rematch) }
     }
 
+    /// Not now, to the other player's request for another game. They are told, and may ask again.
+    func declineRematch() {
+        guard let link, canAnswerRematch else { return }
+        Task { await link.declineRematch() }
+    }
+
+    /// Online, asked what to do after a long silence: keep waiting. The seat is the other
+    /// player's still, and the question comes again if they stay away.
+    func keepWaiting() {
+        guard canKeepWaiting else { return }
+        offersComputer = false
+        opponentGone = false
+        isReconnecting = true
+    }
+
+    /// Online: the game cannot be gone back to (the relay no longer has it). Nothing to wait for:
+    /// the player may carry on against the computer, or leave.
+    func onlineGameEnded() {
+        guard link != nil, remoteGame?.via == .online else { return }
+        onlineSaves?.clear()
+        gameEnded = true
+        isReconnecting = false
+        opponentGone = true
+        offersComputer = !state.isOver
+    }
+
+    /// Online: keeps the game as it now stands, or removes it once there is nothing to come back to.
+    private func keepOnlineGame() {
+        guard let onlineSaves, let link, let game = remoteGame, game.via == .online, let table = link.table else { return }
+        let isOver = (try? table.match.state().isOver) ?? true
+        guard table.isStarted, !isOver else {
+            // Finished (a rematch is saved when it starts). Before the start there is nothing yet.
+            if table.isStarted || table.isOutOfStep { onlineSaves.clear() }
+            return
+        }
+        guard let relay = link.relaySeat?(), let room = link.room.save else { return }
+        onlineSaves.save(OnlineSave(relay: relay, room: room, table: table, opponentName: game.opponentName))
+    }
+
     /// The other phone has gone: carry on from this position against the computer, as an
     /// ordinary game.
     func finishAgainstComputer(difficulty: Difficulty = .player) {
         guard offersComputer, let game = remoteGame else { return }
         events.nearbyDropped(finishedAgainstComputer: true)
-        link?.room.stop()
+        if game.via == .online { onlineSaves?.clear() }
+        link?.stop()
         link = nil
         interrupt()
         mode = .versusAI(difficulty: difficulty, personality: .balanced, humanPlays: game.mySide)
@@ -726,6 +805,8 @@ final class GameSession {
         latestMatch = nil
         hostMatch = nil
         guard let link else { return }
+        // Leaving an online game for good: it is not kept for later.
+        if remoteGame?.via == .online { onlineSaves?.clear() }
         self.link = nil
         link.onEvent = nil
         Task { await link.leave() }
@@ -733,11 +814,14 @@ final class GameSession {
 
     /// Spoken when the other phone drops, comes back or goes: the banners appear without a sound.
     static func connectionAnnouncement(for event: RoomEvent<OwareTable>, mySeat: Int?, opponentName: String,
-                                       gameOver: Bool) -> String? {
+                                       gameOver: Bool, keepsSeat: Bool = false) -> String? {
         let choice = gameOver ? "" : " Play the computer, or leave."
         switch event {
         case let .reconnecting(seat) where seat != mySeat: return "Reconnecting to \(opponentName)."
         case let .back(seat) where seat != mySeat: return "\(opponentName) is back."
+        case let .seatLost(seat) where seat != mySeat && keepsSeat:
+            // Online the game is kept: waiting on is a choice too.
+            return "Connection lost. Still trying to reach \(opponentName)." + (gameOver ? "" : " Keep waiting, play the computer, or leave.")
         case let .seatLost(seat) where seat != mySeat: return "\(opponentName)'s phone has gone." + choice
         case let .left(seat) where seat != mySeat: return "\(opponentName) left the game." + choice
         default: return nil
@@ -747,7 +831,8 @@ final class GameSession {
     private func handle(_ event: RoomEvent<OwareTable>) {
         guard let link, case .remote = mode else { return }
         let mySeat = link.room.mySeat
-        if let text = Self.connectionAnnouncement(for: event, mySeat: mySeat, opponentName: opponentName, gameOver: state.isOver) {
+        if let text = Self.connectionAnnouncement(for: event, mySeat: mySeat, opponentName: opponentName, gameOver: state.isOver,
+                                                  keepsSeat: keepsSeatWhileWaiting) {
             Self.announce(text)
         }
         switch event {
@@ -755,20 +840,34 @@ final class GameSession {
             if let side = link.mySide {
                 mode = .remote(RemoteGame(mySide: side, opponentName: link.opponentName ?? "", via: remoteGame?.via ?? .nearby))
             }
+            keepOnlineGame()
         case let .snapshot(table):
+            let noteBefore = rematchNote, requestBefore = rematchRequest
             rematchAsked = table.rematchAsked
+            rematchDeclinedBy = table.rematchDeclinedBy
+            rematchLapsedFor = table.rematchLapsedFor
             sharedPace = table.sharedPace
             isStarted = table.isStarted
             isOutOfStep = table.isOutOfStep
             take(table.match)
             sync()
+            keepOnlineGame()
+            if let said = rematchNote ?? rematchRequest, rematchNote != noteBefore || rematchRequest != requestBefore { Self.announce(said) }
         case let .reconnecting(seat):
             if seat != mySeat { isReconnecting = true }
             if aheadMatch != nil { askAgain = true }
         case let .back(seat):
-            if seat != mySeat { isReconnecting = false }
+            if seat != mySeat {
+                isReconnecting = false
+                // Online the seat was kept through a long silence: the game is on again.
+                if !opponentLeft, !gameEnded {
+                    opponentGone = false
+                    offersComputer = false
+                }
+            }
             // Back with the host, whose match may be just as it was: no snapshot follows then.
             sendAgainIfLost()
+            keepOnlineGame()
         case let .seatLost(seat):
             guard seat != mySeat else { return }
             isReconnecting = false
@@ -780,6 +879,8 @@ final class GameSession {
             opponentGone = true
             opponentLeft = true
             offersComputer = !state.isOver
+            // Nobody to carry on with.
+            if remoteGame?.via == .online { onlineSaves?.clear() }
         case let .refused(reason):
             refusal = reason
         case let .joinRequest(peer, _):

@@ -25,6 +25,9 @@ final class NearbyUITests: XCTestCase {
         }
         if !nearby.isHittable { app.swipeUp() }
         nearby.tap()
+        // The screens cross-fade: a tap made before Home has gone can land on it and be lost.
+        XCTAssertTrue(app.staticTexts["nearby-title"].waitForExistence(timeout: 5))
+        XCTAssertTrue(more.waitForNonExistence(timeout: 5), "Home has gone")
     }
 
     private func wait(for element: XCUIElement, label: String, timeout: TimeInterval = 15) {

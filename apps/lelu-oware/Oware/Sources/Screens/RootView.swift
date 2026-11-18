@@ -19,6 +19,7 @@ struct RootView: View {
     @Environment(RiddleReminder.self) private var reminder
     @Environment(NearbyLobby.self) private var lobby
     @Environment(OnlinePlay.self) private var online
+    @Environment(Invitations.self) private var invitations
     @Environment(\.scenePhase) private var scenePhase
     /// Nearby with the demo player (Settings ▸ Try nearby play) rather than real phones.
     @State private var nearbyDemo = false
@@ -42,6 +43,14 @@ struct RootView: View {
     /// Straight to Ready to play in the game the link is for. Ignored while Play online is hidden.
     private func openInvitation(_ url: URL) {
         guard settings.showsOnlinePlay else { return }
+        // The game saved on this phone: the same as Rejoin on Home, where it says how it goes.
+        if online.rejoins(link: url) {
+            online.rejoin(pace: settings.effectiveSpeed)
+            showSettings = false
+            showSplash = false
+            screen = .home
+            return
+        }
         guard online.open(link: url, name: NearbyLobby.myName, pace: settings.effectiveSpeed) else { return }
         showSettings = false
         showSplash = false
@@ -118,6 +127,27 @@ struct RootView: View {
         // An invitation to an online game: tapped in a message (a universal link), or the join
         // page's "Open in Lelu Oware" button (leluoware://join?c=…).
         .onOpenURL { openInvitation($0) }
+        // An invitation to play again: its notification was tapped (also the one that opened the app).
+        .onChange(of: invitations.tapped, initial: true) { _, link in
+            guard let link else { return }
+            invitations.tapped = nil
+            openInvitation(link)
+        }
+        // The same invitation arriving while the app is open: asked here, not as a banner.
+        .overlay(alignment: .top) {
+            if settings.showsOnlinePlay, let invitation = invitations.incoming {
+                InvitationBanner(name: invitation.name,
+                                 join: { if let link = invitations.join() { openInvitation(link) } },
+                                 notNow: { Task { await invitations.notNow() } })
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: invitations.incoming)
+        // Each launch: with invitations on, Apple is asked for the phone's token again.
+        // (A TestFlight build learns a moment after launch that it offers Play online.)
+        .task(id: settings.showsOnlinePlay) { if settings.showsOnlinePlay { await invitations.started() } }
         .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
             if let url = activity.webpageURL { openInvitation(url) }
         }
@@ -149,5 +179,35 @@ struct RootView: View {
                 }
             }
         }
+    }
+}
+
+/// "Ama wants to play", over whatever screen is showing, with Join and Not now.
+struct InvitationBanner: View {
+    let name: String
+    let join: () -> Void
+    let notNow: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("\(name) wants to play")
+                .font(Theme.body(19))
+                .foregroundStyle(Theme.ivory)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("invitation-title")
+            HStack(spacing: 12) {
+                Button("Join", action: join)
+                    .buttonStyle(NearbyButtonStyle(.primary))
+                    .accessibilityIdentifier("btn-invitation-join")
+                Button("Not now", action: notNow)
+                    .buttonStyle(NearbyButtonStyle(.secondary))
+                    .accessibilityIdentifier("btn-invitation-not-now")
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: 520, alignment: .leading)
+        .background(Theme.ember, in: RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Theme.gold.opacity(0.6)))
+        .shadow(color: .black.opacity(0.4), radius: 12, y: 4)
     }
 }

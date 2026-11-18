@@ -24,10 +24,15 @@ Every message is an envelope:
 | `intent` | Any other phone | `intent`: what it asks for, in the game's own form |
 | `snapshot` | The phone in charge | `snapshot`: the whole match, in the game's own form |
 | `ping`, `bye` | Anyone | nothing |
+| `player` | Any phone that has a player number, once seated | `player`: its player number (see [relay-v1](../relay-v1/README.md)) |
 
-- A missing optional is left out, never `null` (`rejoin`, `stateHash`, `resignedBy`).
+- A missing optional is left out, never `null` (`rejoin`, `stateHash`, `resignedBy`,
+  `rematchDeclinedBy`, `rematchLapsedFor`).
 - Tokens and match ids are UUIDs. Swift writes capitals and reads either case.
 - Key order is free.
+- `player` was added to version 2 on 2026-11-18. A phone that does not know it drops the message
+  and plays on (as TestFlight builds 1.0.10 to 1.0.12 do); neither phone then lists the other
+  under Recent players.
 
 ## Lelu Oware (`oware/`)
 
@@ -41,8 +46,30 @@ The match is an `OwareTable` and an intent is a `TableIntent`
 - `stateHash` is `GameState.fingerprint` of the position after `houses` (and `resignedBy`).
 - `houses` are the houses played, 0–11, in order. There is no board in the message: each phone
   replays the moves through its own rules.
-- An intent is one object with a `type`: `play` (`house`), `resign`, `rematch`, `pace` (`pace`,
-  seconds), `ready` (`stateHash`).
+- An intent is one object with a `type`: `play` (`house`), `resign`, `rematch`, `declineRematch`,
+  `pace` (`pace`, seconds), `ready` (`stateHash`).
+
+### Rematch: asked, declined, lapsed
+
+Added to version 2 on 2026-11-18, before any App Store build spoke it (TestFlight builds 1.0.10
+to 1.0.12 did; see below).
+
+- `rematch` puts the asker in `rematchAsked`. When both are in it the phone in charge starts the
+  next game and empties the list.
+- `declineRematch` is the other player's "Not now". The phone in charge empties `rematchAsked`,
+  sets `rematchDeclinedBy` to whoever declined and adds one to `rematchRound`. It changes nothing
+  unless the other player, and only the other player, has asked.
+- A request nobody answers for 60 seconds lapses: the phone in charge empties `rematchAsked`, sets
+  `rematchLapsedFor` to whoever asked and adds one to `rematchRound`. No message asks for this.
+- The next `rematch` removes `rematchDeclinedBy` and `rematchLapsedFor`.
+- `rematchRound` counts requests that ended without a game. For the same match, a snapshot with a
+  higher `rematchRound` is newer, though fewer players are asking in it. It is left out while 0,
+  and a table without it reads as 0.
+
+A phone on a build from before this (it can only be a TestFlight one) still plays whole games
+with a newer phone, and a rematch both players ask for still starts. It has no Not now button;
+it drops a `declineRematch` it is sent (a message it cannot read is ignored); and it does not
+take a snapshot in which a request has ended, so it goes on showing its own request as waiting.
 
 ## Version 1
 

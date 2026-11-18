@@ -46,6 +46,19 @@ public enum RelayRequest: Sendable, Equatable {
     /// The room message was not UTF-8 text, so it cannot ride inside `data`.
     public struct NotText: Error, Equatable {}
 
+    /// Where a notification for this phone goes: its token from Apple, and which of Apple's two
+    /// services gave it (`sandbox` for a build run from Xcode, `production` for every other).
+    public struct Push: Codable, Sendable, Equatable {
+        public enum Env: String, Codable, Sendable { case sandbox, production }
+        public var token: String
+        public var env: Env
+
+        public init(token: String, env: Env) {
+            self.token = token
+            self.env = env
+        }
+    }
+
     case create(game: Game, seats: Int, install: String, proof: Proof?)
     case join(code: String, game: Game, install: String)
     /// Takes the same seat back with the token from `room`.
@@ -56,6 +69,16 @@ public enum RelayRequest: Sendable, Equatable {
     case roll
     case leave
     case ping
+    /// This phone may be invited again: `player` is its player number, which other phones are
+    /// given; `secret` proves later messages come from the same phone and is told only to the
+    /// relay. Without `push` the phone cannot be notified.
+    case register(game: String, player: String, secret: String, push: Push?)
+    /// From the phone that made the room: notify `to` that `name` wants to play, with this room's code.
+    case invite(player: String, secret: String, to: String, name: String)
+    /// `on`: invitations from `who` are refused from now on. Off undoes it.
+    case block(game: String, player: String, secret: String, who: String, on: Bool)
+    /// "Not now" to an invitation: the phone waiting in that room is told.
+    case decline(code: String, player: String)
 
     /// A room message as it comes from `Room`: JSON bytes.
     public static func data(_ message: Data, to peer: PeerID?) throws -> RelayRequest {
@@ -86,6 +109,10 @@ public enum RelayEvent: Sendable, Equatable {
         case needsUnlock
         /// Too many rooms or wrong codes from this phone or network.
         case tooMany
+        /// The room was there but has closed or run out of time.
+        case ended
+        /// The player invited cannot be notified (the relay does not say why).
+        case unreachable
         /// The relay could not read the message.
         case invalid
         /// A reason from a newer relay.
@@ -100,6 +127,12 @@ public enum RelayEvent: Sendable, Equatable {
     case rolled(n: Int, value: Int)
     case refused(Refusal)
     case pong
+    case registered
+    /// The notification is on its way to that player.
+    case invited(to: String)
+    case blocked(who: String, on: Bool)
+    /// That player said "Not now" to the invitation.
+    case declined(player: String)
     /// Something a newer relay says. Passed over.
     case unknown(String)
 }
@@ -109,6 +142,7 @@ public enum RelayEvent: Sendable, Equatable {
 private enum Key: String, CodingKey {
     case type, v, game, `protocol`, format, seats, install, proof, code, token, to, from, data
     case peer, peers, state, n, value, reason
+    case player, secret, push, name, who, on
 }
 
 extension RelayRequest: Codable {
@@ -135,6 +169,18 @@ extension RelayRequest: Codable {
         case "roll": self = .roll
         case "leave": self = .leave
         case "ping": self = .ping
+        case "register":
+            self = .register(game: try c.decode(String.self, forKey: .game), player: try c.decode(String.self, forKey: .player),
+                             secret: try c.decode(String.self, forKey: .secret), push: try c.decodeIfPresent(Push.self, forKey: .push))
+        case "invite":
+            self = .invite(player: try c.decode(String.self, forKey: .player), secret: try c.decode(String.self, forKey: .secret),
+                           to: try c.decode(String.self, forKey: .to), name: try c.decode(String.self, forKey: .name))
+        case "block":
+            self = .block(game: try c.decode(String.self, forKey: .game), player: try c.decode(String.self, forKey: .player),
+                          secret: try c.decode(String.self, forKey: .secret), who: try c.decode(String.self, forKey: .who),
+                          on: try c.decode(Bool.self, forKey: .on))
+        case "decline":
+            self = .decline(code: try c.decode(String.self, forKey: .code), player: try c.decode(String.self, forKey: .player))
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown request \(type)")
         }
@@ -172,6 +218,33 @@ extension RelayRequest: Codable {
         case .roll: try c.encode("roll", forKey: .type)
         case .leave: try c.encode("leave", forKey: .type)
         case .ping: try c.encode("ping", forKey: .type)
+        case let .register(game, player, secret, push):
+            try c.encode("register", forKey: .type)
+            try c.encode(Relay.version, forKey: .v)
+            try c.encode(game, forKey: .game)
+            try c.encode(player, forKey: .player)
+            try c.encode(secret, forKey: .secret)
+            try c.encodeIfPresent(push, forKey: .push)
+        case let .invite(player, secret, to, name):
+            try c.encode("invite", forKey: .type)
+            try c.encode(Relay.version, forKey: .v)
+            try c.encode(player, forKey: .player)
+            try c.encode(secret, forKey: .secret)
+            try c.encode(to, forKey: .to)
+            try c.encode(name, forKey: .name)
+        case let .block(game, player, secret, who, on):
+            try c.encode("block", forKey: .type)
+            try c.encode(Relay.version, forKey: .v)
+            try c.encode(game, forKey: .game)
+            try c.encode(player, forKey: .player)
+            try c.encode(secret, forKey: .secret)
+            try c.encode(who, forKey: .who)
+            try c.encode(on, forKey: .on)
+        case let .decline(code, player):
+            try c.encode("decline", forKey: .type)
+            try c.encode(Relay.version, forKey: .v)
+            try c.encode(code, forKey: .code)
+            try c.encode(player, forKey: .player)
         }
     }
 }
@@ -198,6 +271,10 @@ extension RelayEvent: Codable {
         case "refused":
             self = .refused(Refusal(rawValue: try c.decode(String.self, forKey: .reason)) ?? .other)
         case "pong": self = .pong
+        case "registered": self = .registered
+        case "invited": self = .invited(to: try c.decode(String.self, forKey: .to))
+        case "blocked": self = .blocked(who: try c.decode(String.self, forKey: .who), on: try c.decode(Bool.self, forKey: .on))
+        case "declined": self = .declined(player: try c.decode(String.self, forKey: .player))
         default: self = .unknown(type)
         }
     }
@@ -227,6 +304,17 @@ extension RelayEvent: Codable {
             try c.encode("refused", forKey: .type)
             try c.encode(reason.rawValue, forKey: .reason)
         case .pong: try c.encode("pong", forKey: .type)
+        case .registered: try c.encode("registered", forKey: .type)
+        case let .invited(to):
+            try c.encode("invited", forKey: .type)
+            try c.encode(to, forKey: .to)
+        case let .blocked(who, on):
+            try c.encode("blocked", forKey: .type)
+            try c.encode(who, forKey: .who)
+            try c.encode(on, forKey: .on)
+        case let .declined(player):
+            try c.encode("declined", forKey: .type)
+            try c.encode(player, forKey: .player)
         case let .unknown(type): try c.encode(type, forKey: .type)
         }
     }

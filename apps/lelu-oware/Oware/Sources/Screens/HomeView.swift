@@ -11,6 +11,7 @@ struct HomeView: View {
     @Environment(JourneyProgress.self) private var progress
     @Environment(AppSettings.self) private var settings
     @Environment(TipJar.self) private var tipJar
+    @Environment(OnlinePlay.self) private var online
     let startGame: () -> Void
     let openPuzzles: () -> Void
     let openHeritage: () -> Void
@@ -25,6 +26,7 @@ struct HomeView: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showLevels = false
     @State private var showTipJar = false
+    @State private var confirmLeaveSaved = false
     @Environment(\.openURL) private var openURL
 
     private var difficulty: Difficulty { (Difficulty(rawValue: preferredDifficulty) ?? .beginner).menuLevel }
@@ -135,6 +137,7 @@ struct HomeView: View {
     /// Continue/Play, the 2×2 grid, the More rows and Support me (or Feedback) — shared by both orientations.
     private var controls: some View {
         VStack(spacing: 14) {
+            rejoinCard
             primary
             grid
             if showMore {
@@ -184,6 +187,75 @@ struct HomeView: View {
         .background {
             Ellipse().fill(Theme.night.opacity(0.5)).blur(radius: 28).padding(-24)
                 .accessibilityHidden(true)
+        }
+    }
+
+    // MARK: - Rejoin
+
+    /// An online game from before the app was closed (docs/ONLINE_PLAY.md §5): back to it, or
+    /// leave it for good. If it cannot be rejoined, why, in its place.
+    @ViewBuilder
+    private var rejoinCard: some View {
+        if settings.showsOnlinePlay {
+            if let saved = online.saved {
+                VStack(spacing: 6) {
+                    WoodPlank(title: "Rejoin", subtitle: OnlinePlay.rejoinTitle(saved), glyph: "people", height: 64) {
+                        online.rejoin(pace: settings.effectiveSpeed)
+                    }
+                    .disabled(online.rejoining == .connecting)
+                    .accessibilityIdentifier("btn-rejoin")
+                    if online.rejoining == .connecting {
+                        HStack(spacing: 8) {
+                            WaitingMark()
+                            Text("Rejoining…")
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.onPhoto)
+                        .frame(minHeight: 32)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("rejoin-status")
+                    }
+                    rejoinProblem
+                    Button("Leave game") { confirmLeaveSaved = true }
+                        .buttonStyle(.plain)
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.onPhoto)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                        .accessibilityIdentifier("btn-leave-saved")
+                }
+                .confirmationDialog("Leave the game?", isPresented: $confirmLeaveSaved, titleVisibility: .visible) {
+                    Button("Leave game", role: .destructive) { online.leaveSaved() }
+                    Button("Keep it", role: .cancel) {}
+                } message: {
+                    Text("\(saved.opponentName) will see that you have left. The game can't be picked up again.")
+                }
+            } else if case .failed = online.rejoining {
+                VStack(spacing: 4) {
+                    rejoinProblem
+                    Button("OK") { online.dismissRejoinProblem() }
+                        .buttonStyle(.plain)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.brass)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
+                        .accessibilityIdentifier("btn-rejoin-problem-ok")
+                }
+            }
+        }
+    }
+
+    /// Why the saved game could not be rejoined.
+    @ViewBuilder
+    private var rejoinProblem: some View {
+        if case let .failed(message) = online.rejoining {
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(Theme.bone)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(minHeight: 32)
+                .accessibilityIdentifier("rejoin-problem")
         }
     }
 

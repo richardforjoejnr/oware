@@ -533,19 +533,34 @@ struct GameView: View {
         goHome()
     }
 
+    /// What the sheet says when the other phone has gone.
+    private var goneTitle: String {
+        if session.gameEnded { return "This game has ended" }
+        if session.opponentLeft { return "\(session.opponentName) left the game" }
+        return session.canKeepWaiting ? "Connection lost" : "\(session.opponentName)'s phone has gone"
+    }
+
     /// The other phone has gone quiet (a banner), or gone for good (finish against the computer).
+    /// Online a long silence does not end the game: the player may keep waiting.
     @ViewBuilder private var connectionNotice: some View {
         if session.offersComputer {
             VStack(spacing: 14) {
-                Text(session.opponentLeft ? "\(session.opponentName) left the game" : "\(session.opponentName)'s phone has gone")
+                Text(goneTitle)
                     .font(Theme.title(26))
                     .accessibilityIdentifier("nearby-gone")
-                Text("Carry on against the computer from here.")
+                Text(session.canKeepWaiting
+                     ? "Still trying to reach \(session.opponentName). Your game is kept, even if you close the app."
+                     : "Carry on against the computer from here.")
                     .font(Theme.caption(15))
                     .foregroundStyle(Theme.ivoryDim)
                     .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("nearby-gone-detail")
                 VStack(spacing: 4) {
-                    QuietButton(title: "Play the computer", prominent: true) { session.finishAgainstComputer() }
+                    if session.canKeepWaiting {
+                        QuietButton(title: "Keep waiting", prominent: true) { session.keepWaiting() }
+                            .accessibilityIdentifier("btn-keep-waiting")
+                    }
+                    QuietButton(title: "Play the computer", prominent: !session.canKeepWaiting) { session.finishAgainstComputer() }
                         .accessibilityIdentifier("btn-finish-computer")
                     QuietButton(title: "Leave") { leaveGame() }
                         .accessibilityIdentifier("btn-leave-nearby")
@@ -706,9 +721,9 @@ struct UsageStatsQuestion: View {
 }
 
 extension GameOverOverlay {
-    /// Two phones: both tap Rematch, and the other player starts the next game.
+    /// Two phones: both tap Rematch, and the other player starts the next game. Asked by the
+    /// other player, you answer Rematch or Not now; told not now, or not answered, you may ask again.
     func rematch(_ game: RemoteGame) -> some View {
-        let theyAsked = session.rematchAsked.contains(game.mySide.opponent)
         let iAsked = session.rematchAsked.contains(game.mySide)
         return VStack(spacing: 4) {
             if session.opponentGone {
@@ -716,6 +731,16 @@ extension GameOverOverlay {
                     .font(Theme.body(17))
                     .foregroundStyle(Theme.ivoryDim)
                     .accessibilityIdentifier("rematch-status")
+            } else if session.isReconnecting {
+                // No rematch with someone who is not there just now.
+                HStack(spacing: 10) {
+                    WaitingMark()
+                    Text("Reconnecting to \(game.opponentName)…")
+                }
+                .font(Theme.body(17))
+                .foregroundStyle(Theme.ivoryDim)
+                .frame(minHeight: 44)
+                .accessibilityIdentifier("rematch-status")
             } else if iAsked {
                 HStack(spacing: 10) {
                     WaitingMark()
@@ -725,11 +750,28 @@ extension GameOverOverlay {
                 .foregroundStyle(Theme.ivoryDim)
                 .frame(minHeight: 44)
                 .accessibilityIdentifier("rematch-status")
+            } else if let request = session.rematchRequest {
+                Text(request)
+                    .font(Theme.body(17))
+                    .foregroundStyle(Theme.ivory)
+                    .frame(minHeight: 32)
+                    .accessibilityIdentifier("rematch-request")
+                QuietButton(title: "Rematch", prominent: true) { session.requestRematch() }
+                    .accessibilityIdentifier("btn-rematch")
+                QuietButton(title: "Not now") { session.declineRematch() }
+                    .accessibilityIdentifier("btn-rematch-not-now")
             } else if session.canAskRematch {
-                QuietButton(title: "Rematch", subtitle: theyAsked ? "\(game.opponentName) wants one" : nil, prominent: true) {
-                    session.requestRematch()
+                if let note = session.rematchNote {
+                    Text(note)
+                        .font(Theme.body(17))
+                        .foregroundStyle(Theme.ivoryDim)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(minHeight: 32)
+                        .accessibilityIdentifier("rematch-note")
                 }
-                .accessibilityIdentifier("btn-rematch")
+                QuietButton(title: "Rematch", prominent: true) { session.requestRematch() }
+                    .accessibilityIdentifier("btn-rematch")
             }
             QuietButton(title: "Home") { goHome() }
                 .accessibilityIdentifier("btn-home-overlay")
