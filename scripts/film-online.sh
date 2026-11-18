@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Films a game of Lelu Oware online between two simulators, through the dev relay, and joins the
 # two recordings side by side:  ./scripts/film-online.sh [output.mp4]
+# The video App Review is sent with each release is apps/lelu-oware/fastlane/review/online-play.mp4:
+# film again, then copy the new one over it.
 # The larger phone (Ama) starts a game; the other (Kofi) joins with the invitation link; they
 # play, Kofi resigns, and they have a rematch. Needs xcodegen, ffmpeg and the two simulators below.
 set -euo pipefail
