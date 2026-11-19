@@ -55,6 +55,9 @@ jobs:
       - name: The build number, from the tag's message if not in its name
         run: |
           if [ -z "$BUILD_NUMBER" ]; then
+            # actions/checkout leaves the tag pointing straight at the commit, without its message:
+            # fetch the tag itself again to read it.
+            git fetch --quiet --force origin "$GITHUB_REF:$GITHUB_REF"
             BUILD_NUMBER="$(git tag --list --format='%(contents:subject)' "${GITHUB_REF#refs/tags/}" | sed -n 's/^build \([0-9][0-9]*\)$/\1/p')"
             if [ -z "$BUILD_NUMBER" ]; then
               echo "::error::${GITHUB_REF#refs/tags/} has no build number in its message (\"build NNNN\")."
