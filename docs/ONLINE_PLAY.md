@@ -615,7 +615,7 @@ stage 6. Effort is rough, for one person.
 | 6 | both | `feat(oware): turn on online play` — deploy `prod`; privacy page, label, review notes and video, What's New; `online` to `.free` | done 2026-11-18, then review | Privacy label and review notes in App Store Connect |
 | 7 | both | Ludo with friends — after Ludo nearby steps 1–3. `feat(lelu-play): dice for Ludo`; `feat(ludo): play online with friends` (2–4 seats, computer seats, server dice for every seat checked in `LudoMatch`) | 1–2 days + 5–7 days | Four devices for a real game |
 | 8 | both | The server referees — a spike first (Swift on Lambda: build, size, cold start); the server passes `shared/vectors`; `OwareTable` and `OwareRoomRules` into a package; no phone in charge | 1–2 weeks | Decide Swift or TypeScript after the spike |
-| 9 | both | Games that last days, "your turn" notifications | 1–2 weeks | Push capability, an APNs key |
+| 9 | both | Games that last days, "your turn" notifications (plan: §15) | 1–2 weeks | Push capability, an APNs key |
 | 10 | both | Play with anyone — queue, the computer when nobody waits, names, report and block, App Attest; rankings after | 2–3 weeks, then ongoing | Age rating answers; someone to read reports |
 
 Stages 1–6 are **about four weeks** of work for Oware with a friend. Stages 1–3 can go
@@ -773,3 +773,134 @@ order stays as §11: friends by link, rematch and play again (done or in hand), 
 then Quick Match. Look again when online games with friends pass about **100 a day**, the point
 at which two strangers looking in the same minute stops being luck; the relay's logs
 (`room.created` per day) give that number for free.
+
+## 15. Playing in your own time: investigated 2026-11-20, not built
+
+The owner's concern: Oware is turn-based, and people are busy. Some will want to make a move, put
+the phone down, and come back later, instead of sitting through a whole game together. This
+section says what happens today, what is in the way, and a plan in three steps for review.
+Nothing here is built.
+
+### What happens today
+
+Read from the code on 2026-11-20 (version 1.0.15), not tried on phones.
+
+| A player does this | Today |
+|---|---|
+| Closes the app mid-game | The game is saved on both phones. Home shows **Rejoin** next time (§5). |
+| Presses back on the board | Asked *Leave the game?* and told it cannot be picked up again. There is no way to step out and keep the game except closing the app. |
+| Is away for 90 seconds | The other player gets a sheet over the board: *Connection lost · Keep waiting / Play the computer / Leave*. It reads as a fault, and it comes back each time they stay away. |
+| The joiner moves while the creator is away | The move shows, then is taken back after 8 seconds: the creator's phone applies every move, and it is not there. **The joiner cannot play until the creator returns.** |
+| The creator moves while the joiner is away | Works. The joiner sees it on rejoining. |
+| It becomes your turn while the app is closed | Nothing tells you. You find out when you next open the app. |
+| Nobody plays for 24 hours | The relay forgets the game. Rejoin says *That game has ended.* |
+| Wants a second game with someone else | Only one online game is kept at a time. |
+
+So the pieces for a game that lasts are there (saved games, Rejoin, seats that are kept), but it
+is built for two people who are both present. Stepping away works by accident and feels like a
+broken connection.
+
+### What is in the way
+
+1. **One phone is in charge.** A move by the joiner needs the creator's phone connected at that
+   moment. Two people taking turns hours apart are rarely connected together.
+2. **Nobody is told it is their turn.** Without that, a game in your own time is a game forgotten.
+3. **Stepping away looks like a fault**, and the only clean way out of the board ends the game.
+4. **A day is short.** A move before work and one after is already close to the limit.
+
+### Three ways to hold a move for someone who is not there
+
+| Way | What it is | For | Against |
+|---|---|---|---|
+| **A letterbox at the relay** | The relay keeps the last few messages for a seat whose phone is away and hands them over when it rejoins. It still reads nothing: they are the same sealed `data` it passes today. The creator's phone stays in charge; it applies the joiner's waiting move when it next opens. | Small: one new kind of item in the table and a few lines in `data` and `rejoin`. No rules on the server. Android joins the same way. The turn check added on 2026-11-19 (`ply`) already makes a late or repeated move safe. | A joiner's move is only *confirmed* when the creator next opens the app (it is shown as sent until then). Moves rest on the server for up to a week, sealed but stored: the privacy page and label must say so. |
+| **The server referees** (stage 8) | The server holds the game and applies each move. No phone is in charge. | The complete answer: either player moves at any time and it is final at once. Also what strangers and rankings need. | 1–2 weeks and a new toolchain on the server (Swift on Lambda, not yet measured). Moves and names stored on the server. Too much to do only for this. |
+| **Game Center turn-based matches** | Apple stores the game and sends "your turn". | No server work. | Apple only, and every player signed in to Game Center, which the owner ruled out (§12). A second way of playing beside rooms. Not recommended, for the reasons in §14. |
+
+**Recommended: the letterbox now, the referee when strangers arrive.** The letterbox does not get
+in the referee's way: when the server holds the game, the letterbox simply stops being needed.
+
+### One kind of game, not two
+
+No "live" or "slow" choice when starting a game. Friends do not know in advance which it will be,
+and a switch is one more thing to get wrong. **The same game is both**: while both are there it
+plays as now; when one steps away it waits, and says so calmly. This also means nothing changes
+for players who like it as it is.
+
+### The plan
+
+**Step 1: stepping away is normal (app only, about 3 days).** No server change.
+
+- Back on the board offers **Come back later** (keep the game, go Home) beside **Leave game**.
+  Today's wording stays for nearby play, which cannot be picked up again.
+- When the other player steps away, no sheet. A quiet line on the board: *Kofi has stepped
+  away. Your game is kept.* with **Home** beside it. *Play the computer* and *Leave* move under
+  the flag button. The sheet remains for one case: the game has ended at the relay.
+- Home's card says whose turn it is: *Your game with Kofi · your turn* or *· waiting for Kofi*.
+- Honest limit until step 2: the joiner still cannot move while the creator is away. The board
+  says *Waiting for Ama to come back* instead of showing the move and taking it away.
+
+**Step 2: the letterbox and "your turn" (relay and app, about 5 days).**
+
+- Relay: a message for a seat that is away is kept (at most 8 per seat, 16 KB each, gone with
+  the room) and delivered in order on `rejoin`. A playing room is kept **7 days** after its last
+  message instead of 24 hours.
+- Relay: a sender may mark a message `notify`. If the seat it is for is away and that player has
+  notifications on, the relay sends *Ama played. Your turn.* It knows only that a marked message
+  is waiting, not what it says. At most one notification per seat every 10 minutes, so a quick
+  exchange is not a stream of pings.
+- App: the joiner's move while the creator is away stays on the board, marked *sent*. The
+  creator's phone applies it on return; if it cannot (the turn check refuses it), the joiner's
+  board goes back and says so.
+- App: asks for notification permission at the moment it is useful, the first time either
+  player steps away from a game: *Tell you when Kofi plays?* Today permission is only asked
+  under Settings ▸ Invitations.
+- A reminder on day 6: *Your game with Kofi ends tomorrow if nobody plays.*
+
+**Step 3: more than one game (app only, about 3 days).** Later, if people ask.
+
+- Up to three kept games, listed on Home with whose turn each is. Today's single saved game
+  becomes a small list; the relay needs nothing new, since each game is its own room.
+
+Steps 1 and 2 together are **about a week and a half** with tests, and are what the concern
+needs. Step 1 is worth shipping on its own.
+
+### What stays hard
+
+- **The creator never comes back.** The joiner's last move is never confirmed and the game ends
+  after 7 days. The joiner can still finish against the computer. Only the referee closes this.
+- **Both make changes while apart** (a move from one, a resignation from the other). The
+  creator's phone decides in the order it reads the letterbox. The turn check refuses a move for
+  a turn already played.
+- **A phone is replaced or the app deleted.** The seat's key is on the old phone, so that game
+  cannot be rejoined. Same as today.
+- **Notifications off.** The game still works; the player finds out on opening the app. The Home
+  card carries the same news.
+- **A rematch.** Asking for one already waits a minute for an answer. For a player who is away it
+  should become a letterbox message and a notification, not a timer: to be designed in step 2.
+
+### Cost, privacy and review
+
+- **Cost:** a held message is one small item in the same table for at most a week; a
+  notification goes through Apple for nothing. Still about US$0.001 a game (§8). No fixed charge.
+- **Privacy:** today the relay stores no moves. With the letterbox it stores sealed moves for a
+  player who is away, for at most 7 days. The privacy page, the App Privacy label ("Gameplay
+  Content", not linked to identity) and the review notes change with step 2. Step 1 changes none.
+- **App Review:** "your turn" notifications are about the player's own game, which Apple allows
+  without a marketing opt-in. The permission is asked in context, as its guidelines prefer.
+
+### Decisions for the owner
+
+1. Go with the letterbox now and leave the referee for strangers and rankings? (Recommended.)
+2. Ship step 1 on its own first? (Recommended: it removes the "fault" feeling with no server work.)
+3. Seven days without a move before a game ends? Shorter costs nothing less; longer keeps more
+   sealed moves on the server.
+4. One game at a time for now, with several as step 3?
+5. Should "your turn" be a separate switch from Invitations in Settings, or one switch for both?
+   (Recommended: separate. Being told about your own game is not the same as being asked to one.)
+
+### Not verified
+
+- Everything in "What happens today" is from reading the code, not from two phones.
+- That App Review accepts the notification wording and the in-context permission request.
+- How often a notification sent while the app is closed is delivered on a weak signal; no real
+  notification has been sent end to end yet (§13).
